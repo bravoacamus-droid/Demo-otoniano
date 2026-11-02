@@ -20,7 +20,7 @@ type Accion = (prev: Resultado | null, fd: FormData) => Promise<Resultado>;
  */
 export function FormularioAccion({
   accion, children, textoBoton = "Guardar", variante = "primario", onExito, className, reiniciar = true,
-  mensajeExito = "Cambios guardados correctamente.",
+  mensajeExito = "Cambios guardados correctamente.", confirmar,
 }: {
   accion: Accion;
   children: React.ReactNode;
@@ -30,6 +30,8 @@ export function FormularioAccion({
   className?: string;
   reiniciar?: boolean;
   mensajeExito?: string | false;
+  /** Pregunta antes de enviar (acciones que liberan pagos o no se deshacen fácil) */
+  confirmar?: string;
 }) {
   const [estado, enviar, pendiente] = useActionState<Resultado | null, FormData>(accion, null);
   const router = useRouter();
@@ -49,7 +51,8 @@ export function FormularioAccion({
   }, [estado, reiniciar, router, notificar]);
 
   return (
-    <form ref={formRef} action={enviar} className={className ?? "space-y-3"}>
+    <form ref={formRef} action={enviar} className={className ?? "space-y-3"}
+      onSubmit={(e) => { if (confirmar && !window.confirm(confirmar)) e.preventDefault(); }}>
       {children}
       {estado && !estado.ok && <div className="animar-sacudir"><Aviso tono="rojo">{estado.error}</Aviso></div>}
       <Boton type="submit" variante={variante} disabled={pendiente} className="w-full sm:w-auto">

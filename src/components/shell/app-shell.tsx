@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine, ArrowUpFromLine, ChevronDown, Home, Menu, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Scale, Wallet, X,
 } from "lucide-react";
@@ -15,8 +15,10 @@ import { COOKIE_MENU, type Letra, type Tema } from "@/lib/preferencias";
 import { useNotificar } from "@/components/ui/notificaciones";
 import { AvisoConexion } from "./aviso-conexion";
 import { IndicadorNavegacion } from "./indicador-navegacion";
+import { CargaNavegacion } from "./carga-navegacion";
 import { MenuUsuario } from "./menu-usuario";
 import { BotonInstalar } from "./instalar-app";
+import { AvisosCreditoDiferidos, CampanaEsperando, type AvisoCredito } from "./avisos-credito";
 
 // Accesos de la barra inferior (celular), por prioridad; se muestran los 4 primeros que el rol puede ver.
 const BARRA_INFERIOR = [
@@ -37,7 +39,7 @@ const INACTIVO_LATERAL = "text-lateral-texto hover:bg-white/10 hover:text-white"
 // Estructura: barra lateral = solo secciones (contraíble a iconos en escritorio);
 // barra superior = empresa a la izquierda; tema, letra y usuario (Mi cuenta / Cerrar sesión) a la derecha.
 export function AppShell({
-  rol, nombre, empresa, empresas, tema, letra, compacto: compactoInicial, children,
+  rol, nombre, empresa, empresas, tema, letra, compacto: compactoInicial, avisosCredito, children,
 }: {
   tema: Tema;
   letra: Letra;
@@ -47,6 +49,8 @@ export function AppShell({
   nombre: string;
   empresa: { id: string; razon_social: string };
   empresas: { id: string; razon_social: string; rol: Rol }[];
+  /** Gerencia: cuotas vencidas o por vencer (consulta sin esperar; null = el rol no las ve) */
+  avisosCredito?: Promise<AvisoCredito[]> | null;
   children: React.ReactNode;
 }) {
   const ruta = usePathname();
@@ -287,6 +291,11 @@ export function AppShell({
             <BotonLetra p={preferencias} />
             <span aria-hidden className="mx-1 h-6 w-px bg-stone-200" />
           </div>
+          {avisosCredito && (
+            <Suspense fallback={<CampanaEsperando />}>
+              <AvisosCreditoDiferidos promesa={avisosCredito} />
+            </Suspense>
+          )}
           <MenuUsuario nombre={nombre} rol={rol} p={preferencias} />
           <button onClick={() => setMenuAbierto(true)} aria-expanded={menuAbierto} aria-label="Menú"
             className="rounded-lg p-2 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-500 md:hidden">
@@ -315,7 +324,7 @@ export function AppShell({
 
       <main className="mx-auto w-full max-w-7xl px-4 pb-28 pt-4 sm:px-6 md:pb-10 md:pt-6">
         {pestanas}
-        {children}
+        <CargaNavegacion>{children}</CargaNavegacion>
       </main>
 
       <AvisoConexion compacto={compacto} />

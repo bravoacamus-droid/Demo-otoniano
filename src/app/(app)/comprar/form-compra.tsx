@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, CheckCircle2, FileText, PackageCheck, Plus, Share2, Trash2, Wallet } from "lucide-react";
+import { ArrowDown, Camera, CheckCircle2, FileText, PackageCheck, Plus, Share2, Trash2, Wallet } from "lucide-react";
 import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
 import { SelectorProveedor } from "@/components/selector-proveedor";
-import { SelectorProducto, precioSugerido } from "@/components/selector-producto";
+import { SelectorProducto, partesRuta, precioSugerido } from "@/components/selector-producto";
 import { Campo, InputNumero, Select, Textarea } from "@/components/ui/campos";
-import { Aviso, PuntoMetal, Tarjeta } from "@/components/ui/basicos";
+import { Aviso, Insignia, Tarjeta } from "@/components/ui/basicos";
 import { Boton } from "@/components/ui/boton";
 import { cx } from "@/components/ui/clases";
 import { aCentimos, aGramos, centimosASoles, gramosAKg, importeCentimos, normalizar } from "@/lib/montos";
@@ -16,6 +16,7 @@ import { soles } from "@/lib/formato";
 import { subirArchivo } from "@/lib/archivos";
 import type { Caja, MedioPagoConf, Producto, Proveedor } from "@/lib/tipos";
 import { registrarCompra, saldoAFavor, type CompraRegistrada } from "../compras/acciones";
+import { FormaPago, errorPlan, type PlanCredito } from "@/components/plan-credito";
 
 interface Linea {
   uid: string;
@@ -26,6 +27,13 @@ interface Linea {
   precio: string;
   /** El operario digitó el precio: ya no se cambia solo al elegir otro proveedor */
   precioManual: boolean;
+}
+
+/** Lleva al peso bruto de una línea (scroll suave y foco) */
+function irAPeso(uid: string) {
+  const input = document.getElementById(`bruto-${uid}`);
+  input?.scrollIntoView({ block: "center", behavior: "smooth" });
+  input?.focus({ preventScroll: true });
 }
 
 /** Referencias por producto: costo promedio del stock y precio promedio pagado (últimos 90 días) */
@@ -57,9 +65,29 @@ export function FormCompra({
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [hecho, setHecho] = useState<CompraRegistrada | null>(null);
+  // null = al contado; con plan, a crédito (en cuotas si se eligen varias)
+  const [plan, setPlan] = useState<PlanCredito | null>(null);
+  // A crédito sin inicial no se mueve dinero ahora: no se piden medio ni caja (la RPC usa la caja por defecto)
+  const sinDineroAhora = !!plan && aCentimos(plan.inicial || "0") === 0;
   const router = useRouter();
 
+  const [resaltada, setResaltada] = useState<string | null>(null);
+  const enfocar = useRef<string | null>(null);
+  const reloj = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(reloj.current), []);
+  // Con teclado (Enter en la lista de productos) se salta al peso de la línea nueva; al tocar no, para seguir eligiendo
+  useEffect(() => {
+    if (!enfocar.current) return;
+    irAPeso(enfocar.current);
+    enfocar.current = null;
+  }, [lineas.length]);
+
   const porId = useMemo(() => new Map(productos.map((m) => [m.id, m])), [productos]);
+  const agregados = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const l of lineas) m.set(l.metal_id, (m.get(l.metal_id) ?? 0) + 1);
+    return m;
+  }, [lineas]);
   const clase = proveedor?.clase ?? "minorista";
 
   // Vista previa en vivo (enteros); el importe oficial lo calcula la base de datos
@@ -70,6 +98,7 @@ export function FormCompra({
     return { bruto, merma, neto, importe: importeCentimos(neto, aCentimos(l.precio)) };
   });
   const totalCent = calculo.reduce((s, c) => s + c.importe, 0);
+  const sinPeso = lineas.filter((_, i) => calculo[i].bruto <= 0);
   const totalKg = calculo.reduce((s, c) => s + c.neto, 0);
   const saldoCent = Math.round(saldo * 100);
   const aplicadoCent = aplicarSaldo && proveedor ? Math.min(saldoCent, totalCent) : 0;
@@ -79,15 +108,20 @@ export function FormCompra({
 
   function elegirProveedor(p: Proveedor | null) {
     setProveedor(p);
+    if (!p) setPlan(null); // sin proveedor no hay a quién deberle
     // El precio sugerido depende del tipo de proveedor (al mayorista se le paga su precio)
     setLineas((ls) => ls.map((l) => l.precioManual ? l : { ...l, precio: precioSugerido(porId.get(l.metal_id)!, p?.clase) }));
     setSaldo(0);
     // Saldo a favor del proveedor (descuentos de la versión anterior de la selección en almacén)
     if (p) saldoAFavor(p.id).then(setSaldo);
   }
-  function agregar(p: Producto) {
-    setLineas((ls) => [...ls, { uid: crypto.randomUUID(), metal_id: p.id, bruto: "", merma: "", precio: precioSugerido(p, clase), precioManual: false }]);
-    setTimeout(() => document.getElementById(`bruto-${lineas.length}`)?.focus(), 50);
+  function agregar(p: Producto, desdeTeclado?: boolean) {
+    const uid = crypto.randomUUID();
+    setLineas((ls) => [...ls, { uid, metal_id: p.id, bruto: "", merma: "", precio: precioSugerido(p, clase), precioManual: false }]);
+    if (desdeTeclado) enfocar.current = uid;
+    setResaltada(uid);
+    clearTimeout(reloj.current);
+    reloj.current = setTimeout(() => setResaltada(null), 1200);
   }
   function cambiar(uid: string, campo: "bruto" | "merma" | "precio", valor: string) {
     setLineas((ls) => ls.map((l) => (l.uid === uid ? { ...l, [campo]: valor, precioManual: l.precioManual || campo === "precio" } : l)));
@@ -103,6 +137,9 @@ export function FormCompra({
     if (calculo.some((c) => c.bruto <= 0)) return setError("Ingrese el peso bruto de cada producto.");
     if (calculo.some((c) => c.neto <= 0)) return setError("La merma debe ser menor al peso bruto.");
     if (requiereDoc) return setError(`Para compras desde S/ ${montoDocObligatorio} se requiere el DNI o RUC del proveedor.`);
+    if (plan && !proveedor) return setError("Para comprar a crédito elija al proveedor.");
+    const errCredito = plan ? errorPlan(plan, totalCent - aplicadoCent) : null;
+    if (errCredito) return setError(errCredito);
     setGuardando(true);
     try {
       const rutaFoto = foto ? await subirArchivo(empresaId, "tickets", foto) : null;
@@ -114,6 +151,7 @@ export function FormCompra({
         notas: notas.trim() || null,
         foto_ticket_url: rutaFoto,
         aplicar_saldo: aplicarSaldo && saldo > 0,
+        credito: plan ? { ...plan, inicial: normalizar(plan.inicial) || "0" } : null,
         items: lineas.map((l) => ({
           metal_id: l.metal_id, peso_bruto_kg: normalizar(l.bruto), descuento_kg: normalizar(l.merma) || "0", precio_kg: normalizar(l.precio),
         })),
@@ -139,6 +177,7 @@ export function FormCompra({
     setFoto(null);
     setHecho(null);
     setAplicarSaldo(true);
+    setPlan(null);
     if (medioInicial) elegirMedio(medioInicial);
     window.scrollTo({ top: 0 });
   }
@@ -169,8 +208,19 @@ export function FormCompra({
       </Tarjeta>
 
       <Tarjeta className="p-4">
-        <p className="mb-2 text-sm font-medium text-stone-700">Toque el producto para agregarlo</p>
-        <SelectorProducto productos={productos} onElegir={agregar} precio={(p) => `${soles(precioSugerido(p, clase))}/kg`} />
+        <p className="mb-2 text-sm font-medium text-stone-700">¿Qué productos trae?</p>
+        <SelectorProducto productos={productos} onElegir={agregar} agregados={agregados}
+          precio={(p) => `${soles(precioSugerido(p, clase))}/kg`} />
+        {sinPeso.length > 0 && (
+          <button type="button" onClick={() => irAPeso(sinPeso[0].uid)}
+            className="mt-3 flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-marca-200 bg-marca-50 px-3 text-sm text-marca-800 hover:bg-marca-100">
+            <span>
+              <b className="font-semibold">{lineas.length} producto{lineas.length === 1 ? "" : "s"} agregado{lineas.length === 1 ? "" : "s"}</b>
+              {" · "}{sinPeso.length === 1 ? "falta 1 peso" : `faltan ${sinPeso.length} pesos`}
+            </span>
+            <span className="flex shrink-0 items-center gap-1 font-medium">Ingresar pesos <ArrowDown className="size-4" /></span>
+          </button>
+        )}
       </Tarjeta>
 
       {lineas.map((l, i) => {
@@ -178,11 +228,21 @@ export function FormCompra({
         const c = calculo[i];
         const ref = referencias[l.metal_id];
         const sugerido = precioSugerido(m, clase);
+        const ruta = partesRuta(m.ruta);
         return (
-          <Tarjeta key={l.uid} className="p-4">
+          <Tarjeta key={l.uid} id={`linea-${l.uid}`}
+            className={cx("scroll-mt-4 border-l-4 p-4 transition-shadow", resaltada === l.uid && "ring-2 ring-marca-400")}
+            style={{ borderLeftColor: m.color ?? "var(--color-stone-300)" }}>
             <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2 font-semibold">
-                <PuntoMetal color={m.color} /> <span className="truncate">{m.ruta}</span>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="cifra flex size-7 shrink-0 items-center justify-center rounded-md bg-marca-50 text-xs font-semibold text-marca-700">{i + 1}</span>
+                <div className="min-w-0">
+                  {ruta.familia && <p className="truncate text-[11px] font-medium uppercase tracking-wide text-stone-500">{ruta.familia}</p>}
+                  <p className="truncate text-base font-semibold text-stone-900">
+                    {m.tiene_hijos ? `${m.nombre} · sin clasificar` : ruta.nombre}
+                  </p>
+                </div>
+                {c.bruto <= 0 && <Insignia tono="ambar">Falta peso</Insignia>}
               </div>
               <button
                 type="button"
@@ -195,7 +255,7 @@ export function FormCompra({
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Campo etiqueta="Peso bruto (kg)">
-                <InputNumero id={`bruto-${i}`} value={l.bruto} onChange={(e) => cambiar(l.uid, "bruto", e.target.value)} placeholder="0.000" />
+                <InputNumero id={`bruto-${l.uid}`} value={l.bruto} onChange={(e) => cambiar(l.uid, "bruto", e.target.value)} placeholder="0.000" />
               </Campo>
               <Campo etiqueta="Merma kg (opcional)">
                 <InputNumero value={l.merma} onChange={(e) => cambiar(l.uid, "merma", e.target.value)} placeholder="0.000" />
@@ -233,8 +293,13 @@ export function FormCompra({
 
       {lineas.length > 0 && (
         <Tarjeta className="space-y-4 p-4">
+          <FormaPago plan={plan} onCambio={setPlan} totalCent={totalCent - aplicadoCent} tipo="compra"
+            deshabilitarCredito={proveedor ? null : "Elija al proveedor para comprarle a crédito"} />
+          {sinDineroAhora ? (
+            <p className="rounded-lg bg-stone-50 px-3 py-2 text-xs text-stone-600">No sale dinero de caja ahora. Cada cuota se paga desde Caja y finanzas → Créditos.</p>
+          ) : (
           <div>
-            <p className="mb-2 text-sm font-medium text-stone-700">Medio de pago</p>
+            <p className="mb-2 text-sm font-medium text-stone-700">{plan ? "Medio de pago de la inicial" : "Medio de pago"}</p>
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
               {medios.map((m) => (
                 <button
@@ -251,12 +316,15 @@ export function FormCompra({
               ))}
             </div>
           </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Campo etiqueta="Sale de la caja">
-              <Select value={cajaId} onChange={(e) => setCajaId(e.target.value)}>
-                {cajas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </Select>
-            </Campo>
+            {!sinDineroAhora && (
+              <Campo etiqueta={plan ? "Sale de la caja (inicial)" : "Sale de la caja"}>
+                <Select value={cajaId} onChange={(e) => setCajaId(e.target.value)}>
+                  {cajas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </Select>
+              </Campo>
+            )}
             <Campo etiqueta="Foto (opcional)">
               <label className="flex h-[42px] cursor-pointer items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-superficie px-3 text-sm text-stone-600">
                 <Camera className="size-4 shrink-0" />
@@ -297,13 +365,19 @@ export function FormCompra({
               {gramosAKg(totalKg)} kg neto · {lineas.length} línea(s)
               {precioPromCent > 0 && <> · prom. S/ {centimosASoles(precioPromCent)}/kg</>}
             </p>
-            <p className="cifra text-2xl font-bold">S/ {centimosASoles(totalCent - aplicadoCent)}</p>
+            <p className="cifra truncate text-[clamp(1.25rem,6vw,1.5rem)] font-bold">S/ {centimosASoles(totalCent - aplicadoCent)}</p>
             {aplicadoCent > 0 && (
               <p className="cifra text-xs text-emerald-700">Total S/ {centimosASoles(totalCent)} − saldo a favor S/ {centimosASoles(aplicadoCent)}</p>
             )}
+            {plan && (
+              <p className="line-clamp-2 text-xs font-medium text-marca-700">
+                A crédito · {plan.cuotas === 1 ? "pago único" : `${plan.cuotas} cuotas`}
+                {aCentimos(plan.inicial || "0") > 0 && ` · inicial S/ ${centimosASoles(aCentimos(plan.inicial))}`}
+              </p>
+            )}
           </div>
-          <Boton tamano="lg" onClick={guardar} disabled={guardando || lineas.length === 0}>
-            {guardando ? "Guardando…" : "Pagar y guardar"}
+          <Boton tamano="lg" onClick={guardar} disabled={guardando || lineas.length === 0} className="shrink-0 px-4 text-base sm:px-6 sm:text-lg">
+            {guardando ? "Guardando…" : <><span className="sm:hidden">{plan ? "Guardar" : "Pagar"}</span><span className="hidden sm:inline">{plan ? "Guardar a crédito" : "Pagar y guardar"}</span></>}
           </Boton>
         </div>
       </div>
@@ -340,7 +414,14 @@ function CompraHecha({ compra, onNueva }: { compra: CompraRegistrada; onNueva: (
           <Wallet className="size-4" /> Se descontó {soles(aplicado)} a favor · pagado {soles(Number(compra.total) - aplicado)}
         </p>
       )}
-      <p className="mt-1 text-sm text-stone-500">Se descontó de caja y se sumó al stock. Queda pendiente de limpieza.</p>
+      {compra.credito_id ? (
+        <p className="mt-1 text-sm text-stone-500">
+          Quedó <b className="font-medium text-stone-700">a crédito</b> y se sumó al stock. Las cuotas se pagan desde{" "}
+          <Link href={`/creditos/${compra.credito_id}`} className="font-medium text-marca-700 hover:underline">Créditos</Link>. Queda pendiente de limpieza.
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-stone-500">Se descontó de caja y se sumó al stock. Queda pendiente de limpieza.</p>
+      )}
       {/* 80 mm para la impresora térmica del mostrador; PDF y Compartir: el A4 con la marca */}
       <div className="mt-6 grid grid-cols-3 gap-2">
         <BotonImprimir80 href={`/imprimir/compra/${compra.id}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-stone-300 bg-superficie font-medium" />

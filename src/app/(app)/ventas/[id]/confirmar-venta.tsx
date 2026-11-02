@@ -11,6 +11,7 @@ import { kg } from "@/lib/formato";
 import { subirArchivo } from "@/lib/archivos";
 import type { Caja, MedioPagoConf } from "@/lib/tipos";
 import { confirmarVenta } from "../acciones";
+import { FormaPago, errorPlan, type PlanCredito } from "@/components/plan-credito";
 
 export function ConfirmarVenta({
   ventaId, empresaId, items, cajas, medios,
@@ -34,6 +35,8 @@ export function ConfirmarVenta({
   const [comprobante, setComprobante] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [plan, setPlan] = useState<PlanCredito | null>(null);
+  const sinDineroAhora = !!plan && aCentimos(plan.inicial || "0") === 0;
 
   const total = items.reduce((s, i) => s + importeCentimos(aGramos(datos[i.id].recibido), aCentimos(datos[i.id].precio)), 0);
 
@@ -44,6 +47,8 @@ export function ConfirmarVenta({
         return setError(`Ingrese el peso recibido y el precio de ${i.metal}.`);
       }
     }
+    const errCredito = plan ? errorPlan(plan, total) : null;
+    if (errCredito) return setError(errCredito);
     setGuardando(true);
     try {
       const ruta = comprobante ? await subirArchivo(empresaId, "comprobantes", comprobante) : null;
@@ -52,6 +57,7 @@ export function ConfirmarVenta({
         caja_id: cajaId,
         medio_id: medioId || null,
         comprobante_url: ruta,
+        credito: plan ? { ...plan, inicial: normalizar(plan.inicial) || "0" } : null,
         items: items.map((i) => ({
           item_id: i.id,
           peso_recibido_kg: normalizar(datos[i.id].recibido),
@@ -96,18 +102,26 @@ export function ConfirmarVenta({
             </div>
           );
         })}
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Campo etiqueta="Medio de cobro">
+        <FormaPago plan={plan} onCambio={setPlan} totalCent={total} tipo="venta" />
+        {sinDineroAhora && (
+          <p className="rounded-lg bg-stone-50 px-3 py-2 text-xs text-stone-600">No entra dinero a caja ahora. Cada cuota se cobra desde Caja y finanzas → Créditos.</p>
+        )}
+        <div className={sinDineroAhora ? "grid gap-3" : "grid gap-3 sm:grid-cols-3"}>
+          {!sinDineroAhora && (
+            <>
+          <Campo etiqueta={plan ? "Medio de cobro de la inicial" : "Medio de cobro"}>
             <Select value={medioId} onChange={(e) => elegirMedio(e.target.value)}>
               {medios.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
             </Select>
           </Campo>
-          <Campo etiqueta="Entra a la caja">
+          <Campo etiqueta={plan ? "Entra a la caja (inicial)" : "Entra a la caja"}>
             <Select value={cajaId} onChange={(e) => setCajaId(e.target.value)}>
               {cajas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </Select>
           </Campo>
-          <Campo etiqueta="Comprobante (opcional)">
+            </>
+          )}
+          <Campo etiqueta="Archivo del comprobante (opcional)">
             <label className="flex h-[42px] cursor-pointer items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-superficie px-3 text-sm text-stone-600">
               <FileUp className="size-4 shrink-0" />
               <span className="truncate">{comprobante ? comprobante.name : "Adjuntar"}</span>
@@ -118,7 +132,7 @@ export function ConfirmarVenta({
         {error && <Aviso tono="rojo">{error}</Aviso>}
         <div className="flex items-center justify-between gap-3 border-t border-stone-100 pt-3">
           <p className="cifra text-xl font-bold">S/ {centimosASoles(total)}</p>
-          <Boton onClick={confirmar} disabled={guardando}>{guardando ? "Confirmando…" : "Confirmar y cobrar"}</Boton>
+          <Boton onClick={confirmar} disabled={guardando}>{guardando ? "Confirmando…" : plan ? "Confirmar a crédito" : "Confirmar y cobrar"}</Boton>
         </div>
       </div>
     </Tarjeta>

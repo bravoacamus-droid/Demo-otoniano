@@ -15,6 +15,8 @@ import type { Caja } from "@/lib/tipos";
 import { anularVenta } from "../acciones";
 import { ConfirmarVenta } from "./confirmar-venta";
 import { EditarGuia } from "./editar-guia";
+import { textoComprobante } from "@/lib/comprobantes";
+import { AvanceCredito, type CreditoFila } from "@/components/avance-credito";
 
 export const metadata: Metadata = { title: "Detalle de venta" };
 
@@ -22,11 +24,12 @@ export default async function VentaDetalle({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const ctx = await exigir("verTodo", "vender");
   const { supabase, rol, empresa } = ctx;
-  const [{ data: v }, { data: items }, { data: cajas }, medios] = await Promise.all([
+  const [{ data: v }, { data: items }, { data: cajas }, medios, { data: credito }] = await Promise.all([
     supabase.from("v_ventas").select("*").eq("id", id).maybeSingle(),
     supabase.from("v_venta_items").select("*").eq("venta_id", id),
     supabase.from("cajas").select("*").eq("empresa_id", empresa.id).eq("activo", true).order("orden"),
     cargarMediosPago(ctx),
+    supabase.from("v_creditos").select("*").eq("venta_id", id).maybeSingle(),
   ]);
   if (!v) notFound();
   const [guia, comprobante] = await Promise.all([urlArchivo(supabase, v.guia_url), urlArchivo(supabase, v.comprobante_url)]);
@@ -86,16 +89,18 @@ export default async function VentaDetalle({ params }: { params: Promise<{ id: s
         </Tarjeta>
 
         <div className="space-y-4">
+          {credito && <Tarjeta className="p-4"><AvanceCredito c={credito as unknown as CreditoFila} /></Tarjeta>}
           <Tarjeta className="p-4">
             <dl className="grid grid-cols-2 gap-3">
               <Dato etiqueta="Comprador"><Link className="text-marca-700 hover:underline" href={`/compradores/${v.comprador_id}`}>{v.comprador_nombre}</Link></Dato>
               <Dato etiqueta="RUC">{v.comprador_ruc ?? "—"}</Dato>
+              <Dato etiqueta="Comprobante">{textoComprobante(v.comprobante_tipo, v.comprobante_numero, false)}</Dato>
               <Dato etiqueta="Estado">
                 <Insignia tono={v.estado === "confirmada" ? "verde" : v.estado === "anulada" ? "rojo" : "ambar"}>
                   {v.estado === "pendiente" ? "Pendiente de pesaje" : v.estado === "confirmada" ? "Confirmada" : "Anulada"}
                 </Insignia>
               </Dato>
-              <Dato etiqueta="Total cobrado">{soles(v.total)}</Dato>
+              <Dato etiqueta={credito ? "Total (a crédito)" : "Total cobrado"}>{soles(v.total)}</Dato>
               {v.medio_nombre && <Dato etiqueta="Medio">{v.medio_nombre}</Dato>}
               {v.caja_nombre && <Dato etiqueta="Caja">{v.caja_nombre}</Dato>}
             </dl>
@@ -121,6 +126,9 @@ export default async function VentaDetalle({ params }: { params: Promise<{ id: s
               guiaUrl={guia}
               comprobanteRuta={v.comprobante_url}
               comprobanteUrl={comprobante}
+              comprobanteTipo={v.comprobante_tipo}
+              comprobanteNumero={v.comprobante_numero}
+              clienteConRuc={!!v.comprador_ruc}
               notas={v.notas}
             />
           </Tarjeta>

@@ -17,6 +17,10 @@ export const fecha = (v: string | Date | null | undefined) =>
 export const fechaHora = (v: string | Date | null | undefined) =>
   v ? new Intl.DateTimeFormat("es-PE", { dateStyle: "short", timeStyle: "short", timeZone: TZ }).format(new Date(v)) : "—";
 
+/** Fecha sin hora (columna date, p. ej. vencimiento de una cuota): sin conversión de zona horaria */
+export const fechaDia = (v: string | null | undefined) =>
+  v ? new Intl.DateTimeFormat("es-PE", { dateStyle: "short", timeZone: "UTC" }).format(new Date(`${v.slice(0, 10)}T12:00:00Z`)) : "—";
+
 /** YYYY-MM-DD de hoy en Lima */
 export function hoyLima(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
@@ -44,4 +48,5 @@ export const ETIQUETA_MEDIO: Record<string, string> = {
 export const ETIQUETA_ORIGEN: Record<string, string> = {
   compra: "Compra", venta: "Venta", gasto: "Gasto", aporte: "Aporte", retiro: "Retiro",
   traspaso: "Traspaso", ajuste: "Ajuste", saldo_inicial: "Saldo inicial", devolucion: "Devolución",
+  pago_credito: "Pago de crédito",
 };

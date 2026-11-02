@@ -9,6 +9,7 @@ import { TablaDatos } from "@/components/ui/tabla";
 import { Filtros, rangoLima } from "@/components/filtros";
 import { ResumenCompras } from "@/components/resumen-modulo";
 import { TituloSeccion } from "@/components/panel-modulo";
+import { CreditoLinea } from "@/components/avance-credito";
 
 export const metadata: Metadata = { title: "Compras" };
 
@@ -21,7 +22,7 @@ export default async function ComprasPage({ searchParams }: { searchParams: Prom
   const { desde, hasta } = rangoLima(sp.desde, sp.hasta);
 
   let q = supabase.from("v_compras").select("*").eq("empresa_id", empresa.id)
-    .order("fecha", { ascending: false }).limit(200);
+    .order("fecha", { ascending: false }).order("numero", { ascending: false }).limit(200);
   if (desde) q = q.gte("fecha", desde);
   if (hasta) q = q.lt("fecha", hasta);
   if (sp.estado) q = q.eq("estado", sp.estado);
@@ -33,11 +34,14 @@ export default async function ComprasPage({ searchParams }: { searchParams: Prom
   // El balancero solo ve lo que él registró
   if (rol === "balancero") q = q.eq("creado_por", userId);
 
-  const [{ data: compras }, { data: metales }] = await Promise.all([
+  const [{ data: compras }, { data: metales }, { data: creditos }] = await Promise.all([
     q,
     supabase.from("v_productos").select("id, nombre:ruta").eq("empresa_id", empresa.id).order("clave_orden"),
+    // Compras a crédito: cuánto falta pagar (se muestra debajo del total)
+    supabase.from("v_creditos").select("compra_id, saldo, situacion").eq("empresa_id", empresa.id).eq("tipo", "por_pagar").neq("situacion", "anulado"),
   ]);
   const filas = compras ?? [];
+  const credito = new Map((creditos ?? []).map((c) => [c.compra_id, c]));
   const vigentes = filas.filter((c) => c.estado === "registrada");
   const totalSoles = vigentes.reduce((s, c) => s + Number(c.total), 0);
   const totalKg = vigentes.reduce((s, c) => s + Number(c.kg_total), 0);
@@ -79,8 +83,9 @@ export default async function ComprasPage({ searchParams }: { searchParams: Prom
             {
               titulo: "Total", alinear: "der", principal: true,
               celda: (c) => (
-                <span className={c.estado === "anulada" ? "cifra text-stone-500 line-through" : "cifra font-semibold"}>
-                  {soles(c.total)}
+                <span className="block leading-tight">
+                  <span className={c.estado === "anulada" ? "cifra text-stone-500 line-through" : "cifra font-semibold"}>{soles(c.total)}</span>
+                  {credito.has(c.id) && <CreditoLinea c={credito.get(c.id)!} />}
                 </span>
               ),
             },

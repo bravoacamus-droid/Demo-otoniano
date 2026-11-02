@@ -265,6 +265,86 @@ export type Database = {
           },
         ]
       }
+      asistencias: {
+        Row: {
+          actualizado_en: string
+          aprobado_en: string | null
+          aprobado_por: string | null
+          empresa_id: string
+          entrada: string | null
+          estado: Database["public"]["Enums"]["estado_asistencia"]
+          extra_aprobada: boolean
+          fecha: string
+          horas_extra: number
+          id: string
+          nota: string | null
+          registrado_por: string | null
+          salida: string | null
+          trabajador_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          aprobado_en?: string | null
+          aprobado_por?: string | null
+          empresa_id: string
+          entrada?: string | null
+          estado: Database["public"]["Enums"]["estado_asistencia"]
+          extra_aprobada?: boolean
+          fecha: string
+          horas_extra?: number
+          id?: string
+          nota?: string | null
+          registrado_por?: string | null
+          salida?: string | null
+          trabajador_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          aprobado_en?: string | null
+          aprobado_por?: string | null
+          empresa_id?: string
+          entrada?: string | null
+          estado?: Database["public"]["Enums"]["estado_asistencia"]
+          extra_aprobada?: boolean
+          fecha?: string
+          horas_extra?: number
+          id?: string
+          nota?: string | null
+          registrado_por?: string | null
+          salida?: string | null
+          trabajador_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asistencias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asistencias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "asistencias_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "trabajadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asistencias_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "v_trabajadores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cajas: {
         Row: {
           activo: boolean
@@ -777,6 +857,389 @@ export type Database = {
           },
         ]
       }
+      credito_ajustes: {
+        Row: {
+          creado_por: string | null
+          credito_id: string
+          empresa_id: string
+          fecha: string
+          id: string
+          monto: number
+          motivo: string | null
+        }
+        Insert: {
+          creado_por?: string | null
+          credito_id: string
+          empresa_id: string
+          fecha?: string
+          id?: string
+          monto: number
+          motivo?: string | null
+        }
+        Update: {
+          creado_por?: string | null
+          credito_id?: string
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          monto?: number
+          motivo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credito_ajustes_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_ajustes_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "v_creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_ajustes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_ajustes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
+      credito_cuotas: {
+        Row: {
+          credito_id: string
+          empresa_id: string
+          id: string
+          monto: number
+          numero: number
+          vence: string
+        }
+        Insert: {
+          credito_id: string
+          empresa_id: string
+          id?: string
+          monto: number
+          numero: number
+          vence: string
+        }
+        Update: {
+          credito_id?: string
+          empresa_id?: string
+          id?: string
+          monto?: number
+          numero?: number
+          vence?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credito_cuotas_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "v_creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
+      credito_pagos: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string
+          clave: string | null
+          creado_en: string
+          creado_por: string | null
+          credito_id: string
+          empresa_id: string
+          estado: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          id: string
+          medio_id: string | null
+          medio_pago: Database["public"]["Enums"]["medio_pago"]
+          monto: number
+          motivo_anulacion: string | null
+          mov_id: string | null
+          nota: string | null
+        }
+        Insert: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id: string
+          clave?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          credito_id: string
+          empresa_id: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          id?: string
+          medio_id?: string | null
+          medio_pago: Database["public"]["Enums"]["medio_pago"]
+          monto: number
+          motivo_anulacion?: string | null
+          mov_id?: string | null
+          nota?: string | null
+        }
+        Update: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id?: string
+          clave?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          credito_id?: string
+          empresa_id?: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          id?: string
+          medio_id?: string | null
+          medio_pago?: Database["public"]["Enums"]["medio_pago"]
+          monto?: number
+          motivo_anulacion?: string | null
+          mov_id?: string | null
+          nota?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credito_pagos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "v_creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_medio_id_fkey"
+            columns: ["medio_id"]
+            isOneToOne: false
+            referencedRelation: "medios_pago"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "v_movimientos_caja"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creditos: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          compra_id: string | null
+          comprador_id: string | null
+          creado_en: string
+          creado_por: string | null
+          empresa_id: string
+          estado: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          frecuencia: string
+          id: string
+          inicial: number
+          monto: number
+          motivo_anulacion: string | null
+          n_cuotas: number
+          primer_vencimiento: string
+          proveedor_id: string | null
+          tipo: Database["public"]["Enums"]["tipo_credito"]
+          venta_id: string | null
+        }
+        Insert: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          compra_id?: string | null
+          comprador_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          frecuencia: string
+          id?: string
+          inicial?: number
+          monto: number
+          motivo_anulacion?: string | null
+          n_cuotas: number
+          primer_vencimiento: string
+          proveedor_id?: string | null
+          tipo: Database["public"]["Enums"]["tipo_credito"]
+          venta_id?: string | null
+        }
+        Update: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          compra_id?: string | null
+          comprador_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id?: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          frecuencia?: string
+          id?: string
+          inicial?: number
+          monto?: number
+          motivo_anulacion?: string | null
+          n_cuotas?: number
+          primer_vencimiento?: string
+          proveedor_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_credito"]
+          venta_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creditos_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: true
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: true
+            referencedRelation: "v_compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_comprador_id_fkey"
+            columns: ["comprador_id"]
+            isOneToOne: false
+            referencedRelation: "compradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_comprador_id_fkey"
+            columns: ["comprador_id"]
+            isOneToOne: false
+            referencedRelation: "v_compradores_resumen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "creditos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "v_proveedores_resumen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_proveedor"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "creditos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: true
+            referencedRelation: "v_ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: true
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devoluciones_proveedor: {
         Row: {
           anulado_en: string | null
@@ -881,7 +1344,11 @@ export type Database = {
           creado_en: string
           dias_seleccion: number
           direccion: string | null
+          domingo_tasa: number
+          hx_tasa_primeras: number
+          hx_tasa_siguientes: number
           id: string
+          jornada_horas: number
           logo_url: string | null
           merma_alerta_pct: number
           moneda: string
@@ -896,7 +1363,11 @@ export type Database = {
           creado_en?: string
           dias_seleccion?: number
           direccion?: string | null
+          domingo_tasa?: number
+          hx_tasa_primeras?: number
+          hx_tasa_siguientes?: number
           id?: string
+          jornada_horas?: number
           logo_url?: string | null
           merma_alerta_pct?: number
           moneda?: string
@@ -911,7 +1382,11 @@ export type Database = {
           creado_en?: string
           dias_seleccion?: number
           direccion?: string | null
+          domingo_tasa?: number
+          hx_tasa_primeras?: number
+          hx_tasa_siguientes?: number
           id?: string
+          jornada_horas?: number
           logo_url?: string | null
           merma_alerta_pct?: number
           moneda?: string
@@ -2050,6 +2525,69 @@ export type Database = {
           },
         ]
       }
+      trabajadores: {
+        Row: {
+          cargo: string | null
+          creado_en: string
+          creado_por: string | null
+          dni: string | null
+          empresa_id: string
+          fecha_cese: string | null
+          fecha_ingreso: string
+          id: string
+          motivo_cese: string | null
+          nombre: string
+          notas: string | null
+          sueldo_mensual: number | null
+          telefono: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          dni?: string | null
+          empresa_id: string
+          fecha_cese?: string | null
+          fecha_ingreso: string
+          id?: string
+          motivo_cese?: string | null
+          nombre: string
+          notas?: string | null
+          sueldo_mensual?: number | null
+          telefono?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          dni?: string | null
+          empresa_id?: string
+          fecha_cese?: string | null
+          fecha_ingreso?: string
+          id?: string
+          motivo_cese?: string | null
+          nombre?: string
+          notas?: string | null
+          sueldo_mensual?: number | null
+          telefono?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trabajadores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabajadores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
       traspasos: {
         Row: {
           anulado_en: string | null
@@ -2342,6 +2880,10 @@ export type Database = {
           caja_id: string | null
           clave_idempotencia: string | null
           comprador_id: string
+          comprobante_numero: string | null
+          comprobante_tipo:
+            | Database["public"]["Enums"]["tipo_comprobante"]
+            | null
           comprobante_url: string | null
           confirmado_por: string | null
           creado_en: string
@@ -2366,6 +2908,10 @@ export type Database = {
           caja_id?: string | null
           clave_idempotencia?: string | null
           comprador_id: string
+          comprobante_numero?: string | null
+          comprobante_tipo?:
+            | Database["public"]["Enums"]["tipo_comprobante"]
+            | null
           comprobante_url?: string | null
           confirmado_por?: string | null
           creado_en?: string
@@ -2390,6 +2936,10 @@ export type Database = {
           caja_id?: string | null
           clave_idempotencia?: string | null
           comprador_id?: string
+          comprobante_numero?: string | null
+          comprobante_tipo?:
+            | Database["public"]["Enums"]["tipo_comprobante"]
+            | null
           comprobante_url?: string | null
           confirmado_por?: string | null
           creado_en?: string
@@ -2952,6 +3502,256 @@ export type Database = {
           },
         ]
       }
+      v_credito_cuotas: {
+        Row: {
+          credito_estado: Database["public"]["Enums"]["estado_doc"] | null
+          credito_id: string | null
+          empresa_id: string | null
+          id: string | null
+          monto: number | null
+          numero: number | null
+          pagado: number | null
+          saldo: number | null
+          situacion: string | null
+          tipo: Database["public"]["Enums"]["tipo_credito"] | null
+          vence: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credito_cuotas_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "v_creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
+      v_credito_pagos: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string | null
+          caja_nombre: string | null
+          creado_en: string | null
+          creado_por: string | null
+          creado_por_nombre: string | null
+          credito_id: string | null
+          empresa_id: string | null
+          estado: Database["public"]["Enums"]["estado_doc"] | null
+          fecha: string | null
+          id: string | null
+          medio_id: string | null
+          medio_nombre: string | null
+          medio_pago: Database["public"]["Enums"]["medio_pago"] | null
+          monto: number | null
+          motivo_anulacion: string | null
+          mov_id: string | null
+          nota: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credito_pagos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_credito_id_fkey"
+            columns: ["credito_id"]
+            isOneToOne: false
+            referencedRelation: "v_creditos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_medio_id_fkey"
+            columns: ["medio_id"]
+            isOneToOne: false
+            referencedRelation: "medios_pago"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "v_movimientos_caja"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_creditos: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          compra_id: string | null
+          comprador_id: string | null
+          contraparte: string | null
+          contraparte_doc: string | null
+          creado_en: string | null
+          creado_por: string | null
+          cuotas_pagadas: number | null
+          cuotas_vencidas: number | null
+          dias_atraso: number | null
+          empresa_id: string | null
+          estado: Database["public"]["Enums"]["estado_doc"] | null
+          fecha: string | null
+          frecuencia: string | null
+          id: string | null
+          inicial: number | null
+          monto: number | null
+          monto_vencido: number | null
+          motivo_anulacion: string | null
+          n_cuotas: number | null
+          n_pagos: number | null
+          operacion_numero: number | null
+          pagado: number | null
+          primer_vencimiento: string | null
+          proveedor_id: string | null
+          proxima_numero: number | null
+          proxima_saldo: number | null
+          proxima_vence: string | null
+          saldo: number | null
+          situacion: string | null
+          tipo: Database["public"]["Enums"]["tipo_credito"] | null
+          total_operacion: number | null
+          venta_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creditos_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: true
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: true
+            referencedRelation: "v_compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_comprador_id_fkey"
+            columns: ["comprador_id"]
+            isOneToOne: false
+            referencedRelation: "compradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_comprador_id_fkey"
+            columns: ["comprador_id"]
+            isOneToOne: false
+            referencedRelation: "v_compradores_resumen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "creditos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "v_proveedores_resumen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_proveedor"
+            referencedColumns: ["proveedor_id"]
+          },
+          {
+            foreignKeyName: "creditos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: true
+            referencedRelation: "v_ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: true
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_gastos: {
         Row: {
           anulado_en: string | null
@@ -3161,6 +3961,8 @@ export type Database = {
           aportes: number | null
           caja: number | null
           capital: number | null
+          cuentas_por_cobrar: number | null
+          cuentas_por_pagar: number | null
           empresa_id: string | null
           en_transito: number | null
           ganancia_acumulada: number | null
@@ -3577,6 +4379,75 @@ export type Database = {
           },
         ]
       }
+      v_trabajadores: {
+        Row: {
+          cargo: string | null
+          creado_en: string | null
+          creado_por: string | null
+          dias_en_empresa: number | null
+          dni: string | null
+          empresa_id: string | null
+          fecha_cese: string | null
+          fecha_ingreso: string | null
+          id: string | null
+          motivo_cese: string | null
+          nombre: string | null
+          notas: string | null
+          situacion: string | null
+          sueldo_mensual: number | null
+          telefono: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          creado_en?: string | null
+          creado_por?: string | null
+          dias_en_empresa?: never
+          dni?: string | null
+          empresa_id?: string | null
+          fecha_cese?: string | null
+          fecha_ingreso?: string | null
+          id?: string | null
+          motivo_cese?: string | null
+          nombre?: string | null
+          notas?: string | null
+          situacion?: never
+          sueldo_mensual?: number | null
+          telefono?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          creado_en?: string | null
+          creado_por?: string | null
+          dias_en_empresa?: never
+          dni?: string | null
+          empresa_id?: string | null
+          fecha_cese?: string | null
+          fecha_ingreso?: string | null
+          id?: string | null
+          motivo_cese?: string | null
+          nombre?: string | null
+          notas?: string | null
+          situacion?: never
+          sueldo_mensual?: number | null
+          telefono?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trabajadores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabajadores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
       v_turnos_caja: {
         Row: {
           abierto_en: string | null
@@ -3753,6 +4624,10 @@ export type Database = {
           comprador_id: string | null
           comprador_nombre: string | null
           comprador_ruc: string | null
+          comprobante_numero: string | null
+          comprobante_tipo:
+            | Database["public"]["Enums"]["tipo_comprobante"]
+            | null
           comprobante_url: string | null
           confirmado_por: string | null
           costo_total: number | null
@@ -3836,12 +4711,31 @@ export type Database = {
       }
     }
     Functions: {
+      _crear_credito: {
+        Args: {
+          p_compra: string
+          p_comprador: string
+          p_empresa: string
+          p_fecha: string
+          p_inicial: number
+          p_monto: number
+          p_plan: Json
+          p_proveedor: string
+          p_tipo: Database["public"]["Enums"]["tipo_credito"]
+          p_venta: string
+        }
+        Returns: string
+      }
       _fecha_operacion: {
         Args: {
           p_fecha: string
           p_rol: Database["public"]["Enums"]["rol_miembro"]
         }
         Returns: string
+      }
+      _inicial_credito: {
+        Args: { p_plan: Json; p_total: number }
+        Returns: number
       }
       _medio_pago: {
         Args: { p_empresa: string; p_medio: string }
@@ -3876,6 +4770,7 @@ export type Database = {
         }
         Returns: string
       }
+      _plan_cuotas: { Args: { p_credito: string }; Returns: undefined }
       _precio_sugerido: {
         Args: {
           p_clase: string
@@ -3980,6 +4875,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      _validar_comprobante_venta: {
+        Args: {
+          p_comprador: string
+          p_numero: string
+          p_tipo: Database["public"]["Enums"]["tipo_comprobante"]
+          p_venta?: string
+        }
+        Returns: string
+      }
       abrir_caja: {
         Args: {
           p_caja: string
@@ -3995,6 +4899,8 @@ export type Database = {
       }
       actualizar_venta_guia: {
         Args: {
+          p_comprobante_numero?: string
+          p_comprobante_tipo?: Database["public"]["Enums"]["tipo_comprobante"]
           p_comprobante_url: string
           p_guia_numero: string
           p_guia_url: string
@@ -4038,6 +4944,10 @@ export type Database = {
         Args: { p_gasto: string; p_motivo: string }
         Returns: undefined
       }
+      anular_pago_credito: {
+        Args: { p_motivo: string; p_pago: string }
+        Returns: undefined
+      }
       anular_seleccion: {
         Args: { p_motivo: string; p_seleccion: string }
         Returns: undefined
@@ -4049,6 +4959,16 @@ export type Database = {
       anular_venta: {
         Args: { p_motivo: string; p_venta: string }
         Returns: undefined
+      }
+      aprobar_horas_extra: {
+        Args: {
+          p_desde: string
+          p_empresa: string
+          p_hasta: string
+          p_trabajador?: string
+          p_visto_en?: string
+        }
+        Returns: number
       }
       cerrar_caja: {
         Args: {
@@ -4080,6 +5000,7 @@ export type Database = {
         Args: {
           p_caja?: string
           p_comprobante_url?: string
+          p_credito?: Json
           p_fecha?: string
           p_items: Json
           p_medio?: string
@@ -4109,6 +5030,10 @@ export type Database = {
           p_roles: Database["public"]["Enums"]["rol_miembro"][]
         }
         Returns: Database["public"]["Enums"]["rol_miembro"]
+      }
+      guardar_asistencia: {
+        Args: { p_empresa: string; p_fecha: string; p_filas: Json }
+        Returns: number
       }
       mi_rol: {
         Args: { p_empresa: string }
@@ -4231,6 +5156,7 @@ export type Database = {
           p_aplicar_saldo?: boolean
           p_caja?: string
           p_clave?: string
+          p_credito?: Json
           p_empresa: string
           p_fecha?: string
           p_foto_ticket_url?: string
@@ -4277,6 +5203,18 @@ export type Database = {
         Args: { p_compra: string; p_lineas?: Json; p_motivo?: string }
         Returns: Json
       }
+      registrar_pago_credito: {
+        Args: {
+          p_caja?: string
+          p_clave?: string
+          p_credito: string
+          p_fecha?: string
+          p_medio?: string
+          p_monto: number
+          p_nota?: string
+        }
+        Returns: Json
+      }
       registrar_seleccion: {
         Args: {
           p_cobrar?: boolean
@@ -4302,7 +5240,10 @@ export type Database = {
           p_caja?: string
           p_clave?: string
           p_comprador: string
+          p_comprobante_numero?: string
+          p_comprobante_tipo?: Database["public"]["Enums"]["tipo_comprobante"]
           p_comprobante_url?: string
+          p_credito?: Json
           p_empresa: string
           p_fecha?: string
           p_guia_numero?: string
@@ -4319,6 +5260,31 @@ export type Database = {
       resumen_metal: {
         Args: { p_desde: string; p_hasta: string; p_metal: string }
         Returns: Json
+      }
+      resumen_personal: {
+        Args: { p_desde: string; p_empresa: string; p_hasta: string }
+        Returns: {
+          asistencias: number
+          cargo: string
+          descansos: number
+          dias_por_marcar: number
+          domingos_trabajados: number
+          faltas: number
+          horas_25: number
+          horas_35: number
+          horas_aprobadas: number
+          horas_extra: number
+          horas_pendientes: number
+          monto_domingos: number
+          monto_horas: number
+          monto_total: number
+          nombre: string
+          permisos: number
+          situacion: string
+          sueldo_mensual: number
+          trabajador_id: string
+          vacaciones: number
+        }[]
       }
       resumen_turno: { Args: { p_turno: string }; Returns: Json }
       resumen_ventas: { Args: { p_empresa: string }; Returns: Json }
@@ -4447,6 +5413,12 @@ export type Database = {
       uso_consultas_doc: { Args: { p_empresa: string }; Returns: Json }
     }
     Enums: {
+      estado_asistencia:
+        | "asistio"
+        | "falta"
+        | "descanso"
+        | "permiso"
+        | "vacaciones"
       estado_cierre: "cerrado" | "reabierto"
       estado_doc: "registrada" | "anulada"
       estado_venta: "pendiente" | "confirmada" | "anulada"
@@ -4464,6 +5436,8 @@ export type Database = {
       tipo_ajuste: "conteo" | "merma" | "reclasificacion" | "otro"
       tipo_aporte: "aporte" | "retiro"
       tipo_caja: "efectivo" | "banco" | "billetera"
+      tipo_comprobante: "factura" | "boleta" | "nota_venta"
+      tipo_credito: "por_pagar" | "por_cobrar"
       tipo_doc: "DNI" | "RUC" | "CE" | "SIN_DOC"
       tipo_kardex: "compra" | "venta" | "ajuste" | "descuento" | "traslado"
       tipo_mov_caja: "ingreso" | "egreso"
@@ -4594,6 +5568,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      estado_asistencia: [
+        "asistio",
+        "falta",
+        "descanso",
+        "permiso",
+        "vacaciones",
+      ],
       estado_cierre: ["cerrado", "reabierto"],
       estado_doc: ["registrada", "anulada"],
       estado_venta: ["pendiente", "confirmada", "anulada"],
@@ -4612,6 +5593,8 @@ export const Constants = {
       tipo_ajuste: ["conteo", "merma", "reclasificacion", "otro"],
       tipo_aporte: ["aporte", "retiro"],
       tipo_caja: ["efectivo", "banco", "billetera"],
+      tipo_comprobante: ["factura", "boleta", "nota_venta"],
+      tipo_credito: ["por_pagar", "por_cobrar"],
       tipo_doc: ["DNI", "RUC", "CE", "SIN_DOC"],
       tipo_kardex: ["compra", "venta", "ajuste", "descuento", "traslado"],
       tipo_mov_caja: ["ingreso", "egreso"],

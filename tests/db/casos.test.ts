@@ -455,6 +455,242 @@ describe("Reunión 23/10 · jerarquía, mayorista, merma, corrección y limpieza
     await expect(como(db, ADMIN_A, (tx) => tx.query(`select registrar_venta($1, $2, $3::jsonb)`,
       [empA, comprador, JSON.stringify([{ metal_id: chatarra, peso_salida_kg: "9999" }])]))).rejects.toThrow(/Stock insuficiente/);
   });
+
+  it("comprobante de la venta: factura solo con RUC, se ve en v_ventas y se completa después", async () => {
+    const items = JSON.stringify([{ metal_id: chatarra, peso_salida_kg: "1" }]);
+    const v = await como(db, DUENO_A, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'factura', p_comprobante_numero => ' f001-000123 ') as r`,
+      [empA, comprador, items])).then((x) => x.r);
+    const vv = await como(db, DUENO_A, (tx) => uno<{ comprobante_tipo: string; comprobante_numero: string }>(tx,
+      `select comprobante_tipo, comprobante_numero from v_ventas where id = $1`, [v.id]));
+    expect(vv).toEqual({ comprobante_tipo: "factura", comprobante_numero: "F001-000123" });
+
+    const sinRuc = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into compradores (empresa_id, razon_social) values ($1, 'Juan Pérez') returning id`, [empA])).then((x) => x.id);
+    await expect(como(db, DUENO_A, (tx) => tx.query(
+      `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'factura')`, [empA, sinRuc, items])))
+      .rejects.toThrow(/debe tener RUC/);
+
+    // Boleta al cliente sin RUC; luego Almacén completa la serie-número desde el detalle
+    const b = await como(db, DUENO_A, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'boleta') as r`, [empA, sinRuc, items])).then((x) => x.r);
+    await como(db, CAJERO_A, (tx) => tx.query(
+      `select actualizar_venta_guia($1, null, null, null, null, 'boleta', 'b001-45')`, [b.id]));
+    const bb = await como(db, DUENO_A, (tx) => uno<{ comprobante_numero: string }>(tx,
+      `select comprobante_numero from ventas where id = $1`, [b.id]));
+    expect(bb.comprobante_numero).toBe("B001-45");
+    // La misma serie-número no se repite en otra venta vigente; volver a guardar la propia sí se puede
+    await expect(como(db, DUENO_A, (tx) => tx.query(
+      `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'boleta', p_comprobante_numero => 'B001-45')`,
+      [empA, sinRuc, items]))).rejects.toThrow(/ya está registrado en la venta/);
+    await como(db, DUENO_A, (tx) => tx.query(
+      `select actualizar_venta_guia($1, 'T001-9', null, null, null, 'boleta', 'B001-45')`, [b.id]));
+    await expect(como(db, DUENO_A, (tx) => tx.query(
+      `select actualizar_venta_guia($1, null, null, null, null, 'factura', null)`, [b.id]))).rejects.toThrow(/debe tener RUC/);
+  });
+});
+
+describe("Créditos (compras y ventas en cuotas)", () => {
+  let prov: string;
+  const credito = (where: string, id: string) => como(db, DUENO_A, (tx) => uno<Record<string, string>>(tx,
+    `select * from v_creditos where ${where} = $1`, [id]));
+  const cuotas = (id: string) => como(db, DUENO_A, (tx) => tx.query<{ numero: number; monto: string; pagado: string; situacion: string; vence: string }>(
+    `select numero, monto, pagado, situacion, vence::text from v_credito_cuotas where credito_id = $1 order by numero`, [id])).then((r) => r.rows);
+  const compraCredito = (metal: string, bruto: string, precio: string, plan: object, proveedor: string | null = prov) =>
+    como(db, DUENO_A, (tx) => uno<{ r: { id: string; credito_id: string } }>(tx,
+      `select registrar_compra($1, $2::jsonb, $3, p_proveedor => $4, p_credito => $5::jsonb) as r`,
+      [empA, JSON.stringify([{ metal_id: metal, peso_bruto_kg: bruto, descuento_kg: "0", precio_kg: precio }]), caja, proveedor,
+        JSON.stringify(plan)])).then((x) => x.r);
+
+  beforeAll(async () => {
+    prov = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into proveedores (empresa_id, tipo_doc, nro_doc, nombre) values ($1, 'DNI', '45678912', 'Prov Crédito') returning id`,
+      [empA])).then((x) => x.id);
+  });
+
+  it("compra a crédito: solo la inicial sale de caja, el resto queda en cuotas por pagar", async () => {
+    const c0 = await saldoCaja();
+    const s0 = num((await stock(cobre)).kg);
+    const r = await compraCredito(cobre, "10", "30", { cuotas: 3, frecuencia: "mensual", inicial: "60" });
+    expect(await saldoCaja()).toBeCloseTo(c0 - 60, 2);
+    expect(num((await stock(cobre)).kg)).toBe(s0 + 10);
+    const cr = await credito("compra_id", r.id);
+    expect(cr.tipo).toBe("por_pagar");
+    expect(num(cr.saldo)).toBe(240);
+    expect(cr.situacion).toBe("al_dia");
+    const q = await cuotas(r.credito_id);
+    expect(q.map((x) => num(x.monto))).toEqual([80, 80, 80]);
+    // Cuotas mensuales desde el primer vencimiento
+    expect(new Date(q[1].vence).getUTCMonth()).toBe((new Date(q[0].vence).getUTCMonth() + 1) % 12);
+
+    // Cuotas desiguales: la última absorbe los céntimos
+    const r2 = await compraCredito(bronce, "5", "20", { cuotas: 3, frecuencia: "semanal" });
+    expect((await cuotas(r2.credito_id)).map((x) => num(x.monto))).toEqual([33.33, 33.33, 33.34]);
+
+    await expect(compraCredito(cobre, "1", "30", { cuotas: 2 }, null)).rejects.toThrow(/elija al proveedor/);
+    await expect(compraCredito(cobre, "1", "30", { cuotas: 1, inicial: "30" })).rejects.toThrow(/inicial debe ser menor/);
+  });
+
+  it("pagos: se aplican a las cuotas en orden, mueven caja y no pasan del saldo; anular devuelve todo", async () => {
+    const r = await compraCredito(cobre, "4", "30", { cuotas: 2, frecuencia: "quincenal" });   // 120 → 60 + 60
+    const c0 = await saldoCaja();
+    await como(db, CAJERO_A, (tx) => tx.query(`select registrar_pago_credito($1, 90, p_caja => $2)`, [r.credito_id, caja]));
+    expect(await saldoCaja()).toBeCloseTo(c0 - 90, 2);
+    const q = await cuotas(r.credito_id);
+    expect(q.map((x) => [num(x.pagado), x.situacion])).toEqual([[60, "pagada"], [30, "parcial"]]);
+    expect(num((await credito("compra_id", r.id)).saldo)).toBe(30);
+
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select registrar_pago_credito($1, 31, p_caja => $2)`, [r.credito_id, caja])))
+      .rejects.toThrow(/mayor a lo que falta/);
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select anular_compra($1, 'prueba')`, [r.id])))
+      .rejects.toThrow(/Anule primero esos pagos/);
+
+    const pago = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx, `select id from credito_pagos where credito_id = $1`, [r.credito_id]));
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select anular_pago_credito($1, 'error')`, [pago.id]))).rejects.toThrow();
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_pago_credito($1, 'Pago duplicado')`, [pago.id]));
+    expect(await saldoCaja()).toBeCloseTo(c0, 2);
+    expect(num((await credito("compra_id", r.id)).saldo)).toBe(120);
+
+    // Sin pagos ya se puede anular: el crédito queda anulado con la compra
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_compra($1, 'Prueba de crédito')`, [r.id]));
+    expect((await credito("compra_id", r.id)).situacion).toBe("anulado");
+  });
+
+  it("corregir una compra a crédito rehace las cuotas y no mueve caja", async () => {
+    const r = await compraCredito(cobre, "10", "30", { cuotas: 2, inicial: "100" });          // 300 − 100 = 200
+    const item = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx, `select id from compra_items where compra_id = $1`, [r.id]));
+    const c0 = await saldoCaja();
+    await como(db, DUENO_A, (tx) => tx.query(`select corregir_compra($1, $2::jsonb, 'Peso mal digitado')`,
+      [r.id, JSON.stringify([{ item_id: item.id, peso_bruto_kg: "12" }])]));                  // 360 − 100 = 260
+    expect(await saldoCaja()).toBeCloseTo(c0, 2);
+    expect((await cuotas(r.credito_id)).map((x) => num(x.monto))).toEqual([130, 130]);
+  });
+
+  it("venta a crédito: se cobra en cuotas; sin pesaje del comprador no se puede dar a crédito", async () => {
+    const items = (recibido = true) => JSON.stringify([{ metal_id: cobre, peso_salida_kg: "2",
+      ...(recibido ? { peso_recibido_kg: "2", precio_kg: "34" } : {}) }]);
+    const c0 = await saldoCaja();
+    const v = await como(db, DUENO_A, (tx) => uno<{ r: { id: string; estado: string } }>(tx,
+      `select registrar_venta($1, $2, $3::jsonb, p_caja => $4, p_credito => $5::jsonb) as r`,
+      [empA, comprador, items(), caja, JSON.stringify({ cuotas: 2, frecuencia: "quincenal" })])).then((x) => x.r);
+    expect(v.estado).toBe("confirmada");
+    expect(await saldoCaja()).toBeCloseTo(c0, 2);
+    const cr = await credito("venta_id", v.id);
+    expect([cr.tipo, num(cr.saldo), num(cr.n_cuotas)]).toEqual(["por_cobrar", 68, 2]);
+
+    await como(db, DUENO_A, (tx) => tx.query(`select registrar_pago_credito($1, 68, p_caja => $2)`, [cr.id, caja]));
+    expect(await saldoCaja()).toBeCloseTo(c0 + 68, 2);
+    expect((await credito("venta_id", v.id)).situacion).toBe("pagado");
+
+    await expect(como(db, DUENO_A, (tx) => tx.query(
+      `select registrar_venta($1, $2, $3::jsonb, p_caja => $4, p_credito => '{"cuotas": 1}'::jsonb)`,
+      [empA, comprador, items(false), caja]))).rejects.toThrow(/Para vender a crédito/);
+  });
+
+  it("pagos: idempotentes, nunca antes de la operación, aparte en el turno; corregir no cambia el patrimonio pasado", async () => {
+    const r = await compraCredito(cobre, "5", "30", { cuotas: 3, frecuencia: "semanal" });   // 150
+    const clave = "aaaaaaaa-0000-4000-8000-000000000001";
+    for (let i = 0; i < 2; i++) {
+      await como(db, DUENO_A, (tx) => tx.query(`select registrar_pago_credito($1, 50, p_caja => $2, p_clave => $3)`, [r.credito_id, caja, clave]));
+    }
+    expect(num((await credito("compra_id", r.id)).saldo)).toBe(100);
+    await expect(como(db, DUENO_A, (tx) => tx.query(
+      `select registrar_pago_credito($1, 10, p_caja => $2, p_fecha => now() - interval '3 days')`, [r.credito_id, caja])))
+      .rejects.toThrow(/anterior a la operación/);
+
+    // El pago sale como «pago_credito» en el resumen del turno de caja
+    const turno = await como(db, DUENO_A, (tx) => uno<{ r: { id: string } }>(tx, `select abrir_caja($1, $2, 0) as r`, [empA, caja])).then((x) => x.r.id);
+    await como(db, DUENO_A, (tx) => tx.query(`select registrar_pago_credito($1, 20, p_caja => $2)`, [r.credito_id, caja]));
+    const res = await como(db, DUENO_A, (tx) => uno<{ r: { detalle: { origen: string; monto: number }[] } }>(tx,
+      `select resumen_turno($1) as r`, [turno])).then((x) => x.r);
+    expect(res.detalle.some((d) => d.origen === "pago_credito")).toBe(true);
+    await como(db, DUENO_A, (tx) => tx.query(`select cerrar_caja($1, 0)`, [turno]));
+
+    // Anular el pago para poder corregir; el patrimonio a una fecha anterior no cambia con la corrección
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_pago_credito(id, 'prueba') from credito_pagos where credito_id = $1 and estado = 'registrada'`, [r.credito_id]));
+    const t0 = await como(db, DUENO_A, (tx) => uno<{ t: string }>(tx, `select clock_timestamp()::text t`)).then((x) => x.t);
+    const antes = await como(db, DUENO_A, (tx) => uno<{ p: Record<string, number> }>(tx, `select patrimonio_al($1, $2::timestamptz) p`, [empA, t0]));
+    const item = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx, `select id from compra_items where compra_id = $1`, [r.id]));
+    await como(db, DUENO_A, (tx) => tx.query(`select corregir_compra($1, $2::jsonb, 'Peso')`,
+      [r.id, JSON.stringify([{ item_id: item.id, peso_bruto_kg: "7" }])]));
+    const despues = await como(db, DUENO_A, (tx) => uno<{ p: Record<string, number> }>(tx, `select patrimonio_al($1, $2::timestamptz) p`, [empA, t0]));
+    expect(num(despues.p.cuentas_por_pagar)).toBe(num(antes.p.cuentas_por_pagar));
+    expect(num(despues.p.ganancia_acumulada)).toBe(num(antes.p.ganancia_acumulada));
+  });
+
+  it("patrimonio: las cuentas por cobrar y por pagar son el saldo de los créditos vigentes", async () => {
+    const r = await como(db, DUENO_A, async (tx) => ({
+      p: await uno<Record<string, string>>(tx, `select * from v_patrimonio where empresa_id = $1`, [empA]),
+      c: await uno<{ cxc: string; cxp: string }>(tx, `select
+           coalesce(sum(saldo) filter (where tipo = 'por_cobrar' and estado = 'registrada'), 0) cxc,
+           coalesce(sum(saldo) filter (where tipo = 'por_pagar' and estado = 'registrada'), 0) cxp
+         from v_creditos where empresa_id = $1`, [empA]),
+    }));
+    expect(num(r.p.cuentas_por_cobrar)).toBeCloseTo(num(r.c.cxc), 2);
+    expect(num(r.p.cuentas_por_pagar)).toBeCloseTo(num(r.c.cxp), 2);
+    expect(num(r.p.cuentas_por_pagar)).toBeGreaterThan(0);
+    // El inicio (dashboard) trae lo mismo
+    const d = await como(db, DUENO_A, (tx) => uno<{ d: Record<string, string> }>(tx, `select dashboard($1) d`, [empA]));
+    expect(num(d.d.cuentas_por_pagar)).toBeCloseTo(num(r.p.cuentas_por_pagar), 2);
+    expect(num(d.d.cuentas_por_cobrar)).toBeCloseTo(num(r.p.cuentas_por_cobrar), 2);
+  });
+});
+
+describe("Personal: ingreso, cese, asistencia, domingos y horas extras", () => {
+  it("registra asistencia, cuenta domingos, separa horas al 25 % y 35 % y solo paga las aprobadas", async () => {
+    // Semana del lunes 2026-10-05 al domingo 2026-10-11; sueldo 2400 → valor hora 2400/30/8 = 10
+    const trab = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into trabajadores (empresa_id, nombre, dni, cargo, fecha_ingreso, sueldo_mensual)
+       values ($1, 'Juan Pérez', '40000001', 'Balanza', '2026-10-01', 2400) returning id`, [empA])).then((x) => x.id);
+    const cesado = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into trabajadores (empresa_id, nombre, fecha_ingreso, fecha_cese, motivo_cese)
+       values ($1, 'Pedro Cesado', '2026-01-10', '2026-10-06', 'Renuncia') returning id`, [empA])).then((x) => x.id);
+    const marcar = (fecha: string, filas: object[], user = DUENO_A) => como(db, user, (tx) =>
+      tx.query(`select guardar_asistencia($1, $2::date, $3::jsonb)`, [empA, fecha, JSON.stringify(filas)]));
+
+    await marcar("2026-10-05", [{ trabajador_id: trab, estado: "asistio", entrada: "08:00", salida: "20:00", horas_extra: "3" },
+      { trabajador_id: cesado, estado: "asistio" }]);
+    await marcar("2026-10-06", [{ trabajador_id: trab, estado: "falta", horas_extra: "5" }]);       // falta: sin horas extras
+    await marcar("2026-10-11", [{ trabajador_id: trab, estado: "asistio", horas_extra: "1" }]);     // domingo trabajado
+    await expect(marcar("2026-10-07", [{ trabajador_id: cesado, estado: "asistio" }])).rejects.toThrow(/no trabajaba/);
+    await expect(marcar("2026-10-07", [{ trabajador_id: trab, estado: "asistio" }], CAJERO_A)).rejects.toThrow();
+    await expect(marcar("2999-01-01", [{ trabajador_id: trab, estado: "asistio" }])).rejects.toThrow(/futuros/);
+
+    type Fila = Record<string, string | number | null>;
+    const resumen = () => como(db, DUENO_A, (tx) => tx.query<Fila>(
+      `select * from resumen_personal($1, '2026-10-05', '2026-10-11')`, [empA])).then((r) => r.rows);
+    let juan = (await resumen()).find((r) => r.trabajador_id === trab)!;
+    expect([juan.asistencias, juan.faltas, juan.domingos_trabajados, num(juan.horas_extra), num(juan.horas_pendientes)])
+      .toEqual([2, 1, 1, 4, 4]);
+    expect(juan.dias_por_marcar).toBe(4);                 // mar–sáb sin marcar: 7, 8, 9, 10 (el 6 es falta)
+    expect(num(juan.monto_horas)).toBe(0);                // nada aprobado todavía
+    expect(num(juan.monto_domingos)).toBe(80);            // 10 × 8 h × 100 %
+
+    // Gerencia aprueba; Administración no puede
+    await expect(como(db, "55555555-5555-5555-5555-555555555555", (tx) => tx.query(`select aprobar_horas_extra($1, '2026-10-05', '2026-10-11')`, [empA]))).rejects.toThrow();
+    await como(db, DUENO_A, (tx) => tx.query(`select aprobar_horas_extra($1, '2026-10-05', '2026-10-11', $2)`, [empA, trab]));
+    juan = (await resumen()).find((r) => r.trabajador_id === trab)!;
+    // Lunes 3 h → 2 al 25 % + 1 al 35 %; domingo 1 h al 25 %  ⇒ 3 h×12.5 + 1 h×13.5 = 51
+    expect([num(juan.horas_25), num(juan.horas_35), num(juan.monto_horas), num(juan.monto_total)]).toEqual([3, 1, 51, 131]);
+
+    // Si cambian las horas, vuelven a quedar por aprobar
+    await marcar("2026-10-05", [{ trabajador_id: trab, estado: "asistio", horas_extra: "2" }]);
+    juan = (await resumen()).find((r) => r.trabajador_id === trab)!;
+    expect(num(juan.horas_pendientes)).toBe(2);
+
+    const pedro = (await resumen()).find((r) => r.trabajador_id === cesado)!;
+    expect([pedro.situacion, pedro.dias_por_marcar]).toEqual(["cesado", 1]);  // trabajó 5 y 6; falta marcar el 6
+    // No se puede adelantar el cese dejando asistencias fuera del periodo
+    await expect(como(db, DUENO_A, (tx) => tx.query(`update trabajadores set fecha_cese = '2026-10-04' where id = $1`, [cesado])))
+      .rejects.toThrow(/fuera de esas fechas/);
+    // Aprobar solo lo visto: con una hora anterior al último cambio no aprueba nada
+    const n = await como(db, DUENO_A, (tx) => uno<{ n: number }>(tx,
+      `select aprobar_horas_extra($1, '2026-10-05', '2026-10-11', $2, now() - interval '1 hour') n`, [empA, trab]));
+    expect(n.n).toBe(0);
+    // El cajero (Almacén) no ve sueldos ni asistencia
+    const vistos = await como(db, CAJERO_A, (tx) => tx.query(`select * from trabajadores`)).then((r) => r.rows);
+    expect(vistos).toHaveLength(0);
+  });
 });
 
 describe("Patrimonio y resultado", () => {

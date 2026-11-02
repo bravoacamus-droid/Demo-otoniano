@@ -10,6 +10,7 @@ import { Pestanas } from "@/components/ui/pestanas";
 import { TablaDatos } from "@/components/ui/tabla";
 import type { Comprador } from "@/lib/tipos";
 import { EditarComprador } from "../form-comprador";
+import { textoComprobante } from "@/lib/comprobantes";
 
 type PorMetal = {
   metal_id: string; metal: string; color: string | null; kg: number; importe: number; precio_promedio: number | null;
@@ -45,6 +46,7 @@ export default async function CompradorDetalle({
         columnas={[
           { titulo: "N°", principal: true, celda: (v) => `#${v.numero}` },
           { titulo: "Fecha", celda: (v) => fechaHora(v.fecha) },
+          { titulo: "Comprobante", celda: (v) => textoComprobante(v.comprobante_tipo, v.comprobante_numero) },
           { titulo: "Productos", celda: (v) => v.metales },
           { titulo: "Salida", alinear: "der", celda: (v) => <span className="cifra">{kg(v.kg_salida)}</span> },
           { titulo: "Merma", alinear: "der", celda: (v) => v.merma_kg === null ? "—" : <span className="cifra">{kg(v.merma_kg)}</span> },

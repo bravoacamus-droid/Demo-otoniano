@@ -19,6 +19,11 @@ export interface Empresa {
   dias_seleccion: number;
   /** % de merma de limpieza desde el cual se marca para revisión de Gerencia */
   merma_alerta_pct: string;
+  /** Personal: jornada diaria y sobretasas de horas extras y domingo trabajado ([CONFIRMAR], configurables) */
+  jornada_horas: string;
+  hx_tasa_primeras: string;
+  hx_tasa_siguientes: string;
+  domingo_tasa: string;
 }
 
 /** Producto (la tabla se llama metales): un nodo de la jerarquía familia → producto → variante… */

@@ -1,5 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { ETIQUETA_MEDIO, kg, soles } from "@/lib/formato";
+import { textoComprobante, type TipoComprobante } from "@/lib/comprobantes";
 import { BandaMarca, CEBRA, MARCA, MARCA_OSCURO, fechaHoraLima, PieMarca, TINTE, type EmpresaPdf } from "./marca";
 
 // Comprobante interno A4 de una compra o una venta, con la marca de la empresa (como el valorizado).
@@ -188,6 +189,7 @@ export function datosVenta(base: EmpresaLogo, v: {
   numero: number; fecha: string; fecha_confirmacion: string | null; estado: string; total: Num; kg_salida: Num; kg_recibido: Num; merma_kg: Num;
   medio_pago: string | null; caja_nombre: string | null; comprador_nombre: string | null; comprador_ruc: string | null; guia_numero: string | null; notas: string | null;
   medio_nombre?: string | null;
+  comprobante_tipo?: TipoComprobante | null; comprobante_numero?: string | null;
 }, items: { metal_nombre: string; metal_color: string | null; peso_salida_kg: Num; peso_recibido_kg: Num; merma_kg: Num; precio_kg: Num; importe: Num }[]): DatosComprobante {
   const pendiente = v.estado === "pendiente";
   const guion = (x: Num, f: (y: Num) => string) => (x === null || x === undefined ? "-" : f(x));
@@ -198,8 +200,8 @@ export function datosVenta(base: EmpresaLogo, v: {
     fecha: v.fecha,
     anulada: v.estado === "anulada",
     datos: [
-      { titulo: "Comprador", valor: v.comprador_nombre ?? "-", lineas: [v.comprador_ruc && `RUC ${v.comprador_ruc}`] },
-      { titulo: "Guía de traslado", valor: v.guia_numero ?? "Sin guía", lineas: [`Salida: ${fechaHoraLima(v.fecha)}`] },
+      { titulo: "Comprador", valor: v.comprador_nombre ?? "-", lineas: [v.comprador_ruc && `RUC ${v.comprador_ruc}`, v.comprobante_tipo && textoComprobante(v.comprobante_tipo, v.comprobante_numero, false)] },
+      { titulo: "Guía de remisión", valor: v.guia_numero ?? "Sin guía", lineas: [`Salida: ${fechaHoraLima(v.fecha)}`] },
       pendiente
         ? { titulo: "Estado", valor: "Pendiente de pesaje", lineas: ["Falta el peso y precio del comprador"] }
         : {

@@ -45,6 +45,16 @@ export default async function ConfiguracionPage() {
               <Campo etiqueta="Merma alta desde (%)" ayuda="Una limpieza con más merma que este % se marca en rojo para que Gerencia la revise.">
                 <InputNumero name="merma_alerta_pct" defaultValue={String(Number(empresa.merma_alerta_pct ?? 5))} />
               </Campo>
+              <fieldset className="rounded-lg border border-stone-200 p-3">
+                <legend className="px-1 text-sm font-medium text-stone-700">Personal: horas extras y domingos</legend>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Campo etiqueta="Jornada diaria (horas)"><InputNumero name="jornada_horas" min={1} max={24} step={0.5} defaultValue={String(Number(empresa.jornada_horas ?? 8))} /></Campo>
+                  <Campo etiqueta="2 primeras horas extras (+%)"><InputNumero name="hx_tasa_primeras" min={0} max={300} defaultValue={String(Number(empresa.hx_tasa_primeras ?? 25))} /></Campo>
+                  <Campo etiqueta="Horas extras siguientes (+%)"><InputNumero name="hx_tasa_siguientes" min={0} max={300} defaultValue={String(Number(empresa.hx_tasa_siguientes ?? 35))} /></Campo>
+                  <Campo etiqueta="Domingo trabajado (+% del día)"><InputNumero name="domingo_tasa" min={0} max={300} defaultValue={String(Number(empresa.domingo_tasa ?? 100))} /></Campo>
+                </div>
+                <p className="mt-2 text-xs text-stone-500">Valores de ley usuales en Perú (25 %, 35 % y 100 % sin descanso sustitutorio). Confírmelos con su contador.</p>
+              </fieldset>
               <Campo etiqueta="Exigir DNI/RUC desde (S/)" ayuda="Vacío = nunca obligatorio. Por confirmar con el cliente.">
                 <InputNumero name="monto_doc_obligatorio" defaultValue={empresa.monto_doc_obligatorio ?? ""} />
               </Campo>

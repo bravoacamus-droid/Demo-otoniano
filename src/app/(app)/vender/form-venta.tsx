@@ -1,16 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileUp, Plus, Trash2 } from "lucide-react";
+import { FileUp, Trash2 } from "lucide-react";
 import { Campo, Input, InputNumero, Select, Textarea } from "@/components/ui/campos";
-import { Aviso, PuntoMetal, Tarjeta } from "@/components/ui/basicos";
+import { Aviso, Tarjeta } from "@/components/ui/basicos";
+import { cx } from "@/components/ui/clases";
+import { SelectorCliente } from "@/components/selector-cliente";
+import { SelectorProducto, partesRuta } from "@/components/selector-producto";
 import { Boton } from "@/components/ui/boton";
 import { aCentimos, aGramos, centimosASoles, gramosAKg, importeCentimos, normalizar } from "@/lib/montos";
 import { kg, soles } from "@/lib/formato";
 import { subirArchivo } from "@/lib/archivos";
-import type { Caja, Comprador, MedioPagoConf } from "@/lib/tipos";
+import type { Caja, Comprador, MedioPagoConf, Producto } from "@/lib/tipos";
+import { COMPROBANTES, TIPOS_COMPROBANTE, comprobanteSugerido, type TipoComprobante } from "@/lib/comprobantes";
 import { registrarVenta } from "../ventas/acciones";
+import { FormaPago, errorPlan, type PlanCredito } from "@/components/plan-credito";
 
 export interface MetalConStock {
   metal_id: string;
@@ -35,16 +40,29 @@ interface Linea {
 }
 
 export function FormVenta({
-  empresaId, metales, compradores, cajas, medios, verCostos,
-}: { empresaId: string; metales: MetalConStock[]; compradores: Comprador[]; cajas: Caja[]; medios: MedioPagoConf[]; verCostos: boolean }) {
+  empresaId, metales, productos, compradores, cajas, medios, verCostos,
+}: {
+  empresaId: string; metales: MetalConStock[];
+  /** Árbol de productos con stock (en el producto o en sus variantes), para el selector */
+  productos: Producto[];
+  compradores: Comprador[]; cajas: Caja[]; medios: MedioPagoConf[]; verCostos: boolean;
+}) {
   const router = useRouter();
   const [clave] = useState(() => crypto.randomUUID());
-  const [compradorId, setCompradorId] = useState(compradores[0]?.id ?? "");
+  const [compradorId, setCompradorId] = useState("");
+  const comprador = compradores.find((c) => c.id === compradorId) ?? null;
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [confirmarYa, setConfirmarYa] = useState(false);
   const medioInicial = medios.find((m) => m.tipo === "transferencia") ?? medios[0] ?? null;
   const [medioId, setMedioId] = useState(medioInicial?.id ?? "");
   const [cajaId, setCajaId] = useState(() => medioInicial?.caja_id ?? cajas.find((c) => c.tipo === "banco")?.id ?? cajas[0]?.id ?? "");
+  // Comprobante: se sugiere según el cliente (RUC → factura) hasta que se elija a mano
+  const [tipoElegido, setTipoElegido] = useState<TipoComprobante | null>(null);
+  const tipoCp = tipoElegido ?? comprobanteSugerido(comprador?.ruc);
+  const [numeroCp, setNumeroCp] = useState("");
+  // Cobro al contado (null) o a crédito: se decide al confirmar el pesaje del comprador
+  const [plan, setPlan] = useState<PlanCredito | null>(null);
+  const sinDineroAhora = !!plan && aCentimos(plan.inicial || "0") === 0;
   const [guiaNumero, setGuiaNumero] = useState("");
   const [guia, setGuia] = useState<File | null>(null);
   const [notas, setNotas] = useState("");
@@ -52,12 +70,43 @@ export function FormVenta({
   const [guardando, setGuardando] = useState(false);
 
   const metal = (id: string) => metales.find((m) => m.metal_id === id)!;
-  const usados = new Set(lineas.map((l) => l.metal_id));
-  const disponibles = metales.filter((m) => !usados.has(m.metal_id));
+  const conStock = useMemo(() => new Map(metales.map((m) => [m.metal_id, m])), [metales]);
+  // Cada producto sale en una sola línea: lo agregado se marca y al tocarlo de nuevo se va a su línea
+  const agregados = useMemo(() => new Map(lineas.map((l) => [l.metal_id, 1])), [lineas]);
+  const [resaltada, setResaltada] = useState<string | null>(null);
+  const reloj = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(reloj.current), []);
 
-  function agregar(id: string) {
-    const m = metal(id);
-    setLineas((ls) => [...ls, { uid: crypto.randomUUID(), metal_id: id, salida: "", recibido: "", precio: m.precio_venta }]);
+  function resaltar(metalId: string) {
+    setResaltada(metalId);
+    clearTimeout(reloj.current);
+    reloj.current = setTimeout(() => setResaltada(null), 1200);
+  }
+  // Con teclado (Enter en la lista de productos) se salta al peso de salida; al tocar no, para seguir eligiendo
+  const enfocar = useRef<string | null>(null);
+  useEffect(() => {
+    if (!enfocar.current) return;
+    irASalida(enfocar.current);
+    enfocar.current = null;
+  }, [lineas.length]);
+  function irASalida(metalId: string) {
+    const el = document.getElementById(`salida-${metalId}`);
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    el?.focus({ preventScroll: true });
+  }
+  const bloqueado = useCallback((p: Producto) => (conStock.has(p.id) ? null : "Sin stock"), [conStock]);
+
+  function agregar(p: Producto, desdeTeclado?: boolean) {
+    const m = conStock.get(p.id);
+    if (!m) return false;
+    resaltar(p.id);
+    if (agregados.has(p.id)) {
+      if (desdeTeclado) irASalida(p.id);
+      else document.getElementById(`linea-${p.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return false;
+    }
+    if (desdeTeclado) enfocar.current = p.id;
+    setLineas((ls) => [...ls, { uid: crypto.randomUUID(), metal_id: p.id, salida: "", recibido: "", precio: m.precio_venta }]);
   }
   function elegirMedio(id: string) {
     setMedioId(id);
@@ -77,6 +126,9 @@ export function FormVenta({
     setError(null);
     if (!compradorId) return setError("Elija el comprador.");
     if (lineas.length === 0) return setError("Agregue al menos un producto.");
+    if (tipoCp === "factura" && !comprador?.ruc) return setError("Para emitir factura el cliente debe tener RUC. Elija boleta o registre su RUC.");
+    const errCredito = confirmarYa && plan ? errorPlan(plan, totalImporte) : null;
+    if (errCredito) return setError(errCredito);
     for (const l of lineas) {
       const m = metal(l.metal_id);
       if (aGramos(l.salida) <= 0) return setError(`Ingrese el peso de salida de ${m.nombre}.`);
@@ -105,6 +157,9 @@ export function FormVenta({
         caja_id: confirmarYa ? cajaId : null,
         medio_id: confirmarYa ? medioId || null : null,
         comprobante_url: null,
+        comprobante_tipo: tipoCp,
+        comprobante_numero: numeroCp.trim() || null,
+        credito: confirmarYa && plan ? { ...plan, inicial: normalizar(plan.inicial) || "0" } : null,
       });
       if (!r.ok) {
         setError(r.error);
@@ -125,12 +180,52 @@ export function FormVenta({
       <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Nueva venta</h1>
 
       <Tarjeta className="grid gap-3 p-4 sm:grid-cols-2">
-        <Campo etiqueta="Comprador">
-          <Select value={compradorId} onChange={(e) => setCompradorId(e.target.value)}>
-            {compradores.map((c) => <option key={c.id} value={c.id}>{c.razon_social}{c.ruc ? ` · ${c.ruc}` : ""}</option>)}
-          </Select>
+        {/* div y no <label>: dentro de un label, tocar la lista vuelve a enfocar el campo */}
+        <div className="min-w-0 sm:col-span-2">
+          <p className="mb-1 text-sm font-medium text-stone-700">Comprador</p>
+          <SelectorCliente valor={comprador} onCambio={(c) => { setCompradorId(c?.id ?? ""); setTipoElegido(null); setNumeroCp(""); }} clientes={compradores} />
+        </div>
+        <div className="min-w-0 sm:col-span-2">
+          <p id="etiqueta-comprobante" className="mb-1 text-sm font-medium text-stone-700">Comprobante</p>
+          {/* En celular uno debajo de otro (la ayuda no se corta); desde sm, en 3 columnas. Flechas ←/→ como radio */}
+          <div role="radiogroup" aria-labelledby="etiqueta-comprobante" className="grid gap-2 sm:grid-cols-3"
+            onKeyDown={(e) => {
+              if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) return;
+              e.preventDefault();
+              const posibles = TIPOS_COMPROBANTE.filter((t) => t !== "factura" || !comprador || !!comprador.ruc);
+              const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+              const sig = posibles[(posibles.indexOf(tipoCp) + d + posibles.length) % posibles.length];
+              setTipoElegido(sig);
+              setNumeroCp("");
+              document.getElementById(`comprobante-${sig}`)?.focus();
+            }}>
+            {TIPOS_COMPROBANTE.map((t) => {
+              const sinRuc = t === "factura" && !!comprador && !comprador.ruc;
+              const activo = tipoCp === t;
+              return (
+                <button key={t} id={`comprobante-${t}`} type="button" role="radio" aria-checked={activo} disabled={sinRuc}
+                  tabIndex={activo ? 0 : -1} onClick={() => { if (t !== tipoCp) setNumeroCp(""); setTipoElegido(t); }}
+                  className={cx(
+                    "flex min-h-12 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-500 disabled:cursor-not-allowed sm:block",
+                    activo ? "border-marca-600 bg-marca-50 ring-1 ring-marca-600"
+                      : sinRuc ? "border-stone-200 bg-stone-50" : "border-stone-200 bg-superficie hover:border-marca-300",
+                  )}>
+                  <span className={cx("block text-sm font-semibold leading-tight", activo ? "text-marca-700" : sinRuc ? "text-stone-400" : "text-stone-900")}>
+                    {COMPROBANTES[t].texto}
+                  </span>
+                  <span className={cx("block text-right text-xs leading-tight sm:mt-0.5 sm:text-left", sinRuc ? "text-stone-600" : "text-stone-500")}>
+                    {sinRuc ? "Sin RUC: registre su RUC para facturar" : COMPROBANTES[t].ayuda}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-xs text-stone-500">Si aún no se emite, el N° se puede completar luego en el detalle de la venta.</p>
+        </div>
+        <Campo etiqueta={tipoCp === "nota_venta" ? "N° interno (opcional)" : `N° de ${COMPROBANTES[tipoCp].corto.toLowerCase()} (opcional)`}>
+          <Input value={numeroCp} onChange={(e) => setNumeroCp(e.target.value)} placeholder={COMPROBANTES[tipoCp].ejemplo} autoCapitalize="characters" />
         </Campo>
-        <Campo etiqueta="N° de guía de traslado">
+        <Campo etiqueta="N° de guía de remisión (opcional)">
           <Input value={guiaNumero} onChange={(e) => setGuiaNumero(e.target.value)} placeholder="T001-000123" />
         </Campo>
         <Campo etiqueta="Foto o PDF de la guía (opcional)" className="sm:col-span-2">
@@ -145,12 +240,12 @@ export function FormVenta({
       <Tarjeta className="p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium text-stone-700">Productos que salen (peso de nuestra balanza)</p>
-          {disponibles.length > 0 && (
-            <Select value="" onChange={(e) => e.target.value && agregar(e.target.value)} className="w-full sm:w-60">
-              <option value="">+ Agregar producto…</option>
-              {disponibles.map((m) => <option key={m.metal_id} value={m.metal_id}>{m.ruta} · disponible {kg(m.kg)}</option>)}
-            </Select>
-          )}
+        </div>
+        <div className="mb-4">
+          <SelectorProducto productos={productos} onElegir={agregar} agregados={agregados}
+            bloqueado={bloqueado}
+            precio={(p) => `${soles(p.precio_venta)}/kg`}
+            extra={(p) => conStock.has(p.id) ? <span className="text-stone-500">Disponible {kg(conStock.get(p.id)!.kg)}</span> : null} />
         </div>
 
         <label className="mb-3 flex items-center gap-2 text-sm">
@@ -160,15 +255,23 @@ export function FormVenta({
 
         {lineas.length === 0 && <p className="py-6 text-center text-sm text-stone-500">Agregue los productos que salen. Solo se puede vender lo que hay en stock.</p>}
         <div className="space-y-3">
-          {lineas.map((l) => {
+          {lineas.map((l, i) => {
             const m = metal(l.metal_id);
             const merma = aGramos(l.salida) - aGramos(l.recibido);
             const costo = m.costo_promedio ? aCentimos(String(m.costo_promedio)) : 0;
             const margen = importeCentimos(aGramos(l.recibido), aCentimos(l.precio)) - importeCentimos(aGramos(l.recibido), costo);
             return (
-              <div key={l.uid} className="rounded-xl border border-stone-200 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="flex min-w-0 items-center gap-2 font-semibold"><PuntoMetal color={m.color} /><span className="truncate">{m.ruta}</span></span>
+              <div key={l.uid} id={`linea-${l.metal_id}`}
+                className={cx("scroll-mt-4 rounded-xl border border-l-4 border-stone-200 p-3 transition-shadow", resaltada === l.metal_id && "ring-2 ring-marca-400")}
+                style={{ borderLeftColor: m.color ?? "var(--color-stone-300)" }}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <span className="cifra flex size-7 shrink-0 items-center justify-center rounded-md bg-marca-50 text-xs font-semibold text-marca-700">{i + 1}</span>
+                    <span className="min-w-0">
+                      {partesRuta(m.ruta).familia && <span className="block truncate text-[11px] font-medium uppercase tracking-wide text-stone-500">{partesRuta(m.ruta).familia}</span>}
+                      <span className="block truncate font-semibold text-stone-900">{partesRuta(m.ruta).nombre}</span>
+                    </span>
+                  </span>
                   <span className={`flex shrink-0 items-center gap-2 text-xs ${aGramos(l.salida) > aGramos(m.kg) ? "font-semibold text-red-700" : "text-stone-500"}`}>
                     Disponible {kg(m.kg)}
                     <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.uid !== l.uid))} className="rounded p-1 hover:bg-red-50 hover:text-red-600" aria-label="Quitar">
@@ -178,7 +281,7 @@ export function FormVenta({
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <Campo etiqueta="Salida (kg)">
-                    <InputNumero value={l.salida} onChange={(e) => cambiar(l.uid, "salida", e.target.value)} placeholder="0.000" />
+                    <InputNumero id={`salida-${l.metal_id}`} value={l.salida} onChange={(e) => cambiar(l.uid, "salida", e.target.value)} placeholder="0.000" />
                   </Campo>
                   {confirmarYa && (
                     <>
@@ -210,17 +313,24 @@ export function FormVenta({
       </Tarjeta>
 
       {confirmarYa && (
-        <Tarjeta className="grid gap-3 p-4 sm:grid-cols-2">
-          <Campo etiqueta="Medio de cobro">
+        <Tarjeta className="space-y-3 p-4">
+          <FormaPago plan={plan} onCambio={setPlan} totalCent={totalImporte} tipo="venta" />
+          {sinDineroAhora ? (
+            <p className="rounded-lg bg-stone-50 px-3 py-2 text-xs text-stone-600">No entra dinero a caja ahora. Cada cuota se cobra desde Caja y finanzas → Créditos.</p>
+          ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo etiqueta={plan ? "Medio de cobro de la inicial" : "Medio de cobro"}>
             <Select value={medioId} onChange={(e) => elegirMedio(e.target.value)}>
               {medios.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
             </Select>
           </Campo>
-          <Campo etiqueta="Entra a la caja">
+            <Campo etiqueta={plan ? "Entra a la caja (inicial)" : "Entra a la caja"}>
             <Select value={cajaId} onChange={(e) => setCajaId(e.target.value)}>
               {cajas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </Select>
           </Campo>
+          </div>
+          )}
         </Tarjeta>
       )}
 
@@ -236,23 +346,15 @@ export function FormVenta({
         <div className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-superficie p-3 shadow-lg">
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-stone-500">Salida {gramosAKg(totalSalida)} kg{confirmarYa && ventaPromCent > 0 && <> · venta prom. S/ {centimosASoles(ventaPromCent)}/kg</>}</p>
-            <p className="cifra text-xl font-bold">{confirmarYa ? `S/ ${centimosASoles(totalImporte)}` : "Pendiente de pesaje"}</p>
+            <p className="cifra truncate text-[clamp(1.125rem,5.5vw,1.25rem)] font-bold">{confirmarYa ? `S/ ${centimosASoles(totalImporte)}` : "Pendiente de pesaje"}</p>
+            {confirmarYa && plan && <p className="line-clamp-2 text-xs font-medium text-marca-700">A crédito · {plan.cuotas === 1 ? "pago único" : `${plan.cuotas} cuotas`}</p>}
           </div>
-          <Boton tamano="lg" onClick={guardar} disabled={guardando || lineas.length === 0}>
-            {guardando ? "Guardando…" : confirmarYa ? "Registrar y cobrar" : "Registrar salida"}
+          <Boton tamano="lg" onClick={guardar} disabled={guardando || lineas.length === 0} className="shrink-0 px-4 text-base sm:px-6 sm:text-lg">
+            {guardando ? "Guardando…" : !confirmarYa ? "Registrar salida" : <><span className="sm:hidden">{plan ? "Registrar" : "Cobrar"}</span><span className="hidden sm:inline">{plan ? "Registrar a crédito" : "Registrar y cobrar"}</span></>}
           </Boton>
         </div>
       </div>
 
-      {lineas.length === 0 && disponibles.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {disponibles.slice(0, 6).map((m) => (
-            <button key={m.metal_id} type="button" onClick={() => agregar(m.metal_id)} className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-superficie px-3 py-1.5 text-sm">
-              <Plus className="size-3.5" /> {m.nombre} · {kg(m.kg)}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

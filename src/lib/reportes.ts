@@ -229,7 +229,7 @@ export const REPORTES: DefReporte[] = [
   {
     id: "patrimonio",
     titulo: "Patrimonio: ¿cuánto tenemos?",
-    descripcion: "Caja + stock valorizado vs. capital → ganancia acumulada (a hoy)",
+    descripcion: "Caja + stock valorizado + por cobrar − deudas vs. capital → ganancia acumulada (a hoy)",
     async obtener({ supabase, empresa }) {
       const [p, cajas, stock] = await Promise.all([
         supabase.from("v_patrimonio").select("*").eq("empresa_id", empresa.id).single(),
@@ -244,7 +244,10 @@ export const REPORTES: DefReporte[] = [
         ...(stock.data ?? []).map((s) => ({ concepto: `Stock: ${s.ruta ?? s.nombre}`, kg: s.kg, monto: s.valor_costo })),
         { concepto: "Mercadería en tránsito (ventas pendientes)", kg: null, monto: v.en_transito },
         { concepto: "Total mercadería a costo", kg: null, monto: Number(v.stock_costo) + Number(v.en_transito), _fuerte: true },
-        { concepto: "LO QUE TENEMOS (caja + mercadería)", kg: null, monto: v.activos, _fuerte: true },
+        { concepto: "Por cobrar a clientes (ventas a crédito)", kg: null, monto: v.cuentas_por_cobrar },
+        ...(Number(v.por_cobrar) !== 0 ? [{ concepto: "Saldo a favor por cobrar a proveedores (descuentos)", kg: null, monto: v.por_cobrar }] : []),
+        { concepto: "LO QUE TENEMOS (caja + mercadería + por cobrar)", kg: null, monto: v.activos, _fuerte: true },
+        { concepto: "Deudas con proveedores (compras a crédito)", kg: null, monto: -Number(v.cuentas_por_pagar), _fuerte: true },
         { concepto: "Aportes de socios", kg: null, monto: v.aportes },
         { concepto: "Retiros de socios", kg: null, monto: -Number(v.retiros) },
         { concepto: "Capital neto", kg: null, monto: v.capital, _fuerte: true },

@@ -12,6 +12,7 @@ import { TablaDatos } from "@/components/ui/tabla";
 import { BotonAnular } from "@/components/boton-anular";
 import { anularCompra } from "../acciones";
 import { CorregirCompra } from "./corregir-compra";
+import { AvanceCredito, type CreditoFila } from "@/components/avance-credito";
 
 export const metadata: Metadata = { title: "Detalle de compra" };
 
@@ -20,12 +21,13 @@ type LineaJson = { producto: string; peso_bruto_kg: number; descuento_kg: number
 export default async function CompraDetalle({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, rol } = await obtenerContexto();
-  const [{ data: c }, { data: items }, { data: sel }, { data: correcciones }, { data: rutas }] = await Promise.all([
+  const [{ data: c }, { data: items }, { data: sel }, { data: correcciones }, { data: rutas }, { data: credito }] = await Promise.all([
     supabase.from("v_compras").select("*").eq("id", id).maybeSingle(),
     supabase.from("v_compra_items").select("*").eq("compra_id", id).order("id"),
     supabase.from("v_selecciones").select("*").eq("compra_id", id).order("fecha", { ascending: false }),
     supabase.from("v_correcciones_compra").select("*").eq("compra_id", id).order("fecha", { ascending: false }),
     supabase.from("v_productos").select("id, ruta"),
+    supabase.from("v_creditos").select("*").eq("compra_id", id).maybeSingle(),
   ]);
   if (!c) notFound();
 
@@ -158,6 +160,7 @@ export default async function CompraDetalle({ params }: { params: Promise<{ id: 
         </div>
 
         <div className="space-y-4">
+          {credito && <Tarjeta className="p-4"><AvanceCredito c={credito as unknown as CreditoFila} /></Tarjeta>}
           <Tarjeta className="p-4">
             <p className="mb-2 flex items-center gap-2 text-sm font-medium"><PackageCheck className="size-4" /> Limpieza</p>
             {c.estado === "anulada" ? <p className="text-sm text-stone-500">—</p>
@@ -196,8 +199,9 @@ export default async function CompraDetalle({ params }: { params: Promise<{ id: 
               </Dato>
               <Dato etiqueta="Documento">{c.proveedor_nro_doc ? `${c.proveedor_tipo_doc} ${c.proveedor_nro_doc}` : "—"}</Dato>
               <Dato etiqueta="Tipo">{c.proveedor_clase ? ETIQUETA_CLASE[c.proveedor_clase] : "—"}</Dato>
-              <Dato etiqueta="Medio de pago">{c.medio_nombre}</Dato>
-              <Dato etiqueta="Caja">{c.caja_nombre}</Dato>
+              <Dato etiqueta="Forma de pago">{credito ? "A crédito" : "Al contado"}</Dato>
+              <Dato etiqueta={credito ? "Medio de la inicial" : "Medio de pago"}>{credito && !Number(credito.inicial) ? "Sin inicial" : c.medio_nombre}</Dato>
+              {(!credito || Number(credito.inicial) > 0) && <Dato etiqueta="Caja">{c.caja_nombre}</Dato>}
               <Dato etiqueta="Estado">
                 {c.estado === "anulada" ? <Insignia tono="rojo">Anulada</Insignia> : <Insignia tono="verde">Registrada</Insignia>}
               </Dato>

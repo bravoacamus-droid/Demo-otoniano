@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, ChevronRight, Search, Users } from "lucide-react";
+import { Building2, ChevronRight, Users } from "lucide-react";
 import { obtenerContexto } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
 import { soles } from "@/lib/formato";
 import { Encabezado, Insignia, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
-import { claseBoton, claseInput, cx } from "@/components/ui/clases";
+import { cx } from "@/components/ui/clases";
 import { TONOS } from "@/components/shell/modulos";
+import { BuscadorContactos, type Contacto } from "./buscador-contactos";
 
 export const metadata: Metadata = { title: "Contactos" };
 
@@ -63,8 +64,39 @@ export default async function ContactosPage({ searchParams }: { searchParams: Pr
     ];
   };
 
-  const [resultados, nProv, nCli] = await Promise.all([
-    buscar(), cuenta("proveedores"), verClientes ? cuenta("compradores") : null,
+  // Todos los contactos para el desplegable (se filtran en el navegador al escribir).
+  // Por páginas de 1000: la API corta cada consulta en max_rows sin avisar.
+  const paginas = async <T,>(pagina: (desde: number) => PromiseLike<{ data: T[] | null }>) => {
+    const filas: T[] = [];
+    for (let desde = 0; ; desde += 1000) {
+      const { data } = await pagina(desde);
+      filas.push(...(data ?? []));
+      if ((data?.length ?? 0) < 1000) return filas;
+    }
+  };
+  const todos = async (): Promise<Contacto[]> => {
+    const [p, c] = await Promise.all([
+      paginas((d) => supabase.from("proveedores").select("id, nombre, tipo_doc, nro_doc, telefono, clase, activo")
+        .eq("empresa_id", empresa.id).order("nombre").order("id").range(d, d + 999)),
+      verClientes
+        ? paginas((d) => supabase.from("compradores").select("id, razon_social, ruc, contacto, activo")
+          .eq("empresa_id", empresa.id).order("razon_social").order("id").range(d, d + 999))
+        : [],
+    ]);
+    return [
+      ...p.map((x): Contacto => ({
+        id: x.id, tipo: "proveedor", nombre: x.nombre, activo: x.activo, extra: x.telefono, mayorista: x.clase === "mayorista",
+        documento: x.nro_doc ? `${x.tipo_doc} ${x.nro_doc}` : null,
+      })),
+      ...c.map((x): Contacto => ({
+        id: x.id, tipo: "cliente", nombre: x.razon_social, activo: x.activo, extra: x.contacto, mayorista: false,
+        documento: x.ruc ? `RUC ${x.ruc}` : null,
+      })),
+    ].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  };
+
+  const [resultados, nProv, nCli, contactos] = await Promise.all([
+    buscar(), cuenta("proveedores"), verClientes ? cuenta("compradores") : null, todos(),
   ]);
 
   const tarjetas = [
@@ -77,27 +109,7 @@ export default async function ContactosPage({ searchParams }: { searchParams: Pr
     <>
       <Encabezado titulo="Contactos" descripcion="Proveedores y clientes en un solo lugar" />
 
-      <form method="get" className="mb-4">
-        <div className="flex gap-2">
-          <label className="relative flex-1">
-            <span className="sr-only">Buscar</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-stone-400" />
-            <input
-              name="q"
-              defaultValue={sp.q ?? ""}
-              autoFocus={!t}
-              inputMode="search"
-              placeholder="Buscar por DNI, RUC o nombre…"
-              className={cx(claseInput, "h-12 pl-10 text-base sm:text-base")}
-            />
-          </label>
-          <button className={cx(claseBoton("primario", "md"), "h-12 px-5")}>Buscar</button>
-        </div>
-        <label className="mt-2 inline-flex items-center gap-2 text-sm text-stone-600">
-          <input type="checkbox" name="inactivos" value="1" defaultChecked={conInactivos} className="size-4 accent-marca-600" />
-          Incluir inactivos
-        </label>
-      </form>
+      <BuscadorContactos contactos={contactos} inicial={sp.q ?? ""} conInactivos={conInactivos} verClientes={!!verClientes} />
 
       {t ? (
         <Tarjeta>

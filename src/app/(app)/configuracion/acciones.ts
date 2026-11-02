@@ -16,8 +16,18 @@ export async function guardarEmpresa(_: unknown, fd: FormData): Promise<Resultad
   const roles = ROLES.filter((r) => r === "dueno" || fd.get(`precio_${r}`) === "on");
   const dias = Number(texto(fd, "dias_seleccion") ?? 2);
   if (!Number.isInteger(dias) || dias < 0 || dias > 60) return fallo("Los días para limpiar deben estar entre 0 y 60.");
-  const alerta = Number(normalizar(texto(fd, "merma_alerta_pct") ?? "5") || 5);
+  const alertaTxt = normalizar(texto(fd, "merma_alerta_pct") ?? "");
+  const alerta = alertaTxt === "" ? 5 : Number(alertaTxt);
   if (!(alerta >= 0 && alerta <= 100)) return fallo("El % de merma debe estar entre 0 y 100.");
+  // Personal: jornada diaria y sobretasas (horas extras y domingo trabajado)
+  // Vacío = valor por defecto; un 0 escrito se respeta (p. ej. domingo con descanso sustitutorio)
+  const num = (campo: string, def: number) => { const v = normalizar(texto(fd, campo) ?? ""); return v === "" ? def : Number(v); };
+  const jornada = num("jornada_horas", 8);
+  const hx1 = num("hx_tasa_primeras", 25);
+  const hx2 = num("hx_tasa_siguientes", 35);
+  const dom = num("domingo_tasa", 100);
+  if (!(jornada > 0 && jornada <= 24)) return fallo("La jornada debe ser mayor a 0 y de hasta 24 horas.");
+  if ([hx1, hx2, dom].some((t) => !(t >= 0 && t <= 300))) return fallo("Las sobretasas deben estar entre 0 y 300 %.");
   const { error } = await supabase.from("empresas").update({
     razon_social: texto(fd, "razon_social"),
     ruc,
@@ -27,6 +37,10 @@ export async function guardarEmpresa(_: unknown, fd: FormData): Promise<Resultad
     roles_editan_precio: roles,
     dias_seleccion: dias,
     merma_alerta_pct: alerta,
+    jornada_horas: jornada,
+    hx_tasa_primeras: hx1,
+    hx_tasa_siguientes: hx2,
+    domingo_tasa: dom,
   }).eq("id", empresa.id);
   if (error) return fallo(error);
   olvidarMembresias();

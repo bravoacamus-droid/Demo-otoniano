@@ -1,6 +1,6 @@
 import {
   ArrowDownToLine, ArrowUpFromLine, BarChart3, Boxes, Building2, ClipboardList, Contact, Handshake, Home, Landmark,
-  PackageCheck, PiggyBank, PlusCircle, Search, Settings, Tag, Users, Wallet,
+  CalendarCheck, HandCoins, IdCard, PackageCheck, PiggyBank, PlusCircle, Search, Settings, Tag, Users, Wallet,
 } from "lucide-react";
 import { puede, type Accion } from "@/lib/permisos";
 import type { Rol } from "@/lib/tipos";
@@ -88,6 +88,7 @@ export const MODULOS: Modulo[] = [
     id: "finanzas", texto: "Caja y finanzas", icono: Landmark, tono: "caja",
     items: [
       { href: "/caja", texto: "Caja", icono: Wallet, permiso: ["caja", "verTodo"] },
+      { href: "/creditos", texto: "Créditos", icono: HandCoins, permiso: ["creditos"] },
       { href: "/capital", texto: "Capital y cierres", icono: PiggyBank, permiso: ["verTodo"] },
       { href: "/caja/reportes", texto: "Reportes", icono: BarChart3, permiso: ["verReportes"] },
     ],
@@ -98,6 +99,8 @@ export const MODULOS: Modulo[] = [
       { href: "/reportes", texto: "Todos los reportes", icono: BarChart3, permiso: ["verReportes"] },
       // Socios: información de la sociedad (participación y capital), no un contacto del día a día
       { href: "/socios", texto: "Socios", icono: Handshake, permiso: ["verTodo"] },
+      { href: "/personal", texto: "Personal", icono: IdCard, permiso: ["personal"] },
+      { href: "/personal/asistencia", texto: "Asistencia", icono: CalendarCheck, permiso: ["personal"] },
       { href: "/configuracion", texto: "Configuración", icono: Settings, permiso: ["configurar"] },
     ],
   },

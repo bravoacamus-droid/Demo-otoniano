@@ -60,7 +60,12 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
           detalle: `${soles(patrimonio?.aportes)} aportes − ${soles(patrimonio?.retiros)} retiros`,
         }}
         celdas={[
-          { titulo: "Lo que tenemos", valor: soles(patrimonio?.activos), detalle: "Caja + stock a costo + en tránsito" },
+          {
+            titulo: "Lo que tenemos", valor: soles(patrimonio?.activos),
+            detalle: Number(patrimonio?.cuentas_por_pagar ?? 0) > 0
+              ? `Caja + stock + por cobrar · debemos ${soles(patrimonio?.cuentas_por_pagar)}`
+              : "Caja + stock a costo + por cobrar",
+          },
           { titulo: "Ganancia acumulada", valor: soles(ganancia), negativo: ganancia < 0, detalle: "Desde el inicio del negocio" },
           {
             titulo: `Utilidad ${nombrePeriodo(periodo)}`, valor: soles(utilidadMes), negativo: utilidadMes < 0,

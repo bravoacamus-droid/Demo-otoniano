@@ -23,8 +23,10 @@ export default async function LimpiezaPage({ searchParams }: { searchParams: Pro
 
   const [{ data: pendientes }, { data: limpiezas }, { data: saldos }, { data: devoluciones }, { data: cajas }, productos] = await Promise.all([
     supabase.from("v_compras").select("id, numero, fecha, proveedor_id, proveedor_nombre, metales, kg_total, total, retrasada")
-      .eq("empresa_id", empresa.id).eq("por_seleccionar", true).order("fecha"),
-    supabase.from("v_selecciones").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(150),
+      .eq("empresa_id", empresa.id).eq("por_seleccionar", true)
+      .order("fecha", { ascending: false }).order("numero", { ascending: false }),
+    supabase.from("v_selecciones").select("*").eq("empresa_id", empresa.id)
+      .order("fecha", { ascending: false }).order("numero", { ascending: false }).limit(150),
     supabase.from("v_saldo_proveedor").select("*").eq("empresa_id", empresa.id).gt("descontado", 0).order("saldo", { ascending: false }),
     supabase.from("devoluciones_proveedor").select("id, fecha, monto, nota, estado, proveedor_id").eq("empresa_id", empresa.id)
       .order("fecha", { ascending: false }).limit(50),

@@ -1,8 +1,10 @@
 import { cx } from "./clases";
 
-export function Tarjeta({ className, children }: { className?: string; children: React.ReactNode }) {
+export function Tarjeta({ className, children, id, style }: {
+  className?: string; children: React.ReactNode; id?: string; style?: React.CSSProperties;
+}) {
   // min-w-0: dentro de grids, un texto largo o una tabla no estiran la tarjeta (ni la página)
-  return <section className={cx("min-w-0 rounded-xl border border-stone-200 bg-superficie shadow-sm", className)}>{children}</section>;
+  return <section id={id} style={style} className={cx("min-w-0 rounded-xl border border-stone-200 bg-superficie shadow-sm", className)}>{children}</section>;
 }
 
 export function TituloTarjeta({ children, accion }: { children: React.ReactNode; accion?: React.ReactNode }) {
@@ -66,14 +68,14 @@ export function Vacio({ titulo, children }: { titulo: string; children?: React.R
 
 export function Kpi({
   titulo, valor, detalle, tono,
-}: { titulo: string; valor: React.ReactNode; detalle?: React.ReactNode; tono?: "positivo" | "negativo" }) {
+}: { titulo: string; valor: React.ReactNode; detalle?: React.ReactNode; tono?: "positivo" | "negativo" | "aviso" }) {
   return (
     // Franja izquierda según el tono (colores que el modo oscuro no invierte)
     <Tarjeta className={cx("border-l-4 p-4",
-      tono === "positivo" ? "border-l-emerald-600" : tono === "negativo" ? "border-l-red-600" : "border-l-marca-600")}>
+      tono === "positivo" ? "border-l-emerald-600" : tono === "negativo" ? "border-l-red-600" : tono === "aviso" ? "border-l-amber-600" : "border-l-marca-600")}>
       <p className="text-[13px] font-medium text-stone-600">{titulo}</p>
       <p className={cx("cifra mt-1 text-[clamp(1.25rem,5.5vw,1.75rem)] font-bold tracking-tight",
-        tono === "positivo" && "text-emerald-700", tono === "negativo" && "text-red-700")}>{valor}</p>
+        tono === "positivo" && "text-emerald-700", tono === "negativo" && "text-red-700", tono === "aviso" && "text-amber-700")}>{valor}</p>
       {detalle && <p className="mt-0.5 text-xs text-stone-600">{detalle}</p>}
     </Tarjeta>
   );

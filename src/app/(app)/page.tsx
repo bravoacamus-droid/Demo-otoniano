@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Inicio" };
 
 interface Dashboard {
   caja: number; stock_costo: number; stock_precio_venta: number; en_transito: number; por_cobrar: number; capital: number;
-  activos: number; ganancia_acumulada: number; ventas_pendientes: number; por_seleccionar: number; selecciones_retrasadas: number;
+  activos: number; ganancia_acumulada: number; cuentas_por_cobrar: number; cuentas_por_pagar: number; ventas_pendientes: number; por_seleccionar: number; selecciones_retrasadas: number;
 }
 
 interface DashboardRango {
@@ -73,7 +73,9 @@ async function Patrimonio({ ctx }: { ctx: Contexto }) {
   const db = (data ?? {}) as unknown as Dashboard;
   const capital = Number(db.capital);
   const ganancia = Number(db.ganancia_acumulada);
-  const porCobrar = Number(db.por_cobrar ?? 0);
+  // Por cobrar: descuentos a proveedores + ventas a crédito (ambos ya están en «lo que tenemos»)
+  const porCobrar = Number(db.por_cobrar ?? 0) + Number(db.cuentas_por_cobrar ?? 0);
+  const debemos = Number(db.cuentas_por_pagar ?? 0);
   return (
     <>
       {(db.ventas_pendientes > 0 || db.selecciones_retrasadas > 0) && (
@@ -109,7 +111,8 @@ async function Patrimonio({ ctx }: { ctx: Contexto }) {
           {[
             { t: "En caja", v: soles(db.caja), d: <Link href="/caja" className="underline-offset-2 hover:underline">Ver cajas</Link> },
             { t: "En mercadería", v: soles(Number(db.stock_costo) + Number(db.en_transito)), d: <Link href="/inventario" className="underline-offset-2 hover:underline">Stock a costo promedio</Link> },
-            { t: "Total · lo que tenemos", v: soles(db.activos), d: porCobrar > 0 ? `Caja + mercadería + ${soles(porCobrar)} por cobrar` : "Caja + mercadería", fuerte: true },
+            { t: "Total · lo que tenemos", v: soles(db.activos), d: (porCobrar > 0 ? `Caja + mercadería + ${soles(porCobrar)} por cobrar` : "Caja + mercadería")
+                + (debemos > 0 ? ` · debemos ${soles(debemos)}` : ""), fuerte: true },
             // Sin repetir la ganancia en soles (coincide con la utilidad si todo pasó en el periodo): capital y su rendimiento
             { t: "Capital aportado", v: soles(capital), d: capital > 0 ? "Aportes de los socios (sin retiros)" : "Registre los aportes en Socios" },
           ].map((k) => (

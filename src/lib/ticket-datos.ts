@@ -2,6 +2,7 @@ import "server-only";
 import type { Contexto } from "./contexto";
 import { cargarLogo } from "./archivos-servidor";
 import { fechaHora, soles } from "./formato";
+import { textoComprobante } from "./comprobantes";
 import type { DatosTicket } from "./pdf/ticket";
 
 // Datos del ticket de 80 mm: los usan el PDF (ticket/route.tsx) y la página de impresión directa (/imprimir).
@@ -55,7 +56,7 @@ export async function ticketVenta(ctx: Contexto, id: string): Promise<DatosTicke
   ]);
   if (!v) return null;
   return {
-    // Primera etapa: sin boletas ni facturas, el comprobante es la nota de venta
+    // Ticket interno; la factura o boleta (si la hay) se emite aparte y aquí solo se referencia
     titulo: v.estado === "pendiente" ? "Nota de salida" : "Nota de venta",
     empresa,
     logo,
@@ -66,7 +67,8 @@ export async function ticketVenta(ctx: Contexto, id: string): Promise<DatosTicke
     medio_pago: v.medio_nombre ?? v.medio_pago,
     estado: v.estado,
     total: v.total,
-    notas: [v.guia_numero && `Guía ${v.guia_numero}`, v.notas].filter(Boolean).join(" · ") || null,
+    notas: [v.comprobante_tipo && (v.comprobante_tipo !== "nota_venta" || v.comprobante_numero) && textoComprobante(v.comprobante_tipo, v.comprobante_numero, false),
+      v.guia_numero && `Guía ${v.guia_numero}`, v.notas].filter(Boolean).join(" · ") || null,
     pie: "Pesos de salida según nuestra balanza",
     items: (items ?? []).map((i) => ({
       metal: i.metal_nombre,

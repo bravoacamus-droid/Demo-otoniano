@@ -4,6 +4,7 @@ import { obtenerContexto } from "@/lib/contexto";
 import { fallo, ok, texto } from "@/lib/acciones";
 import { normalizar } from "@/lib/montos";
 import type { Resultado } from "@/lib/tipos";
+import type { PlanCredito } from "@/components/plan-credito";
 
 export interface LineaCompra {
   metal_id: string;
@@ -24,9 +25,11 @@ export interface DatosCompra {
   foto_ticket_url: string | null;
   /** Descontar del pago el saldo a favor del proveedor (descuentos de selección) */
   aplicar_saldo: boolean;
+  /** A crédito (cuotas, frecuencia, primer vencimiento, inicial); null = al contado */
+  credito: PlanCredito | null;
 }
 
-export type CompraRegistrada = { id: string; numero: number; total: number; saldo_aplicado: number };
+export type CompraRegistrada = { id: string; numero: number; total: number; saldo_aplicado: number; credito_id?: string | null };
 
 export async function registrarCompra(d: DatosCompra): Promise<Resultado<CompraRegistrada>> {
   const { supabase, empresa } = await obtenerContexto();
@@ -40,6 +43,7 @@ export async function registrarCompra(d: DatosCompra): Promise<Resultado<CompraR
     p_clave: d.clave,
     p_aplicar_saldo: d.aplicar_saldo,
     p_medio: d.medio_id,
+    p_credito: d.credito ?? undefined,
   });
   if (error) return fallo(error);
   return ok(data as CompraRegistrada);
