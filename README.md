@@ -4,7 +4,7 @@
 
 # Sistema Otiniano
 
-### Control interno para un negocio de reciclaje: compras, limpieza, stock, ventas y caja — cada kilo y cada sol, bajo control
+### Control interno para un negocio de reciclaje: compras, limpieza, stock, ventas, caja, socios y personal — cada kilo y cada sol, bajo control
 
 ![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs)
 ![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
@@ -30,7 +30,7 @@ Este sistema responde, en cualquier momento y desde la oficina, las preguntas de
 
 | ¿Cuánto hay en **caja**? | ¿Cuánto hay en **mercadería**? | ¿Cuánto **ganamos**? |
 |:---:|:---:|:---:|
-| Saldo por caja chica, banco y Yape/Plin | Kilos × costo promedio, por producto y por nivel | Utilidad del periodo y sobre el capital aportado |
+| Saldo por caja chica, banco y Yape/Plin | Kilos × costo promedio, por producto y por nivel | Utilidad del mes, cuánto le toca a cada socio y cuánto ya se le entregó |
 
 > *«Si se compraron 1 000 kg de chatarra con aluminio mezclado, al limpiar debe subir el stock de
 > chatarra y bajar lo mismo en aluminio. Si el stock no cuadra, llamo al encargado: según el sistema
@@ -56,7 +56,14 @@ local; Gerencia la revisa en la **computadora**. Está hecha **multiempresa** de
                     │                                  │
                     └────────────►  CAJA  ◄────────────┘
                          (cada pago y cobro sale o entra de una caja;
-                          apertura y cierre del día con ticket de cuadre)
+                          apertura y cierre del día con ticket de cuadre;
+                          compras y ventas a crédito, en cuotas)
+                                       │
+                                       ▼
+                    CIERRE DE MES ──► utilidad ──► SOCIOS
+                    (foto de caja,     (solo de     (según su %: se entrega
+                     material,          lo vendido)  o se deja como capital)
+                     compras y ventas)
 ```
 
 ---
@@ -68,8 +75,8 @@ Cada rol ve su propio menú y su propia pantalla de inicio. La base de datos hac
 
 | Rol | Quién | Qué hace |
 |---|---|---|
-| **Gerencia** | El dueño | Ve todo: patrimonio, stock, caja, capital, utilidad y reportes. Anula, configura y crea usuarios. |
-| **Administración** | El encargado | Productos y precios, proveedores y clientes, reportes. Corrige tickets emitidos. |
+| **Gerencia** | El dueño | Ve todo: patrimonio, stock, caja, capital y utilidad por socio, personal y reportes. Cierra el mes, anula, configura y crea usuarios. |
+| **Administración** | El encargado | Productos y precios, proveedores y clientes, reportes. Corrige compras y ventas ya emitidas. |
 | **Almacén** | Personal del local | Registra compras y ventas, pesa, hace la limpieza, abre y cierra la caja del día. |
 
 ---
@@ -122,20 +129,32 @@ limpiezas con merma alta.
 |:---:|:---:|
 | <img src="docs/capturas/inventario.png" width="440"> | <img src="docs/capturas/precios.png" width="440"> |
 
+<img src="docs/capturas/conteos.png" alt="Ajustes y conteos físicos" width="900">
+
 - **Stock por cada nivel** de la jerarquía, a **costo promedio ponderado**, valor al precio del día,
   ganancia si se vendiera hoy y **fecha de la llegada más antigua**.
-- **Kardex** por producto (cada entrada y salida), conteo físico, ajustes y reclasificación.
+- **Kardex** por producto (cada entrada y salida), ajustes y reclasificación.
+- **Conteo físico:** se pesa lo que hay y el sistema muestra en vivo *«Sistema 415 kg → contado 410 kg = faltante 5 kg»*.
+  Si no cuadra, el **motivo es obligatorio**; queda el faltante o sobrante en kg y en soles, quién y cuándo.
+- Menú de **tres puntos** en cada producto: editar nombre y datos, agregar variante, ver historial de precios.
 - **Jerarquía libre de productos**: familia → producto → variante (y variantes de variantes), cada nivel
   con su código y precios de **compra, mayorista y venta**. Cada cambio de precio queda en el histórico.
 
 ### ⬆️ Ventas
 
-<img src="docs/capturas/vender.png" alt="Nueva venta" width="900">
+| Nueva venta | Historial |
+|:---:|:---:|
+| <img src="docs/capturas/vender.png" width="440"> | <img src="docs/capturas/ventas.png" width="440"> |
 
-Comprador, productos que salen con el **peso de nuestra balanza** y el **stock disponible a la vista**
-(no se puede vender más de lo que hay), número de guía de traslado y foto o PDF de la guía. Luego se
-confirma el pesaje y precio del comprador y la diferencia de peso se registra sola. Nota de venta en PDF
-y ticket de 80 mm.
+- Comprador, productos que salen con el **peso de nuestra balanza** y el **stock disponible a la vista**
+  (no se puede vender más de lo que hay), guía de remisión y foto o PDF de la guía.
+- **Comprobante:** factura (solo con RUC), boleta o nota de venta; el N° se puede completar después. En el
+  historial el comprobante va primero y resaltado, y lleva al detalle.
+- Luego se confirma el **pesaje y precio del comprador**; la diferencia de peso se registra sola.
+- **Al contado o a crédito** (inicial + cuotas con vencimiento).
+- **Corregir una venta confirmada** (Gerencia o Administración): peso recibido o precio, con **motivo
+  obligatorio**; la caja o el crédito se ajustan y el ticket sale marcado como corregido.
+- Nota de venta en PDF y ticket de 80 mm.
 
 ### 💰 Caja y finanzas
 
@@ -144,7 +163,41 @@ y ticket de 80 mm.
 - Saldo por caja (efectivo, banco, Yape/Plin) y cada movimiento con su origen.
 - **Apertura y cierre del día** con ticket de cuadre en 80 mm; gastos por categoría, traspasos entre
   cajas y **arqueo** (lo contado vs. lo que dice el sistema).
-- **Capital de socios**, aportes y retiros, y **cierre de mes** (guarda el resultado y bloquea el periodo).
+- **Créditos:** ventas por cobrar y compras por pagar en cuotas, con avance, vencidos y pagos.
+
+### 🤝 Capital, socios y cierre de mes
+
+<img src="docs/capturas/capital.png" alt="Capital y cierres" width="900">
+
+- **Capital por socio** = aportes + utilidad que dejó en el negocio − retiros. Cada movimiento guarda el
+  **N° de voucher y la foto o PDF**, si fue en efectivo o depósito, quién lo registró, y se imprime una
+  **constancia de 80 mm** con firma.
+- **«Editar capital»:** se escribe el capital correcto y la diferencia queda como aporte o retiro, con motivo.
+- **Utilidad por socio y por mes:** cuánto le toca (según su %), cuánto se le entregó, cuánto dejó en el
+  negocio y cuánto falta. Si se le dio de más, aparece como **adelanto**. Entregar utilidad **no baja el capital**.
+- **Cierre de mes:** guarda la foto del mes y bloquea registrar o anular en ese periodo (Gerencia puede
+  reabrirlo con motivo).
+
+#### Reporte del mes — «¿Cuánto ganamos y dónde está la plata?»
+
+| En la computadora | En el celular |
+|:---:|:---:|
+| <img src="docs/capturas/reporte-mes.png" width="600"> | <img src="docs/capturas/movil-reporte-mes.png" width="220"> |
+
+Explicado en simple: **lo vendido − lo que costó ese material − mermas − gastos = utilidad**, y **caja +
+material en almacén + por cobrar − deudas = lo que tenemos**. Detalle del **material por producto**, de
+**compras y ventas por producto** y del reparto entre socios. Se imprime con el membrete de la empresa.
+
+> La utilidad sale **solo de lo vendido**: lo comprado que aún no se vende sigue siendo capital, guardado
+> como material.
+
+### 👷 Personal y asistencia
+
+<img src="docs/capturas/personal.png" alt="Personal" width="900">
+
+Ingreso y cese de cada trabajador, asistencia del día (asistió, faltó, permiso, vacaciones), domingos
+trabajados y **horas extras** (al 25 % y 35 %, se pagan solo las aprobadas). Resumen por rango exportable
+a PDF y Excel. Solo lo ve Gerencia.
 
 ### 📊 Reportes
 
@@ -153,7 +206,7 @@ y ticket de 80 mm.
 | <img src="docs/capturas/reportes.png" width="440"> | <img src="docs/capturas/reporte-pdf.png" width="440"> |
 
 Compras, ventas, margen por producto, merma total y de limpieza, kardex, libro de caja, estado de
-resultados, patrimonio y ranking de proveedores. Todos con filtros de periodo y exportables a
+resultados, patrimonio, créditos y ranking de proveedores. Todos con filtros de periodo y exportables a
 **Excel y PDF** con los mismos números que la pantalla.
 
 ### 📱 En el celular
@@ -204,9 +257,9 @@ centro y menú por módulos. Se instala como app desde el navegador.
 ```
 src/
   app/(app)/          pantallas con sesión: comprar, compras, limpieza, vender, ventas, contactos,
-                      proveedores, compradores, socios, inventario, precios, caja, capital,
-                      reportes, configuracion, cuenta
-  app/imprimir/       tickets HTML de 80 mm (compra, venta, cierre de caja)
+                      proveedores, compradores, socios, inventario, precios, caja, creditos,
+                      capital (y reporte del mes), personal, reportes, configuracion, cuenta
+  app/imprimir/       tickets HTML de 80 mm (compra, venta, cierre de caja, constancia de socio)
   app/login           acceso · app/restablecer: nueva contraseña
   app/api/            exportar reportes, consulta DNI/RUC
   components/ui       botones, campos, tablas (tarjetas en celular), modales, pestañas
@@ -287,6 +340,12 @@ casos de negocio:
 - ✅ Mes cerrado → no se puede registrar ni anular
 - ✅ Una empresa no ve ni escribe datos de otra; Almacén no anula ni cambia precios
 - ✅ Patrimonio = caja + stock + en tránsito, y cuadra con las utilidades
+- ✅ Créditos: cuotas, pagos en orden, anulación y correcciones sin descuadrar caja ni patrimonio
+- ✅ Personal: asistencia, domingos y horas extras al 25 % / 35 % (solo las aprobadas)
+- ✅ Socios: aporte con voucher, «editar capital», utilidad entregada o dejada como capital
+- ✅ Conteo físico: guarda sistema, contado y faltante; sin motivo no deja ajustar
+- ✅ Corregir venta: motivo obligatorio, ajusta caja y deja registro; el almacén no puede
+- ✅ Reporte del mes: caja, material, compras, ventas y utilidad; el cierre lo guarda
 
 ---
 
@@ -297,7 +356,9 @@ casos de negocio:
 - [x] Productos en jerarquía libre con precio mayorista y minorista
 - [x] Corrección de tickets con registro, apertura y cierre de caja con ticket de 80 mm
 - [x] Autocompletado de DNI/RUC, modo oscuro, letra grande, PWA
-- [ ] Cargar la lista real de productos y precios del cliente
+- [x] Comprobante de venta, compras y ventas a crédito en cuotas, control de personal (reunión 02/11)
+- [x] Capital con voucher, utilidad por socio, conteo físico con motivo, corregir ventas y reporte del mes (reunión 06/11)
+- [ ] Dejar los datos en cero y cargar el inventario real del cliente (como capital en material, no como sobrante)
 - [ ] Probar en el local con la balanza y la impresora térmica
 - [ ] Siguiente etapa: guías de remisión, boletas y facturas con SUNAT
 
