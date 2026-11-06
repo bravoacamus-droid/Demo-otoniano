@@ -49,3 +49,6 @@ credenciales*.txt
 # transcripciones de reuniones con el cliente y utilidades locales
 reuniones/
 scripts/_captura*.mjs
+
+.vercel
+.env*

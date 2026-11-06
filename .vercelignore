@@ -1,0 +1,14 @@
+# Nada privado ni pesado sube a Vercel al publicar con la CLI
+.env*
+!.env.example
+credenciales*.txt
+reuniones/
+.next/
+.next-prod/
+node_modules/
+coverage/
+docs/
+scripts/_captura*.mjs
+Logotipos/
+*.pdf
+supabase/.temp/
