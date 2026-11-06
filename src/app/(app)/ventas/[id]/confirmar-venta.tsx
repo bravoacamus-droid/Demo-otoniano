@@ -122,11 +122,11 @@ export function ConfirmarVenta({
             </>
           )}
           <Campo etiqueta="Archivo del comprobante (opcional)">
-            <label className="flex h-[42px] cursor-pointer items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-superficie px-3 text-sm text-stone-600">
+            <span className="relative flex h-[42px] cursor-pointer items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-superficie px-3 text-sm text-stone-600 focus-within:ring-2 focus-within:ring-marca-500">
               <FileUp className="size-4 shrink-0" />
               <span className="truncate">{comprobante ? comprobante.name : "Adjuntar"}</span>
-              <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => setComprobante(e.target.files?.[0] ?? null)} />
-            </label>
+              <input type="file" accept="image/*,application/pdf" className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => setComprobante(e.target.files?.[0] ?? null)} />
+            </span>
           </Campo>
         </div>
         {error && <Aviso tono="rojo">{error}</Aviso>}

@@ -24,6 +24,11 @@ UI y textos en **español (Perú)**. Lo marcado **[CONFIRMAR]** en la propuesta 
 - Ticket emitido: el almacén no lo edita; `corregir_compra` (Gerencia/Administración) ajusta stock y caja y deja
   registro en `correcciones_compra`. Limpieza (`registrar_limpieza`, ruta `/limpieza`, antes Despacho) guarda la merma
   en kg y S/ y pasa el material separado a otro producto (`limpieza_traslados`, kardex `traslado`).
+- Venta confirmada: `corregir_venta` (recibido y precio; ajusta caja o rehace cuotas del crédito) → `correcciones_venta`.
+  Conteo físico (`registrar_conteo`) guarda sistema/contado y exige motivo si hay faltante o sobrante.
+- Socios (reunión 06/11): `registrar_movimiento_socio` con voucher (N° + archivo), «Editar capital» = `ajustar_capital_socio`
+  (la diferencia queda como aporte/retiro). Entregar utilidad (`retiro_utilidad`) NO baja el capital; dejarla en el
+  negocio (`capitalizacion`) lo sube. Reporte del mes `/capital/mes/[periodo]` = `reporte_mes()` (cierre guarda `_foto_mes`).
 - Medios de pago editables en `medios_pago` (tipo base + caja); las RPC reciben `p_medio`.
 - Navegación por módulos (Compras, Ventas, Contactos, Inventario, Caja y finanzas) en `src/components/shell/modulos.ts`:
   menú lateral y pestañas salen de ahí. Reportes de cada módulo con `VistaReportes` (`ids` + `base`).

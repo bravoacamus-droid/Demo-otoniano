@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { PencilLine, Plus } from "lucide-react";
 import { obtenerContexto } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
 import { fechaHora, kg, soles } from "@/lib/formato";
@@ -46,6 +47,7 @@ export default async function ComprasPage({ searchParams }: { searchParams: Prom
   const totalSoles = vigentes.reduce((s, c) => s + Number(c.total), 0);
   const totalKg = vigentes.reduce((s, c) => s + Number(c.kg_total), 0);
   const precioProm = totalKg > 0 ? totalSoles / totalKg : null;
+  const corrige = puede(rol, "corregir");
 
   return (
     <>
@@ -78,8 +80,15 @@ export default async function ComprasPage({ searchParams }: { searchParams: Prom
             { titulo: "Fecha", celda: (c) => fechaHora(c.fecha) },
             { titulo: "Proveedor", celda: (c) => c.proveedor_nombre ?? <span className="text-stone-500">Sin documento</span> },
             { titulo: "Productos", celda: (c) => c.metales },
-            { titulo: "Kg", celda: (c) => <span className="cifra">{kg(c.kg_total)}</span>, alinear: "der" },
-            { titulo: "S/ por kg", alinear: "der", ocultarMovil: true, celda: (c) => <span className="cifra text-stone-600">{c.precio_promedio ? soles(c.precio_promedio) : "—"}</span> },
+            {
+              // S/ por kg debajo de los kilos: deja sitio a «Corregir» sin pasar la tabla a tarjetas en laptop
+              titulo: "Kg", alinear: "der", celda: (c) => (
+                <span className="block leading-tight">
+                  <span className="cifra">{kg(c.kg_total)}</span>
+                  {Number(c.precio_promedio) > 0 && <span className="cifra block text-xs text-stone-500">{soles(c.precio_promedio)}/kg</span>}
+                </span>
+              ),
+            },
             {
               titulo: "Total", alinear: "der", principal: true,
               celda: (c) => (
@@ -97,6 +106,16 @@ export default async function ComprasPage({ searchParams }: { searchParams: Prom
                 : Number(c.seleccion_kg) > 0 ? <Insignia tono={c.merma_alta ? "rojo" : "azul"}>Merma {Number(c.merma_pct ?? 0).toLocaleString("es-PE")} %</Insignia>
                 : <Insignia tono="verde">Limpia</Insignia>,
             },
+            // En celular la tarjeta entera abre el detalle (ahí está «Corregir»): esta columna va solo en la tabla
+            ...(corrige ? [{
+              titulo: "", ocultarMovil: true,
+              celda: (c: (typeof filas)[number]) => c.estado === "registrada" && !Number(c.seleccion_kg) && !Number(c.seleccion_traslado_kg) && (
+                <Link href={`/compras/${c.id}?corregir=1`} title={`Corregir compra N° ${c.numero}`}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-marca-700 hover:bg-marca-50">
+                  <PencilLine className="size-3.5" /> Corregir
+                </Link>
+              ),
+            }] : []),
           ]}
         />
       </Tarjeta>

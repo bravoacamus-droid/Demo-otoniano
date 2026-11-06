@@ -24,6 +24,8 @@ export type Database = {
           grupo_id: string | null
           id: string
           kg: number
+          kg_contado: number | null
+          kg_sistema: number | null
           metal_id: string
           motivo: string
           tipo: Database["public"]["Enums"]["tipo_ajuste"]
@@ -37,6 +39,8 @@ export type Database = {
           grupo_id?: string | null
           id?: string
           kg: number
+          kg_contado?: number | null
+          kg_sistema?: number | null
           metal_id: string
           motivo: string
           tipo?: Database["public"]["Enums"]["tipo_ajuste"]
@@ -50,6 +54,8 @@ export type Database = {
           grupo_id?: string | null
           id?: string
           kg?: number
+          kg_contado?: number | null
+          kg_sistema?: number | null
           metal_id?: string
           motivo?: string
           tipo?: Database["public"]["Enums"]["tipo_ajuste"]
@@ -103,7 +109,7 @@ export type Database = {
         Row: {
           anulado_en: string | null
           anulado_por: string | null
-          caja_id: string
+          caja_id: string | null
           creado_en: string
           creado_por: string | null
           empresa_id: string
@@ -113,13 +119,16 @@ export type Database = {
           monto: number
           motivo_anulacion: string | null
           nota: string | null
+          periodo: string | null
           socio_id: string
           tipo: Database["public"]["Enums"]["tipo_aporte"]
+          voucher_numero: string | null
+          voucher_url: string | null
         }
         Insert: {
           anulado_en?: string | null
           anulado_por?: string | null
-          caja_id: string
+          caja_id?: string | null
           creado_en?: string
           creado_por?: string | null
           empresa_id: string
@@ -129,13 +138,16 @@ export type Database = {
           monto: number
           motivo_anulacion?: string | null
           nota?: string | null
+          periodo?: string | null
           socio_id: string
           tipo: Database["public"]["Enums"]["tipo_aporte"]
+          voucher_numero?: string | null
+          voucher_url?: string | null
         }
         Update: {
           anulado_en?: string | null
           anulado_por?: string | null
-          caja_id?: string
+          caja_id?: string | null
           creado_en?: string
           creado_por?: string | null
           empresa_id?: string
@@ -145,8 +157,11 @@ export type Database = {
           monto?: number
           motivo_anulacion?: string | null
           nota?: string | null
+          periodo?: string | null
           socio_id?: string
           tipo?: Database["public"]["Enums"]["tipo_aporte"]
+          voucher_numero?: string | null
+          voucher_url?: string | null
         }
         Relationships: [
           {
@@ -196,6 +211,13 @@ export type Database = {
             columns: ["socio_id"]
             isOneToOne: false
             referencedRelation: "v_utilidad_socio"
+            referencedColumns: ["socio_id"]
+          },
+          {
+            foreignKeyName: "aportes_retiros_socio_id_fkey"
+            columns: ["socio_id"]
+            isOneToOne: false
+            referencedRelation: "v_utilidad_socio_saldo"
             referencedColumns: ["socio_id"]
           },
         ]
@@ -821,6 +843,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
+      correcciones_venta: {
+        Row: {
+          antes: Json
+          creado_por: string | null
+          despues: Json
+          empresa_id: string
+          fecha: string
+          id: string
+          motivo: string
+          total: number
+          total_antes: number
+          venta_id: string
+        }
+        Insert: {
+          antes: Json
+          creado_por?: string | null
+          despues: Json
+          empresa_id: string
+          fecha?: string
+          id?: string
+          motivo: string
+          total: number
+          total_antes: number
+          venta_id: string
+        }
+        Update: {
+          antes?: Json
+          creado_por?: string | null
+          despues?: Json
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          motivo?: string
+          total?: number
+          total_antes?: number
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correcciones_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "v_ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2886,6 +2976,8 @@ export type Database = {
             | null
           comprobante_url: string | null
           confirmado_por: string | null
+          corregido_en: string | null
+          corregido_por: string | null
           creado_en: string
           creado_por: string | null
           empresa_id: string
@@ -2914,6 +3006,8 @@ export type Database = {
             | null
           comprobante_url?: string | null
           confirmado_por?: string | null
+          corregido_en?: string | null
+          corregido_por?: string | null
           creado_en?: string
           creado_por?: string | null
           empresa_id: string
@@ -2942,6 +3036,8 @@ export type Database = {
             | null
           comprobante_url?: string | null
           confirmado_por?: string | null
+          corregido_en?: string | null
+          corregido_por?: string | null
           creado_en?: string
           creado_por?: string | null
           empresa_id?: string
@@ -3017,13 +3113,17 @@ export type Database = {
           costo_total: number | null
           creado_en: string | null
           creado_por: string | null
+          creado_por_nombre: string | null
           empresa_id: string | null
           fecha: string | null
           grupo_id: string | null
           id: string | null
           kg: number | null
+          kg_contado: number | null
+          kg_sistema: number | null
           metal_id: string | null
           metal_nombre: string | null
+          metal_ruta: string | null
           motivo: string | null
           tipo: Database["public"]["Enums"]["tipo_ajuste"] | null
         }
@@ -3078,8 +3178,10 @@ export type Database = {
           anulado_por: string | null
           caja_id: string | null
           caja_nombre: string | null
+          caja_tipo: string | null
           creado_en: string | null
           creado_por: string | null
+          creado_por_nombre: string | null
           empresa_id: string | null
           estado: Database["public"]["Enums"]["estado_doc"] | null
           fecha: string | null
@@ -3087,9 +3189,12 @@ export type Database = {
           monto: number | null
           motivo_anulacion: string | null
           nota: string | null
+          periodo: string | null
           socio_id: string | null
           socio_nombre: string | null
           tipo: Database["public"]["Enums"]["tipo_aporte"] | null
+          voucher_numero: string | null
+          voucher_url: string | null
         }
         Relationships: [
           {
@@ -3139,6 +3244,13 @@ export type Database = {
             columns: ["socio_id"]
             isOneToOne: false
             referencedRelation: "v_utilidad_socio"
+            referencedColumns: ["socio_id"]
+          },
+          {
+            foreignKeyName: "aportes_retiros_socio_id_fkey"
+            columns: ["socio_id"]
+            isOneToOne: false
+            referencedRelation: "v_utilidad_socio_saldo"
             referencedColumns: ["socio_id"]
           },
         ]
@@ -3192,12 +3304,14 @@ export type Database = {
           activo: boolean | null
           aportes: number | null
           capital: number | null
+          capitalizado: number | null
           dni: string | null
           empresa_id: string | null
           nombre: string | null
           porcentaje: number | null
           retiros: number | null
           socio_id: string | null
+          utilidad_entregada: number | null
         }
         Relationships: [
           {
@@ -3499,6 +3613,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
+      v_correcciones_venta: {
+        Row: {
+          antes: Json | null
+          creado_por: string | null
+          creado_por_nombre: string | null
+          despues: Json | null
+          empresa_id: string | null
+          fecha: string | null
+          id: string | null
+          motivo: string | null
+          total: number | null
+          total_antes: number | null
+          venta_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correcciones_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "v_ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3961,6 +4120,7 @@ export type Database = {
           aportes: number | null
           caja: number | null
           capital: number | null
+          capitalizado: number | null
           cuentas_por_cobrar: number | null
           cuentas_por_pagar: number | null
           empresa_id: string | null
@@ -3970,6 +4130,7 @@ export type Database = {
           retiros: number | null
           stock_costo: number | null
           stock_precio_venta: number | null
+          utilidad_entregada: number | null
         }
         Relationships: []
       }
@@ -4515,6 +4676,37 @@ export type Database = {
         }
         Relationships: []
       }
+      v_utilidad_socio_saldo: {
+        Row: {
+          activo: boolean | null
+          capitalizado: number | null
+          empresa_id: string | null
+          entregado: number | null
+          nombre: string | null
+          pendiente: number | null
+          periodo: string | null
+          porcentaje: number | null
+          socio_id: string | null
+          utilidad_empresa: number | null
+          utilidad_socio: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "socios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "socios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
       v_venta_items: {
         Row: {
           comprador_id: string | null
@@ -4733,6 +4925,10 @@ export type Database = {
         }
         Returns: string
       }
+      _foto_mes: {
+        Args: { p_empresa: string; p_periodo: string }
+        Returns: Json
+      }
       _inicial_credito: {
         Args: { p_plan: Json; p_total: number }
         Returns: number
@@ -4893,6 +5089,15 @@ export type Database = {
         }
         Returns: Json
       }
+      actualizar_aporte_voucher: {
+        Args: {
+          p_id: string
+          p_nota: string
+          p_voucher_numero: string
+          p_voucher_url: string
+        }
+        Returns: undefined
+      }
       actualizar_compra_adjuntos: {
         Args: { p_compra: string; p_foto_ticket_url: string; p_notas: string }
         Returns: undefined
@@ -4925,6 +5130,19 @@ export type Database = {
           p_nombre_dueno?: string
           p_razon_social: string
           p_ruc: string
+        }
+        Returns: string
+      }
+      ajustar_capital_socio: {
+        Args: {
+          p_caja?: string
+          p_capital: number
+          p_empresa: string
+          p_fecha?: string
+          p_motivo: string
+          p_socio: string
+          p_voucher_numero?: string
+          p_voucher_url?: string
         }
         Returns: string
       }
@@ -5011,6 +5229,10 @@ export type Database = {
       }
       corregir_compra: {
         Args: { p_compra: string; p_items: Json; p_motivo: string }
+        Returns: Json
+      }
+      corregir_venta: {
+        Args: { p_items: Json; p_motivo: string; p_venta: string }
         Returns: Json
       }
       dashboard: { Args: { p_empresa: string }; Returns: Json }
@@ -5203,6 +5425,21 @@ export type Database = {
         Args: { p_compra: string; p_lineas?: Json; p_motivo?: string }
         Returns: Json
       }
+      registrar_movimiento_socio: {
+        Args: {
+          p_caja?: string
+          p_empresa: string
+          p_fecha?: string
+          p_monto: number
+          p_nota?: string
+          p_periodo?: string
+          p_socio: string
+          p_tipo: Database["public"]["Enums"]["tipo_aporte"]
+          p_voucher_numero?: string
+          p_voucher_url?: string
+        }
+        Returns: string
+      }
       registrar_pago_credito: {
         Args: {
           p_caja?: string
@@ -5253,6 +5490,10 @@ export type Database = {
           p_medio_pago?: Database["public"]["Enums"]["medio_pago"]
           p_notas?: string
         }
+        Returns: Json
+      }
+      reporte_mes: {
+        Args: { p_empresa: string; p_periodo: string }
         Returns: Json
       }
       resumen_compras: { Args: { p_empresa: string }; Returns: Json }
@@ -5434,7 +5675,7 @@ export type Database = {
         | "devolucion"
       rol_miembro: "dueno" | "socio" | "cajero" | "balancero" | "administrador"
       tipo_ajuste: "conteo" | "merma" | "reclasificacion" | "otro"
-      tipo_aporte: "aporte" | "retiro"
+      tipo_aporte: "aporte" | "retiro" | "retiro_utilidad" | "capitalizacion"
       tipo_caja: "efectivo" | "banco" | "billetera"
       tipo_comprobante: "factura" | "boleta" | "nota_venta"
       tipo_credito: "por_pagar" | "por_cobrar"
@@ -5591,7 +5832,7 @@ export const Constants = {
       ],
       rol_miembro: ["dueno", "socio", "cajero", "balancero", "administrador"],
       tipo_ajuste: ["conteo", "merma", "reclasificacion", "otro"],
-      tipo_aporte: ["aporte", "retiro"],
+      tipo_aporte: ["aporte", "retiro", "retiro_utilidad", "capitalizacion"],
       tipo_caja: ["efectivo", "banco", "billetera"],
       tipo_comprobante: ["factura", "boleta", "nota_venta"],
       tipo_credito: ["por_pagar", "por_cobrar"],

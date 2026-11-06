@@ -6,7 +6,7 @@ import { cx } from "./clases";
  * Usan stone-200, que el modo oscuro ya redefine.
  */
 export function Esqueleto({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return <div aria-hidden className={cx("animate-pulse rounded-md bg-stone-200", className)} style={style} />;
+  return <div aria-hidden className={cx("esqueleto-brillo rounded-md bg-stone-200", className)} style={style} />;
 }
 
 export function EsqueletoEncabezado({ acciones = true }: { acciones?: boolean }) {

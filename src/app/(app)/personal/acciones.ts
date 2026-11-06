@@ -8,7 +8,7 @@ import { hoyLima } from "@/lib/formato";
 
 const fechaValida = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
-/** Ficha del trabajador (alta o edición). La RLS deja escribir solo a Gerencia y Administración. */
+/** Ficha del trabajador (alta o edición). La RLS deja escribir solo a Gerencia. */
 export async function guardarTrabajador(_: unknown, fd: FormData): Promise<Resultado> {
   const { supabase, empresa } = await obtenerContexto();
   const id = texto(fd, "id");
@@ -34,7 +34,7 @@ export async function guardarTrabajador(_: unknown, fd: FormData): Promise<Resul
     ? await supabase.from("trabajadores").update(datos, { count: "exact" }).eq("id", id)
     : await supabase.from("trabajadores").insert({ ...datos, fecha_ingreso: datos.fecha_ingreso, nombre: datos.nombre, empresa_id: empresa.id }, { count: "exact" });
   if (error) return fallo(error.code === "23505" ? "Ya hay un trabajador con ese DNI." : error);
-  if (!count) return fallo("Solo Gerencia o Administración pueden gestionar el personal.");
+  if (!count) return fallo("Solo Gerencia puede gestionar el personal.");
   return ok(null);
 }
 

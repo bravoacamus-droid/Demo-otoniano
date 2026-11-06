@@ -41,6 +41,8 @@ export function CargaNavegacion({ children }: { children: React.ReactNode }) {
 
   return (
     <div
+      // pantalla: cada bloque de la página entra en cascada (globals.css)
+      className="pantalla"
       data-cargando={cargando || undefined}
       aria-busy={cargando || undefined}
       // Captura: corre antes que el onClick de <Link>

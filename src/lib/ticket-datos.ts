@@ -49,10 +49,11 @@ export async function ticketCompra(ctx: Contexto, id: string): Promise<DatosTick
 
 export async function ticketVenta(ctx: Contexto, id: string): Promise<DatosTicket | null> {
   const { supabase, empresa } = ctx;
-  const [{ data: v }, { data: items }, logo] = await Promise.all([
+  const [{ data: v }, { data: items }, logo, { data: corr }] = await Promise.all([
     supabase.from("v_ventas").select("*").eq("id", id).single(),
     supabase.from("v_venta_items").select("*").eq("venta_id", id).order("id"),
     logoDataUri(ctx),
+    supabase.from("ventas").select("corregido_en").eq("id", id).maybeSingle(),
   ]);
   if (!v) return null;
   return {
@@ -66,6 +67,7 @@ export async function ticketVenta(ctx: Contexto, id: string): Promise<DatosTicke
     documento: v.comprador_ruc ? `RUC ${v.comprador_ruc}` : null,
     medio_pago: v.medio_nombre ?? v.medio_pago,
     estado: v.estado,
+    corregido: corr?.corregido_en ? `Corregido el ${fechaHora(corr.corregido_en)}` : null,
     total: v.total,
     notas: [v.comprobante_tipo && (v.comprobante_tipo !== "nota_venta" || v.comprobante_numero) && textoComprobante(v.comprobante_tipo, v.comprobante_numero, false),
       v.guia_numero && `Guía ${v.guia_numero}`, v.notas].filter(Boolean).join(" · ") || null,

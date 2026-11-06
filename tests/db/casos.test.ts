@@ -690,6 +690,13 @@ describe("Personal: ingreso, cese, asistencia, domingos y horas extras", () => {
     // El cajero (Almacén) no ve sueldos ni asistencia
     const vistos = await como(db, CAJERO_A, (tx) => tx.query(`select * from trabajadores`)).then((r) => r.rows);
     expect(vistos).toHaveLength(0);
+    // Personal es solo de Gerencia: Administración tampoco ve ni marca
+    const ADMIN = "55555555-5555-5555-5555-555555555555";
+    const deAdmin = await como(db, ADMIN, (tx) => tx.query(`select * from trabajadores`)).then((r) => r.rows);
+    expect(deAdmin).toHaveLength(0);
+    await expect(marcar("2026-10-07", [{ trabajador_id: trab, estado: "asistio" }], ADMIN)).rejects.toThrow();
+    await expect(como(db, ADMIN, (tx) => tx.query(
+      `insert into trabajadores (empresa_id, nombre, fecha_ingreso) values ($1, 'Intruso', '2026-10-01')`, [empA]))).rejects.toThrow();
   });
 });
 
@@ -765,5 +772,116 @@ describe("Caja · apertura y cierre (turnos)", () => {
     expect(num(r.diferencia_cierre)).toBe(2);
     expect(r.ajustado).toBe(true);
     expect(await saldoCaja()).toBe(inicio + 2);
+  });
+});
+
+describe("Reunión 06/11: capital con voucher, utilidad por socio, conteo, corrección de venta y reporte del mes", () => {
+  let socio2: string;
+  const capital = (s: string) => como(db, DUENO_A, (tx) =>
+    uno<{ capital: string; capitalizado: string; utilidad_entregada: string }>(tx,
+      `select capital, capitalizado, utilidad_entregada from v_capital_socio where socio_id = $1`, [s]));
+  const patrimonio = () => como(db, DUENO_A, (tx) =>
+    uno<{ capital: string; ganancia_acumulada: string }>(tx,
+      `select capital, ganancia_acumulada from v_patrimonio where empresa_id = $1`, [empA]));
+  const periodo = () => uno<{ p: string }>(db, `select periodo_de(now()) as p`).then((x) => x.p);
+
+  beforeAll(async () => {
+    socio2 = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into socios (empresa_id, nombre, porcentaje) values ($1, 'Socio 2', 0) returning id`, [empA])).then((x) => x.id);
+  });
+
+  it("aporte con voucher, ajuste de capital sin caja y utilidad entregada/capitalizada", async () => {
+    const c0 = await saldoCaja();
+    const id = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `select registrar_movimiento_socio($1, $2, 'aporte', 1000, $3, p_voucher_numero => ' OP-123 ',
+              p_voucher_url => 'x/vouchers/a.jpg') as id`, [empA, socio2, caja])).then((x) => x.id);
+    expect(await saldoCaja()).toBeCloseTo(c0 + 1000, 2);
+    const v = await como(db, DUENO_A, (tx) => uno<{ voucher_numero: string }>(tx,
+      `select voucher_numero from v_aportes_retiros where id = $1`, [id]));
+    expect(v.voucher_numero).toBe("OP-123");
+
+    // «Editar» el capital: la diferencia queda como movimiento; sin caja no mueve dinero y exige motivo
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select ajustar_capital_socio($1, $2, 1500, null)`, [empA, socio2])))
+      .rejects.toThrow(/motivo/);
+    const p0 = await patrimonio();
+    await como(db, DUENO_A, (tx) => tx.query(`select ajustar_capital_socio($1, $2, 1500, 'Aporte en material')`, [empA, socio2]));
+    expect(num((await capital(socio2)).capital)).toBe(1500);
+    expect(await saldoCaja()).toBeCloseTo(c0 + 1000, 2);
+    const p1 = await patrimonio();
+    expect(num(p1.capital) - num(p0.capital)).toBeCloseTo(500, 2);
+    expect(num(p1.ganancia_acumulada) - num(p0.ganancia_acumulada)).toBeCloseTo(-500, 2);
+
+    // Utilidad: entregarla baja la caja y la ganancia, NO el capital; capitalizarla sube el capital sin mover caja
+    const per = await periodo();
+    await como(db, DUENO_A, (tx) => tx.query(
+      `select registrar_movimiento_socio($1, $2, 'retiro_utilidad', 100, $3, p_periodo => $4)`, [empA, socio2, caja, per]));
+    await como(db, DUENO_A, (tx) => tx.query(
+      `select registrar_movimiento_socio($1, $2, 'capitalizacion', 50, p_periodo => $3)`, [empA, socio2, per]));
+    await expect(como(db, DUENO_A, (tx) => tx.query(
+      `select registrar_movimiento_socio($1, $2, 'retiro_utilidad', 10, $3)`, [empA, socio2, caja]))).rejects.toThrow(/qué mes/);
+    const c = await capital(socio2);
+    expect([num(c.capital), num(c.capitalizado), num(c.utilidad_entregada)]).toEqual([1550, 50, 100]);
+    expect(await saldoCaja()).toBeCloseTo(c0 + 900, 2);
+    const p2 = await patrimonio();
+    expect(num(p2.capital) - num(p1.capital)).toBeCloseTo(50, 2);
+    expect(num(p2.ganancia_acumulada) - num(p1.ganancia_acumulada)).toBeCloseTo(-150, 2);
+
+    const s = await como(db, DUENO_A, (tx) => uno<{ pendiente: string; utilidad_socio: string }>(tx,
+      `select pendiente, utilidad_socio from v_utilidad_socio_saldo where socio_id = $1 and periodo = $2`, [socio2, per]));
+    expect(num(s.pendiente)).toBeCloseTo(num(s.utilidad_socio) - 150, 2);
+  });
+
+  it("conteo físico: guarda sistema, contado y faltante; sin motivo no deja ajustar", async () => {
+    await comprar(bronce, "50", "0", "20");
+    const s0 = num((await stock(bronce)).kg);
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select registrar_conteo($1, $2, $3)`, [empA, bronce, s0 - 5])))
+      .rejects.toThrow(/faltante de 5/);
+    const r = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `select registrar_conteo($1, $2, $3, 'Venta sin registrar') as id`, [empA, bronce, s0 - 5]));
+    const a = await como(db, DUENO_A, (tx) => uno<{ kg: string; kg_sistema: string; kg_contado: string; costo_total: string }>(tx,
+      `select kg, kg_sistema, kg_contado, costo_total from v_ajustes where id = $1`, [r.id]));
+    expect([num(a.kg), num(a.kg_sistema), num(a.kg_contado)]).toEqual([-5, s0, s0 - 5]);
+    expect(num(a.costo_total)).toBeLessThan(0);
+    expect(num((await stock(bronce)).kg)).toBe(s0 - 5);
+  });
+
+  it("corregir venta: motivo obligatorio, ajusta caja y deja registro; el almacén no puede", async () => {
+    await comprar(cobre, "10", "0", "30");
+    const v = await como(db, DUENO_A, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_venta($1, $2, $3::jsonb, p_caja => $4) as r`,
+      [empA, comprador, JSON.stringify([{ metal_id: cobre, peso_salida_kg: "4", peso_recibido_kg: "4", precio_kg: "34" }]), caja]))
+      .then((x) => x.r);
+    const item = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx, `select id from venta_items where venta_id = $1`, [v.id]));
+    const cambio = JSON.stringify([{ item_id: item.id, peso_recibido_kg: "3.9", precio_kg: "35" }]);
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select corregir_venta($1, $2::jsonb, ' ')`, [v.id, cambio]))).rejects.toThrow(/motivo/);
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select corregir_venta($1, $2::jsonb, 'x')`, [v.id, cambio]))).rejects.toThrow(/no tiene permiso/);
+    const c0 = await saldoCaja();
+    const r = await como(db, DUENO_A, (tx) => uno<{ r: { total: string; diferencia: string } }>(tx,
+      `select corregir_venta($1, $2::jsonb, 'Precio acordado 35') as r`, [v.id, cambio])).then((x) => x.r);
+    expect(num(r.total)).toBe(136.5);                       // 3.9 × 35
+    expect(num(r.diferencia)).toBe(0.5);                    // antes 4 × 34 = 136
+    expect(await saldoCaja()).toBeCloseTo(c0 + 0.5, 2);
+    const reg = await como(db, DUENO_A, (tx) => uno<{ motivo: string; total_antes: string }>(tx,
+      `select motivo, total_antes from v_correcciones_venta where venta_id = $1`, [v.id]));
+    expect([reg.motivo, num(reg.total_antes)]).toEqual(["Precio acordado 35", 136]);
+  });
+
+  it("reporte del mes: caja, material por producto, compras, ventas y utilidad; el cierre lo guarda", async () => {
+    type Rep = { estado: string; stock: { costo: number }[]; compras: unknown[]; ventas: unknown[];
+      patrimonio: { stock_costo: number }; resultado: { utilidad: number } };
+    const per = await periodo();
+    const rep = await como(db, DUENO_A, (tx) => uno<{ r: Rep }>(tx, `select reporte_mes($1, $2) as r`, [empA, per])).then((x) => x.r);
+    expect(rep.estado).not.toBe("cerrado");   // abierto o reabierto (caso 6)
+    expect(rep.compras.length).toBeGreaterThan(0);
+    expect(rep.ventas.length).toBeGreaterThan(0);
+    // El material por producto suma lo mismo que el stock a costo del patrimonio
+    expect(rep.stock.reduce((s, x) => s + num(x.costo), 0)).toBeCloseTo(num(rep.patrimonio.stock_costo), 1);
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select reporte_mes($1, $2)`, [empA, per]))).rejects.toThrow(/no tiene permiso/);
+
+    await como(db, DUENO_A, (tx) => tx.query(`select cerrar_mes($1, $2)`, [empA, per]));
+    const cerrado = await como(db, DUENO_A, (tx) => uno<{ r: Rep }>(tx, `select reporte_mes($1, $2) as r`, [empA, per])).then((x) => x.r);
+    expect(cerrado.estado).toBe("cerrado");
+    expect(num(cerrado.resultado.utilidad)).toBeCloseTo(num(rep.resultado.utilidad), 2);
+    await como(db, DUENO_A, (tx) => tx.query(`select reabrir_mes($1, $2, 'Prueba')`, [empA, per]));
   });
 });

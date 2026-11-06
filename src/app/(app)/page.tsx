@@ -12,6 +12,7 @@ import { TortaPorMetal, type FilaMes } from "@/components/graficos-dashboard";
 import { InicioOperativo } from "./inicio-operativo";
 import { leerFiltroInicio, type FiltroInicio } from "./filtro-inicio";
 import { Actualizable, BarraFiltroInicio, SeccionCurva, SeccionEvolucion, ZonaFiltrada, type DiaSerie } from "./filtro-inicio-cliente";
+import { CifraAnimada } from "@/components/ui/cifra-animada";
 
 export const metadata: Metadata = { title: "Inicio" };
 
@@ -98,7 +99,8 @@ async function Patrimonio({ ctx }: { ctx: Contexto }) {
           (tarjetas blancas de abajo). Colores fijos: se ve igual en modo claro y oscuro. */}
       <section aria-labelledby="titulo-patrimonio"
         className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a5ca8] via-[#164b8a] to-[#0f2c50] text-white shadow-lg">
-        <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10" />
+        <div aria-hidden className="panel-orbe pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10" />
+        <div aria-hidden className="panel-reflejo" />
         <div className="relative flex flex-wrap items-center justify-between gap-2 px-5 pt-4">
           <h2 id="titulo-patrimonio" className="text-xs font-semibold uppercase tracking-wider text-white/80">Patrimonio · hoy</h2>
           {capital > 0 && (
@@ -118,7 +120,7 @@ async function Patrimonio({ ctx }: { ctx: Contexto }) {
           ].map((k) => (
             <div key={k.t} className={`min-w-0 rounded-xl px-3 py-3 sm:px-4 ${k.fuerte ? "bg-white/15 ring-1 ring-white/25" : ""}`}>
               <p className="truncate text-xs font-medium uppercase tracking-wide text-white/80">{k.t}</p>
-              <p className={`cifra mt-1 truncate font-bold tracking-tight ${k.fuerte ? "text-[clamp(1.2rem,5.6vw,1.9rem)]" : "text-[clamp(1.1rem,5.2vw,1.65rem)]"}`}>{k.v}</p>
+              <p className={`cifra mt-1 truncate font-bold tracking-tight ${k.fuerte ? "text-[clamp(1.2rem,5.6vw,1.9rem)]" : "text-[clamp(1.1rem,5.2vw,1.65rem)]"}`}><CifraAnimada texto={k.v} /></p>
               <p className="mt-0.5 truncate text-xs text-white/80">{k.d}</p>
             </div>
           ))}

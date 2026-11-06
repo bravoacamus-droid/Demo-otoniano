@@ -25,12 +25,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const { supabase, empresa } = ctx;
-  const [{ data: v }, { data: items }, logo] = await Promise.all([
+  const [{ data: v }, { data: items }, logo, { data: corr }] = await Promise.all([
     supabase.from("v_ventas").select("*").eq("id", id).single(),
     supabase.from("v_venta_items").select("*").eq("venta_id", id).order("id"),
     cargarLogo(supabase, empresa.logo_url),
+    supabase.from("ventas").select("corregido_en").eq("id", id).maybeSingle(),
   ]);
   if (!v) return new Response("No encontrada", { status: 404 });
-  const pdf = await renderToBuffer(<ComprobantePdf d={datosVenta({ empresa, logo: logo?.buffer ?? null }, v, items ?? [])} />);
+  const pdf = await renderToBuffer(<ComprobantePdf d={datosVenta({ empresa, logo: logo?.buffer ?? null }, { ...v, corregido_en: corr?.corregido_en ?? null }, items ?? [])} />);
   return pdfResponse(pdf, `venta-${v.numero}`);
 }

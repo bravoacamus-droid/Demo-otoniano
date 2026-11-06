@@ -1,4 +1,5 @@
 import { cx } from "./clases";
+import { CifraAnimada } from "./cifra-animada";
 
 export function Tarjeta({ className, children, id, style }: {
   className?: string; children: React.ReactNode; id?: string; style?: React.CSSProperties;
@@ -9,8 +10,8 @@ export function Tarjeta({ className, children, id, style }: {
 
 export function TituloTarjeta({ children, accion }: { children: React.ReactNode; accion?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-2 border-b border-stone-100 px-4 py-3">
-      <h2 className="text-[15px] font-semibold text-stone-900">{children}</h2>
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-4 py-3">
+      <h2 className="min-w-0 text-[15px] font-semibold text-stone-900">{children}</h2>
       {accion}
     </div>
   );
@@ -71,11 +72,11 @@ export function Kpi({
 }: { titulo: string; valor: React.ReactNode; detalle?: React.ReactNode; tono?: "positivo" | "negativo" | "aviso" }) {
   return (
     // Franja izquierda según el tono (colores que el modo oscuro no invierte)
-    <Tarjeta className={cx("border-l-4 p-4",
+    <Tarjeta className={cx("kpi border-l-4 p-4 transition-[translate,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md",
       tono === "positivo" ? "border-l-emerald-600" : tono === "negativo" ? "border-l-red-600" : tono === "aviso" ? "border-l-amber-600" : "border-l-marca-600")}>
       <p className="text-[13px] font-medium text-stone-600">{titulo}</p>
       <p className={cx("cifra mt-1 text-[clamp(1.25rem,5.5vw,1.75rem)] font-bold tracking-tight",
-        tono === "positivo" && "text-emerald-700", tono === "negativo" && "text-red-700", tono === "aviso" && "text-amber-700")}>{valor}</p>
+        tono === "positivo" && "text-emerald-700", tono === "negativo" && "text-red-700", tono === "aviso" && "text-amber-700")}>{typeof valor === "string" ? <CifraAnimada texto={valor} /> : valor}</p>
       {detalle && <p className="mt-0.5 text-xs text-stone-600">{detalle}</p>}
     </Tarjeta>
   );

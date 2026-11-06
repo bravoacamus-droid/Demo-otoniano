@@ -65,6 +65,7 @@
   :root.oscuro {
     color-scheme: dark;
     --color-superficie: #151c28;
+    --brillo-esqueleto: rgb(255 255 255 / 0.06);
     --color-fondo: #0a0f18;
     --color-stone-50: #1a2230;
     --color-stone-100: #202a3a;
@@ -136,6 +137,7 @@
   :root:not(.claro):not(.oscuro) {
     color-scheme: dark;
     --color-superficie: #151c28;
+    --brillo-esqueleto: rgb(255 255 255 / 0.06);
     --color-fondo: #0a0f18;
     --color-stone-50: #1a2230;
     --color-stone-100: #202a3a;
@@ -470,9 +472,117 @@ form[data-pulsado]::after {
   to { opacity: 1; transform: none; }
 }
 
+/* -----------------------------------------------------------------------------
+   Movimiento del sistema (04/11). Siempre fill-mode «backwards»: al terminar, la animación suelta los
+   estilos y no pisa la atenuación de carga ([data-cargando]) ni los hover.
+   -------------------------------------------------------------------------- */
+@keyframes subir-suave {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fila-entra {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dialogo-entra {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes barrido-panel {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to { transform: translateX(260%) skewX(-18deg); }
+}
+@keyframes flotar-suave {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(-28px, 18px) scale(1.12); }
+}
+@keyframes brillo-carga {
+  to { transform: translateX(100%); }
+}
+
+/* Cada pantalla entra en cascada: encabezado, indicadores, tarjetas… */
+.pantalla > :not(.barra-navegacion, [role="status"]) { animation: subir-suave 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.pantalla > :nth-child(2) { animation-delay: 0.06s; }
+.pantalla > :nth-child(3) { animation-delay: 0.12s; }
+.pantalla > :nth-child(4) { animation-delay: 0.18s; }
+.pantalla > :nth-child(5) { animation-delay: 0.24s; }
+.pantalla > :nth-child(6) { animation-delay: 0.3s; }
+.pantalla > :nth-child(n + 7) { animation-delay: 0.36s; }
+
+/* Indicadores (Kpi) uno tras otro dentro de su grilla */
+.kpi { animation: subir-suave 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.kpi:nth-child(2) { animation-delay: 0.08s; }
+.kpi:nth-child(3) { animation-delay: 0.16s; }
+.kpi:nth-child(n + 4) { animation-delay: 0.24s; }
+
+/* Filas de tablas y tarjetas de lista: aparecen de arriba abajo (las primeras 15; el resto juntas) */
+.filas-entran > * { animation: fila-entra 0.35s ease-out backwards; animation-delay: 0.45s; }
+.filas-entran > :nth-child(1) { animation-delay: 0.15s; }
+.filas-entran > :nth-child(2) { animation-delay: 0.17s; }
+.filas-entran > :nth-child(3) { animation-delay: 0.19s; }
+.filas-entran > :nth-child(4) { animation-delay: 0.21s; }
+.filas-entran > :nth-child(5) { animation-delay: 0.23s; }
+.filas-entran > :nth-child(6) { animation-delay: 0.25s; }
+.filas-entran > :nth-child(7) { animation-delay: 0.27s; }
+.filas-entran > :nth-child(8) { animation-delay: 0.29s; }
+.filas-entran > :nth-child(9) { animation-delay: 0.31s; }
+.filas-entran > :nth-child(10) { animation-delay: 0.33s; }
+.filas-entran > :nth-child(11) { animation-delay: 0.35s; }
+.filas-entran > :nth-child(12) { animation-delay: 0.37s; }
+.filas-entran > :nth-child(13) { animation-delay: 0.39s; }
+.filas-entran > :nth-child(14) { animation-delay: 0.41s; }
+.filas-entran > :nth-child(15) { animation-delay: 0.43s; }
+
+/* Barras de avance y de ranking: crecen desde la izquierda */
+.barra-crece {
+  transform-origin: left;
+  animation: llenar 0.9s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+/* Ventanas (Modal): suben y el fondo se oscurece de a poco */
+.modal-animado[open] { animation: dialogo-entra 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.modal-animado[open]::backdrop { animation: aparecer 0.25s ease-out; }
+
+/* Panel de cada módulo: un reflejo cruza al entrar y el círculo decorativo flota */
+.panel-reflejo {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.16), transparent);
+  animation: barrido-panel 1.6s 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+  pointer-events: none;
+}
+.panel-orbe { animation: flotar-suave 9s ease-in-out infinite alternate; }
+
+/* Cifras que cuentan (components/ui/cifra-animada.tsx): ocultas hasta que hidrata, como máximo 1.2 s */
+.cifra-espera { animation: aparecer 0.01s 1.2s backwards; }
+
+/* Esqueletos de carga: brillo que recorre el bloque */
+.esqueleto-brillo { position: relative; overflow: hidden; }
+.esqueleto-brillo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--brillo-esqueleto, rgb(255 255 255 / 0.6)), transparent);
+  animation: brillo-carga 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pantalla > *, .kpi, .filas-entran > *, .barra-crece, .modal-animado[open], .modal-animado[open]::backdrop,
+  .panel-reflejo, .panel-orbe, .esqueleto-brillo::after, .cifra-espera {
+    animation: none;
+  }
+  .panel-reflejo { display: none; }
+}
+@media print {
+  .pantalla > *, .kpi, .filas-entran > *, .barra-crece, .panel-orbe, .cifra-espera { animation: none; }
+  .panel-reflejo { display: none; }
+}
+
 /* Celulares y tablets: sin los bucles más pesados (orbes con blur, halo, resplandor) y la mitad de chispas */
 @media (max-width: 1023px) {
-  .escena-orbe, .iso-halo, .iso-resplandor { animation: none; }
+  .escena-orbe, .iso-halo, .iso-resplandor, .panel-orbe { animation: none; }
   .chispa:nth-child(odd) { display: none; }
 }
 

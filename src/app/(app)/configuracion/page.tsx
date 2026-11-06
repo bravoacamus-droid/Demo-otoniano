@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Handshake } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { Encabezado, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
+import { cx } from "@/components/ui/clases";
 import { Campo, Input, InputNumero } from "@/components/ui/campos";
 import { FormularioAccion } from "@/components/ui/formulario";
 import { ETIQUETA_ROL } from "@/lib/formato";
@@ -96,7 +97,7 @@ export default async function ConfiguracionPage() {
                   <span className="cifra font-semibold">{usadas} <span className="font-normal text-stone-500">de 100 gratis</span></span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-stone-100">
-                  <div className={usadas >= 90 ? "h-full bg-red-500" : usadas >= 70 ? "h-full bg-amber-500" : "h-full bg-emerald-500"} style={{ width: `${Math.min(100, usadas)}%` }} />
+                  <div className={cx("barra-crece h-full", usadas >= 90 ? "bg-red-500" : usadas >= 70 ? "bg-amber-500" : "bg-emerald-500")} style={{ width: `${Math.min(100, usadas)}%` }} />
                 </div>
               </div>
               <p className="text-stone-500">

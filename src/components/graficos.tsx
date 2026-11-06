@@ -130,7 +130,7 @@ export function GraficoStock({ datos }: { datos: { nombre: string; color: string
             <span className="cifra text-xs text-stone-600">{kg(d.kg)} · {soles(d.valor)}</span>
           </div>
           <div className="h-2.5 rounded-full bg-stone-100">
-            <div className="h-full rounded-full" style={{ width: `${Math.max((d.valor / max) * 100, 1)}%`, background: d.color ?? "#a8a29e" }} />
+            <div className="barra-crece h-full rounded-full" style={{ width: `${Math.max((d.valor / max) * 100, 1)}%`, background: d.color ?? "#a8a29e" }} />
           </div>
         </li>
       ))}

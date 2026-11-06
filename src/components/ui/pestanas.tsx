@@ -14,8 +14,9 @@ export function Pestanas({ base, actual, opciones }: {
           key={o.valor}
           href={i === 0 ? base : `${base}?tab=${o.valor}`}
           scroll={false}
+          aria-current={actual === o.valor ? "page" : undefined}
           className={cx(
-            "flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium",
+            "flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
             actual === o.valor ? "bg-superficie text-stone-900 shadow-sm" : "text-stone-600 hover:text-stone-900",
           )}
         >

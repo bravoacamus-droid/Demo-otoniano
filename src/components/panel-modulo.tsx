@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cx } from "@/components/ui/clases";
+import { CifraAnimada } from "@/components/ui/cifra-animada";
 
 // Panel destacado arriba de cada módulo, con la misma idea que "Patrimonio · hoy" del inicio: fondo del color
 // del módulo, la cifra principal grande a la izquierda y las secundarias al lado. Así el resumen no se confunde
@@ -32,7 +33,7 @@ function Celda({ c, principal }: { c: CeldaPanel; principal?: boolean }) {
         "cifra mt-1 truncate font-bold tracking-tight",
         principal ? "text-[clamp(1.5rem,7vw,2.25rem)] leading-tight" : "text-[clamp(1.05rem,4.8vw,1.4rem)]",
         c.negativo && "text-red-100",
-      )}>{c.valor}</p>
+      )}>{typeof c.valor === "string" ? <CifraAnimada texto={c.valor} /> : c.valor}</p>
       {c.detalle && <p className="mt-0.5 truncate text-xs text-white/90">{c.detalle}</p>}
     </>
   );
@@ -40,7 +41,7 @@ function Celda({ c, principal }: { c: CeldaPanel; principal?: boolean }) {
     "block min-w-0 rounded-xl px-3 py-3 sm:px-4",
     principal && "bg-white/15 py-4 ring-1 ring-white/25 sm:py-5",
     !principal && c.activa && "bg-white/15 ring-1 ring-white/40",
-    c.href && "transition-colors hover:bg-white/10",
+    c.href && "transition-[background-color,translate] duration-200 hover:-translate-y-0.5 hover:bg-white/10",
   );
   return c.href ? <Link href={c.href} className={clase}>{contenido}</Link> : <div className={clase}>{contenido}</div>;
 }
@@ -58,7 +59,8 @@ export function PanelModulo({ tono, etiqueta, insignia, principal, celdas }: {
     <section className={cx("relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br text-white shadow-lg", FONDOS[tono])}>
       {/* Brillo cian como la barra lateral, más el círculo decorativo */}
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(420px_140px_at_0_0,rgb(34_192_248/0.15),transparent)]" />
-      <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10" />
+      <div aria-hidden className="panel-orbe pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-white/10" />
+      <div aria-hidden className="panel-reflejo" />
       <div className="relative flex flex-wrap items-center justify-between gap-2 px-5 pt-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-white/90">{etiqueta}</h2>
         {insignia && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold">{insignia}</span>}

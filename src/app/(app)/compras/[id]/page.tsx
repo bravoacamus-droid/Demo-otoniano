@@ -18,8 +18,10 @@ export const metadata: Metadata = { title: "Detalle de compra" };
 
 type LineaJson = { producto: string; peso_bruto_kg: number; descuento_kg: number; precio_kg: number; importe: number };
 
-export default async function CompraDetalle({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function CompraDetalle({
+  params, searchParams,
+}: { params: Promise<{ id: string }>; searchParams: Promise<{ corregir?: string }> }) {
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
   const { supabase, rol } = await obtenerContexto();
   const [{ data: c }, { data: items }, { data: sel }, { data: correcciones }, { data: rutas }, { data: credito }] = await Promise.all([
     supabase.from("v_compras").select("*").eq("id", id).maybeSingle(),
@@ -61,6 +63,7 @@ export default async function CompraDetalle({ params }: { params: Promise<{ id: 
               <CorregirCompra
                 compra={{ id: c.id, numero: c.numero }}
                 total={c.total}
+                abrirAlInicio={sp.corregir === "1"}
                 lineas={(items ?? []).map((i) => ({
                   id: i.id, producto: rutaDe(i.metal_id, i.metal_nombre),
                   peso_bruto_kg: i.peso_bruto_kg, descuento_kg: i.descuento_kg, precio_kg: i.precio_kg,
@@ -143,8 +146,9 @@ export default async function CompraDetalle({ params }: { params: Promise<{ id: 
                     </p>
                     <p className="text-stone-600">Motivo: {k.motivo}</p>
                     <ul className="space-y-0.5 text-xs text-stone-500">
-                      {(k.despues as LineaJson[]).map((d, n) => {
-                        const a = (k.antes as LineaJson[])[n];
+                      {((k.despues as LineaJson[] | null) ?? []).map((d, n) => {
+                        const a = ((k.antes as LineaJson[] | null) ?? [])[n];
+                        if (!a) return <li key={n} className="cifra">{d.producto}: {kg(d.peso_bruto_kg)} − {kg(d.descuento_kg)} × {soles(d.precio_kg)}</li>;
                         return (
                           <li key={n} className="cifra">
                             {d.producto}: {kg(a.peso_bruto_kg)} − {kg(a.descuento_kg)} × {soles(a.precio_kg)} → {kg(d.peso_bruto_kg)} − {kg(d.descuento_kg)} × {soles(d.precio_kg)}

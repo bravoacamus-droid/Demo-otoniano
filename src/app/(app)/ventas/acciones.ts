@@ -2,6 +2,7 @@
 
 import { obtenerContexto } from "@/lib/contexto";
 import { fallo, ok, texto } from "@/lib/acciones";
+import { normalizar } from "@/lib/montos";
 import type { Resultado } from "@/lib/tipos";
 import type { TipoComprobante } from "@/lib/comprobantes";
 import type { PlanCredito } from "@/components/plan-credito";
@@ -86,4 +87,19 @@ export async function actualizarGuia(d: {
   });
   if (error) return fallo(error);
   return ok(null);
+}
+
+/** Corrección de peso recibido/precio de una venta confirmada: solo Gerencia o Administración (lo valida la BD) */
+export async function corregirVenta(d: {
+  venta_id: string;
+  items: { item_id: string; peso_recibido_kg: string; precio_kg: string }[];
+  motivo: string;
+}): Promise<Resultado<{ total: number; diferencia: number }>> {
+  const { supabase } = await obtenerContexto();
+  const items = d.items.map((i) => ({ item_id: i.item_id, peso_recibido_kg: normalizar(i.peso_recibido_kg), precio_kg: normalizar(i.precio_kg) }));
+  if (items.some((i) => !i.peso_recibido_kg || !i.precio_kg)) return fallo("Ingrese el peso recibido y el precio de cada línea.");
+  if (!d.motivo.trim()) return fallo("Indique el motivo de la corrección.");
+  const { data, error } = await supabase.rpc("corregir_venta", { p_venta: d.venta_id, p_items: items, p_motivo: d.motivo });
+  if (error) return fallo(error);
+  return ok(data as { total: number; diferencia: number });
 }

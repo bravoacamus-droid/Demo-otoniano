@@ -7,10 +7,12 @@ import { Aviso, Insignia, PuntoMetal, Tarjeta } from "@/components/ui/basicos";
 import { Boton } from "@/components/ui/boton";
 import { InputNumero } from "@/components/ui/campos";
 import { Modal } from "@/components/ui/modal";
+import { useNotificar } from "@/components/ui/notificaciones";
 import { soles } from "@/lib/formato";
 import type { Producto } from "@/lib/tipos";
 import { guardarPrecios } from "./acciones";
 import { FormMetal } from "./form-metal";
+import { MenuProducto } from "./menu-producto";
 
 type Valores = { c: string; m: string; v: string };
 
@@ -19,6 +21,7 @@ export function TablaPrecios({ productos, editable }: { productos: Producto[]; e
   const [valores, setValores] = useState<Record<string, Valores>>(() =>
     // Los numeric de Postgres pueden llegar como número: los inputs trabajan con texto
     Object.fromEntries(productos.map((p) => [p.id, { c: String(p.precio_compra), m: p.precio_mayorista == null ? "" : String(p.precio_mayorista), v: String(p.precio_venta) }])));
+  const notificar = useNotificar();
   const [estado, setEstado] = useState<{ tipo: "ok" | "error"; msg: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [modal, setModal] = useState<{ producto: Producto | null; padre: string | null } | null>(null);
@@ -33,8 +36,11 @@ export function TablaPrecios({ productos, editable }: { productos: Producto[]; e
     setEstado(null);
     const r = await guardarPrecios(cambios.map((p) => ({ id: p.id, precio_compra: valores[p.id].c, precio_mayorista: valores[p.id].m, precio_venta: valores[p.id].v })));
     setGuardando(false);
-    setEstado(r.ok ? { tipo: "ok", msg: "Precios actualizados." } : { tipo: "error", msg: r.error });
-    if (r.ok) router.refresh();
+    // La tabla se vuelve a armar con los precios nuevos: el aviso de éxito va como notificación para que se vea
+    if (r.ok) {
+      notificar({ titulo: "Precios actualizados", mensaje: `${cambios.length} producto(s) con precio nuevo.` });
+      router.refresh();
+    } else setEstado({ tipo: "error", msg: r.error });
   }
   const fijar = (id: string, campo: keyof Valores, v: string) => setValores((x) => ({ ...x, [id]: { ...x[id], [campo]: v } }));
 
@@ -60,11 +66,10 @@ export function TablaPrecios({ productos, editable }: { productos: Producto[]; e
               </button>
               {p.codigo && <span className="shrink-0 font-mono text-xs text-stone-500">{p.codigo}</span>}
               {!p.activo && <Insignia>Inactivo</Insignia>}
-              {editable && p.activo && (
-                <button type="button" onClick={() => setModal({ producto: null, padre: p.id })} title={`Agregar variante de ${p.nombre}`}
-                  className="ml-auto shrink-0 rounded p-1 text-stone-400 hover:bg-marca-50 hover:text-marca-700" aria-label={`Agregar variante de ${p.nombre}`}>
-                  <Plus className="size-4" />
-                </button>
+              {editable && (
+                <MenuProducto nombre={p.nombre} id={p.id} activo={p.activo}
+                  onEditar={() => setModal({ producto: p, padre: p.padre_id })}
+                  onSubtipo={() => setModal({ producto: null, padre: p.id })} />
               )}
             </div>
             {editable && p.activo ? (

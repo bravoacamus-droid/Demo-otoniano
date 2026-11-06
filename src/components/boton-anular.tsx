@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Ban } from "lucide-react";
+import { Ban, type LucideIcon } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Textarea } from "@/components/ui/campos";
@@ -12,6 +12,8 @@ import type { Resultado } from "@/lib/tipos";
 /** Anulación con motivo obligatorio. Nada se borra: queda quién, cuándo y por qué. */
 export function BotonAnular({
   id, accion, titulo, explicacion, etiqueta = "Anular", textoConfirmar = "Confirmar anulación",
+  icono: Icono = Ban, peligro = true, mensajeExito = "Anulación registrada. El registro queda en el historial con su motivo.",
+  etiquetaMotivo = "Motivo", chico = false,
 }: {
   id: string;
   accion: (prev: Resultado | null, fd: FormData) => Promise<Resultado>;
@@ -19,18 +21,32 @@ export function BotonAnular({
   explicacion?: string;
   etiqueta?: string;
   textoConfirmar?: string;
+  icono?: LucideIcon;
+  /** false: no es una anulación (p. ej. reabrir un mes), el botón no va en rojo */
+  peligro?: boolean;
+  mensajeExito?: string;
+  etiquetaMotivo?: string;
+  /** Botón tipo enlace, para filas de tabla junto a otras acciones chicas */
+  chico?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
   return (
     <>
-      <Boton variante="secundario" onClick={() => setAbierto(true)} className="text-red-700">
-        <Ban className="size-4" /> {etiqueta}
-      </Boton>
+      {chico ? (
+        <button type="button" onClick={() => setAbierto(true)}
+          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${peligro ? "text-red-700 hover:bg-red-50" : "text-marca-700 hover:bg-marca-50"}`}>
+          <Icono className="size-3.5" /> {etiqueta}
+        </button>
+      ) : (
+        <Boton variante="secundario" onClick={() => setAbierto(true)} className={peligro ? "text-red-700" : undefined}>
+          <Icono className="size-4" /> {etiqueta}
+        </Boton>
+      )}
       <Modal abierto={abierto} onCerrar={() => setAbierto(false)} titulo={titulo}>
-        <FormularioAccion accion={accion} textoBoton={textoConfirmar} variante="peligro" mensajeExito="Anulación registrada. El registro queda en el historial con su motivo." onExito={() => setAbierto(false)}>
+        <FormularioAccion accion={accion} textoBoton={textoConfirmar} variante={peligro ? "peligro" : "primario"} mensajeExito={mensajeExito} onExito={() => setAbierto(false)}>
           <input type="hidden" name="id" value={id} />
           {explicacion && <Aviso>{explicacion}</Aviso>}
-          <Campo etiqueta="Motivo">
+          <Campo etiqueta={etiquetaMotivo}>
             <Textarea name="motivo" required minLength={3} placeholder="Ej.: error al digitar el peso" />
           </Campo>
         </FormularioAccion>

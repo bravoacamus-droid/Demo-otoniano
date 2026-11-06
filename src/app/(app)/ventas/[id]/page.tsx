@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, History } from "lucide-react";
 import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
@@ -15,21 +15,27 @@ import type { Caja } from "@/lib/tipos";
 import { anularVenta } from "../acciones";
 import { ConfirmarVenta } from "./confirmar-venta";
 import { EditarGuia } from "./editar-guia";
+import { CorregirVenta } from "./corregir-venta";
 import { textoComprobante } from "@/lib/comprobantes";
 import { AvanceCredito, type CreditoFila } from "@/components/avance-credito";
 
 export const metadata: Metadata = { title: "Detalle de venta" };
 
-export default async function VentaDetalle({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+type LineaJson = { producto: string; peso_recibido_kg: number; precio_kg: number; importe: number };
+
+export default async function VentaDetalle({
+  params, searchParams,
+}: { params: Promise<{ id: string }>; searchParams: Promise<{ corregir?: string }> }) {
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
   const ctx = await exigir("verTodo", "vender");
   const { supabase, rol, empresa } = ctx;
-  const [{ data: v }, { data: items }, { data: cajas }, medios, { data: credito }] = await Promise.all([
+  const [{ data: v }, { data: items }, { data: cajas }, medios, { data: credito }, { data: correcciones }] = await Promise.all([
     supabase.from("v_ventas").select("*").eq("id", id).maybeSingle(),
     supabase.from("v_venta_items").select("*").eq("venta_id", id),
     supabase.from("cajas").select("*").eq("empresa_id", empresa.id).eq("activo", true).order("orden"),
     cargarMediosPago(ctx),
     supabase.from("v_creditos").select("*").eq("venta_id", id).maybeSingle(),
+    supabase.from("v_correcciones_venta").select("*").eq("venta_id", id).order("fecha", { ascending: false }),
   ]);
   if (!v) notFound();
   const [guia, comprobante] = await Promise.all([urlArchivo(supabase, v.guia_url), urlArchivo(supabase, v.comprobante_url)]);
@@ -49,6 +55,18 @@ export default async function VentaDetalle({ params }: { params: Promise<{ id: s
               <FileText className="size-4" /> {v.estado === "pendiente" ? "Nota de salida" : "Nota de venta PDF"}
             </a>
             <BotonImprimir80 href={`/imprimir/venta/${v.id}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-stone-300 bg-superficie px-4 text-sm font-medium hover:bg-stone-50" />
+            {puede(rol, "corregir") && v.estado === "confirmada" && (
+              <CorregirVenta
+                venta={{ id: v.id, numero: v.numero }}
+                total={v.total}
+                abrirAlInicio={sp.corregir === "1"}
+                esCredito={!!credito}
+                lineas={(items ?? []).map((i) => ({
+                  id: i.id, producto: i.metal_nombre, peso_salida_kg: i.peso_salida_kg,
+                  peso_recibido_kg: i.peso_recibido_kg ?? i.peso_salida_kg, precio_kg: i.precio_kg ?? "0",
+                }))}
+              />
+            )}
             {puede(rol, "anular") && v.estado !== "anulada" && (
               <BotonAnular id={v.id} accion={anularVenta} titulo={`Anular venta N° ${v.numero}`}
                 explicacion="Los kilos vuelven al stock con su costo y, si estaba cobrada, se revierte el ingreso de caja." />
@@ -72,6 +90,7 @@ export default async function VentaDetalle({ params }: { params: Promise<{ id: s
       )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-4">
         <Tarjeta className="min-w-0">
           <TituloTarjeta>Productos</TituloTarjeta>
           <TablaDatos
@@ -88,8 +107,37 @@ export default async function VentaDetalle({ params }: { params: Promise<{ id: s
           />
         </Tarjeta>
 
+        {(correcciones ?? []).length > 0 && (
+          <Tarjeta>
+            <TituloTarjeta><span className="flex items-center gap-2"><History className="size-4" /> Correcciones de la venta</span></TituloTarjeta>
+            <ul className="divide-y divide-stone-100">
+              {(correcciones ?? []).map((k) => (
+                <li key={k.id} className="space-y-1.5 px-4 py-3 text-sm">
+                  <p className="flex flex-wrap items-center justify-between gap-2">
+                    <span><b className="font-medium">{k.creado_por_nombre ?? "—"}</b> · {fechaHora(k.fecha)}</span>
+                    <span className="cifra">{soles(k.total_antes)} → <b>{soles(k.total)}</b></span>
+                  </p>
+                  <p className="text-stone-600">Motivo: {k.motivo}</p>
+                  <ul className="space-y-0.5 text-xs text-stone-500">
+                    {((k.despues as LineaJson[] | null) ?? []).map((d, n) => {
+                      const a = ((k.antes as LineaJson[] | null) ?? [])[n];
+                      if (!a) return <li key={n} className="cifra">{d.producto}: {kg(d.peso_recibido_kg)} × {soles(d.precio_kg)}</li>;
+                      return (
+                        <li key={n} className="cifra">
+                          {d.producto}: {kg(a.peso_recibido_kg)} × {soles(a.precio_kg)} → {kg(d.peso_recibido_kg)} × {soles(d.precio_kg)}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </Tarjeta>
+        )}
+        </div>
+
         <div className="space-y-4">
-          {credito && <Tarjeta className="p-4"><AvanceCredito c={credito as unknown as CreditoFila} /></Tarjeta>}
+          {credito &&<Tarjeta className="p-4"><AvanceCredito c={credito as unknown as CreditoFila} /></Tarjeta>}
           <Tarjeta className="p-4">
             <dl className="grid grid-cols-2 gap-3">
               <Dato etiqueta="Comprador"><Link className="text-marca-700 hover:underline" href={`/compradores/${v.comprador_id}`}>{v.comprador_nombre}</Link></Dato>

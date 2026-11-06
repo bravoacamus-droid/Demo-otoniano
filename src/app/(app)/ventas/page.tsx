@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { PencilLine, Plus } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
 import { fechaHora, kg, soles } from "@/lib/formato";
@@ -46,6 +47,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   ]);
   const filas = ventas ?? [];
   const credito = new Map((creditos ?? []).map((c) => [c.venta_id, c]));
+  const corrige = puede(rol, "corregir");
 
   return (
     <>
@@ -62,7 +64,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           { nombre: "comprador", etiqueta: "Comprador", opciones: (compradores ?? []).map((c) => ({ valor: c.id, texto: c.razon_social })) },
           { nombre: "metal", etiqueta: "Producto", opciones: (metales ?? []).map((m) => ({ valor: m.id, texto: m.nombre })) },
           { nombre: "comprobante", etiqueta: "Comprobante", opciones: [
-            ...TIPOS_COMPROBANTE.map((t) => ({ valor: t, texto: COMPROBANTES[t].texto })), { valor: "sin", texto: "Sin registrar" },
+            ...TIPOS_COMPROBANTE.map((t) => ({ valor: t, texto: COMPROBANTES[t].texto })), { valor: "sin", texto: "Sin comprobante" },
           ] },
           { nombre: "estado", etiqueta: "Estado", opciones: Object.entries(ESTADO).map(([v, [t]]) => ({ valor: v, texto: t })) },
         ]}
@@ -74,37 +76,53 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
           enlace={(v) => `/ventas/${v.id}`}
           vacio="No hay ventas con esos filtros."
           columnas={[
-            { titulo: "N°", principal: true, celda: (v) => <span className="cifra">#{v.numero}</span> },
-            { titulo: "Fecha", celda: (v) => fechaHora(v.fecha) },
             {
-              // El comprobante va debajo del comprador (una columna más pasaba la tabla a tarjetas en laptop)
-              titulo: "Comprador · comprobante",
+              // El comprobante va primero y resaltado: con un clic sobre la boleta/factura se abre el detalle
+              titulo: "Comprobante", principal: true,
               celda: (v) => (
                 <span className="block leading-tight">
-                  {v.comprador_nombre}
-                  {v.comprobante_tipo && (
-                    <span className="mt-0.5 block text-xs text-stone-500">
-                      <span className="font-medium text-stone-700">{COMPROBANTES[v.comprobante_tipo as TipoComprobante].corto}</span>
-                      {v.comprobante_numero && <span className="cifra"> {v.comprobante_numero}</span>}
+                  {v.comprobante_tipo ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-marca-50 px-1.5 py-0.5 text-xs font-semibold text-marca-800 ring-1 ring-marca-200">
+                      {COMPROBANTES[v.comprobante_tipo as TipoComprobante].corto}
+                      {v.comprobante_numero && <span className="cifra">{v.comprobante_numero}</span>}
                     </span>
-                  )}
+                  ) : <span className="text-xs font-normal text-stone-500">Sin comprobante</span>}
+                  <span className="cifra mt-0.5 block text-xs font-normal text-stone-500">Venta N° {v.numero}</span>
                 </span>
               ),
             },
+            { titulo: "Fecha", celda: (v) => fechaHora(v.fecha) },
+            { titulo: "Comprador", celda: (v) => v.comprador_nombre },
             { titulo: "Productos", celda: (v) => v.metales, ocultarMovil: true },
-            { titulo: "Salida", alinear: "der", celda: (v) => <span className="cifra">{kg(v.kg_salida)}</span> },
-            { titulo: "Merma", alinear: "der", celda: (v) => v.merma_kg === null ? "—" : <span className="cifra">{kg(v.merma_kg)}</span> },
+            {
+              titulo: "Salida", alinear: "der", celda: (v) => (
+                <span className="block leading-tight">
+                  <span className="cifra">{kg(v.kg_salida)}</span>
+                  {v.merma_kg !== null && Number(v.merma_kg) !== 0 && <span className="cifra block text-xs text-amber-700">merma {kg(v.merma_kg)}</span>}
+                </span>
+              ),
+            },
             {
               // S/ por kg debajo del total: con 8 columnas la tabla entra en laptop con el menú abierto
               titulo: "Total", alinear: "der", principal: true, celda: (v) => (
                 <span className="block leading-tight">
                   <span className={v.estado === "anulada" ? "cifra text-stone-500 line-through" : "cifra font-semibold"}>{soles(v.total)}</span>
-                  {v.precio_promedio && <span className="cifra block text-xs text-stone-500">{soles(v.precio_promedio)}/kg</span>}
+                  {Number(v.precio_promedio) > 0 && <span className="cifra block text-xs text-stone-500">{soles(v.precio_promedio)}/kg</span>}
                   {credito.has(v.id) && <CreditoLinea c={credito.get(v.id)!} />}
                 </span>
               ),
             },
             { titulo: "Estado", celda: (v) => <Insignia tono={ESTADO[v.estado][1]}>{ESTADO[v.estado][0]}</Insignia> },
+            // En celular la tarjeta entera abre el detalle (ahí está «Corregir»): esta columna va solo en la tabla
+            ...(corrige ? [{
+              titulo: "", ocultarMovil: true,
+              celda: (v: (typeof filas)[number]) => v.estado === "confirmada" && (
+                <Link href={`/ventas/${v.id}?corregir=1`} title={`Corregir venta N° ${v.numero}`}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-marca-700 hover:bg-marca-50">
+                  <PencilLine className="size-3.5" /> Corregir
+                </Link>
+              ),
+            }] : []),
           ]}
         />
       </Tarjeta>

@@ -10,6 +10,8 @@ export interface Columna<T> {
   principal?: boolean;
   /** No se muestra en la tarjeta de celular */
   ocultarMovil?: boolean;
+  /** En la tarjeta de celular ocupa todo el ancho y no se recorta (textos largos: motivo, nota) */
+  completo?: boolean;
   className?: string;
 }
 
@@ -75,9 +77,9 @@ export function TablaDatos<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-stone-100">
+          <tbody className="filas-entran divide-y divide-stone-100">
             {filas.map((f) => (
-              <tr key={clave(f)} className={cx("transition-colors even:bg-stone-50/70 hover:bg-marca-50", enlace && "cursor-pointer")}>
+              <tr key={clave(f)} className="transition-colors even:bg-stone-50/70 hover:bg-marca-50">
                 {columnas.map((c, i) => (
                   <td key={c.titulo} className={cx("px-3 py-2.5 align-middle", borde, celda(c.alinear), c.className)}>
                     {enlace && i === 0 ? (
@@ -93,7 +95,7 @@ export function TablaDatos<T>({
       </div>
 
       {/* Tarjeta angosta: filas como tarjetas */}
-      <ul className={cx("divide-y divide-stone-100", cabe.tarjetas)}>
+      <ul className={cx("filas-entran divide-y divide-stone-100", cabe.tarjetas)}>
         {filas.map((f) => {
           const contenido = (
             <>
@@ -102,16 +104,20 @@ export function TablaDatos<T>({
                   <div key={c.titulo} className={cx("min-w-0 font-medium", celda(c.alinear))}>{c.celda(f)}</div>
                 ))}
               </div>
-              {resto.length > 0 && (
+              {resto.some((c) => c.titulo) && (
                 <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-sm @xl:grid-cols-3 @3xl:grid-cols-4">
-                  {resto.map((c) => (
-                    <div key={c.titulo} className="min-w-0">
+                  {resto.filter((c) => c.titulo).map((c) => (
+                    <div key={c.titulo} className={cx("min-w-0", c.completo && "col-span-full")}>
                       <dt className="text-[11px] uppercase tracking-wide text-stone-500">{c.titulo}</dt>
-                      <dd className="truncate">{c.celda(f)}</dd>
+                      <dd className={c.completo ? "whitespace-normal [overflow-wrap:anywhere]" : "truncate"}>{c.celda(f)}</dd>
                     </div>
                   ))}
                 </dl>
               )}
+              {/* Columnas sin título (botones de acción): en su propia fila, sin recortar */}
+              {resto.filter((c) => !c.titulo).map((c, i) => (
+                <div key={i} className="mt-2 flex justify-end empty:hidden">{c.celda(f)}</div>
+              ))}
             </>
           );
           return (

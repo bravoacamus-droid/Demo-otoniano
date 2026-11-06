@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import type { Resultado } from "@/lib/tipos";
@@ -34,6 +34,7 @@ export function FormularioAccion({
   confirmar?: string;
 }) {
   const [estado, enviar, pendiente] = useActionState<Resultado | null, FormData>(accion, null);
+  const [, iniciar] = useTransition();
   const router = useRouter();
   const notificar = useNotificar();
   const formRef = useRef<HTMLFormElement>(null);
@@ -51,8 +52,15 @@ export function FormularioAccion({
   }, [estado, reiniciar, router, notificar]);
 
   return (
-    <form ref={formRef} action={enviar} className={className ?? "space-y-3"}
-      onSubmit={(e) => { if (confirmar && !window.confirm(confirmar)) e.preventDefault(); }}>
+    // Se envía desde onSubmit y no con <form action>: React 19 vacía el formulario al terminar la acción
+    // aunque devuelva un error, y el usuario perdería lo escrito. Al salir bien lo reinicia el efecto de arriba.
+    <form ref={formRef} className={className ?? "space-y-3"}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (pendiente || (confirmar && !window.confirm(confirmar))) return;
+        const fd = new FormData(e.currentTarget);
+        iniciar(() => enviar(fd));
+      }}>
       {children}
       {estado && !estado.ok && <div className="animar-sacudir"><Aviso tono="rojo">{estado.error}</Aviso></div>}
       <Boton type="submit" variante={variante} disabled={pendiente} className="w-full sm:w-auto">

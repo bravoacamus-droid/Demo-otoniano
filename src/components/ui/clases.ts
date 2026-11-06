@@ -8,11 +8,11 @@ export const claseInput =
   "disabled:bg-stone-100 disabled:text-stone-500 sm:text-sm";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors " +
+  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[color,background-color,border-color,box-shadow,translate,scale,filter] duration-150 active:scale-[0.97] " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-500 focus-visible:ring-offset-2 focus-visible:ring-offset-superficie disabled:pointer-events-none disabled:opacity-50";
 
 const variantes = {
-  primario: "bg-marca-600 text-white hover:brightness-110 active:brightness-95",
+  primario: "bg-marca-600 text-white shadow-sm hover:shadow-md hover:shadow-marca-600/25 hover:brightness-110 active:brightness-95",
   secundario: "border border-stone-300 bg-superficie text-stone-800 hover:bg-stone-50",
   peligro: "bg-red-600 text-white hover:brightness-110",
   fantasma: "text-stone-700 hover:bg-stone-200/60",

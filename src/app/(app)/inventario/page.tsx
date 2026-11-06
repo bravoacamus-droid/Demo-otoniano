@@ -27,7 +27,7 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
   if (sp.metal) qLotes = qLotes.eq("metal_id", sp.metal);
   const [{ data: stock }, { data: ajustes }, { data: lotes }] = await Promise.all([
     supabase.from("v_stock_arbol").select("*").eq("empresa_id", empresa.id).order("clave_orden"),
-    supabase.from("v_ajustes").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(20),
+    supabase.from("v_ajustes").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(200),
     qLotes,
   ]);
   // Cada nivel de la jerarquía suma lo propio y lo de sus variantes (v_stock_arbol)
@@ -63,7 +63,7 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
         opciones={[
           { valor: "stock", texto: "Stock por producto" },
           { valor: "llegadas", texto: "Llegadas y antigüedad", cantidad: retrasados || undefined },
-          { valor: "ajustes", texto: "Ajustes" },
+          { valor: "ajustes", texto: "Ajustes y conteos" },
         ]}
       />
 
@@ -126,11 +126,11 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
           <TituloTarjeta accion={
             <form method="get" className="flex items-center gap-2">
               <input type="hidden" name="tab" value="llegadas" />
-              <select name="metal" defaultValue={sp.metal ?? ""} className="rounded-md border border-stone-300 bg-superficie px-2 py-1 text-xs">
+              <select name="metal" defaultValue={sp.metal ?? ""} aria-label="Producto" className="h-9 rounded-md border border-stone-300 bg-superficie px-2 text-sm">
                 <option value="">Todos los productos</option>
                 {filas.map((f) => <option key={f.metal_id} value={f.metal_id}>{f.ruta}</option>)}
               </select>
-              <button className="rounded-md border border-stone-300 px-2 py-1 text-xs font-medium">Filtrar</button>
+              <button className="h-9 rounded-md border border-stone-300 bg-superficie px-3 text-sm font-medium text-marca-700 hover:bg-marca-50">Filtrar</button>
             </form>
           }>
             Material en almacén por fecha de llegada
@@ -171,18 +171,37 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
 
       {tab === "ajustes" && (
         <Tarjeta>
-          <TituloTarjeta>Últimos ajustes</TituloTarjeta>
+          <TituloTarjeta>Ajustes y conteos físicos (últimos 200)</TituloTarjeta>
           <TablaDatos
             filas={ajustes ?? []}
             clave={(a) => a.id}
             vacio="Sin ajustes registrados."
             columnas={[
               { titulo: "Fecha", celda: (a) => fechaHora(a.fecha) },
-              { titulo: "Producto", principal: true, celda: (a) => a.metal_nombre },
-              { titulo: "Tipo", celda: (a) => <Insignia tono={a.tipo === "reclasificacion" ? "azul" : "ambar"}>{a.tipo === "reclasificacion" ? "Reclasificación" : a.tipo === "conteo" ? "Conteo" : a.tipo === "merma" ? "Merma" : "Otro"}</Insignia> },
-              { titulo: "Kg", alinear: "der", principal: true, celda: (a) => <span className={`cifra ${Number(a.kg) < 0 ? "text-red-700" : "text-emerald-700"}`}>{Number(a.kg) > 0 ? "+" : ""}{kg(a.kg)}</span> },
-              ...(verCostos ? [{ titulo: "Costo", alinear: "der" as const, celda: (a: NonNullable<typeof ajustes>[number]) => <span className="cifra">{soles(a.costo_total)}</span> }] : []),
-              { titulo: "Motivo", celda: (a) => a.motivo },
+              { titulo: "Producto", principal: true, celda: (a) => a.metal_ruta ?? a.metal_nombre },
+              { titulo: "Tipo", celda: (a) => <Insignia tono={a.tipo === "reclasificacion" ? "azul" : a.tipo === "conteo" ? "marca" : "gris"}>{a.tipo === "reclasificacion" ? "Reclasificación" : a.tipo === "conteo" ? "Conteo físico" : a.tipo === "merma" ? "Merma" : "Otro"}</Insignia> },
+              {
+                // Conteo: lo que decía el sistema y lo que se contó (evidencia del faltante o sobrante)
+                titulo: "Sistema → contado", alinear: "der", ocultarMovil: true,
+                celda: (a) => a.kg_sistema !== null && a.kg_contado !== null
+                  ? <span className="cifra text-stone-600">{kg(a.kg_sistema)} → {kg(a.kg_contado)}</span>
+                  : <span className="text-stone-400">—</span>,
+              },
+              {
+                titulo: "Diferencia", alinear: "der", principal: true,
+                // Una reclasificación solo mueve kilos entre productos: va en tono neutro (salió / entró)
+                celda: (a) => (
+                  <span className={`cifra block leading-tight ${a.tipo === "reclasificacion" ? "text-stone-700" : Number(a.kg) < 0 ? "text-red-700" : "text-emerald-700"}`}>
+                    <span className="block text-[11px] font-medium uppercase tracking-wide">
+                      {a.tipo === "reclasificacion" ? (Number(a.kg) < 0 ? "Salió" : "Entró") : Number(a.kg) < 0 ? "Faltante" : "Sobrante"}
+                    </span>
+                    {Number(a.kg) > 0 ? "+" : ""}{kg(a.kg)}
+                  </span>
+                ),
+              },
+              ...(verCostos ? [{ titulo: "Valor", alinear: "der" as const, celda: (a: NonNullable<typeof ajustes>[number]) => <span className="cifra">{soles(a.costo_total)}</span> }] : []),
+              { titulo: "Motivo", completo: true, celda: (a) => a.motivo },
+              { titulo: "Registró", celda: (a) => a.creado_por_nombre ?? "—" },
             ]}
           />
         </Tarjeta>

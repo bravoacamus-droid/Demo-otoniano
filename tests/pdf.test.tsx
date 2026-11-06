@@ -4,10 +4,31 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { TicketPdf } from "@/lib/pdf/ticket";
 import { ReportePdf } from "@/lib/pdf/reporte";
 import { ValorizadoPdf } from "@/lib/pdf/valorizado";
+import { AsistenciaPdf } from "@/lib/pdf/asistencia";
 import { ComprobantePdf, datosCompra, datosVenta } from "@/lib/pdf/comprobante";
 import { aCentimos, aGramos, importeCentimos } from "@/lib/montos";
 
 describe("PDF", () => {
+  it("resumen de asistencia: totales y cuadro de más de 31 días en dos bloques", async () => {
+    const dias = (desde: number, cuantos: number) => Array.from({ length: cuantos }, (_, i) => ({ dia: String(desde + i), semana: "Lu", domingo: i % 7 === 6 }));
+    const letras = ["A", "F", "D", "P", "V", "?", "·", ""];
+    const fila = (nombre: string, cuantos: number) => ({ nombre, dias: Array.from({ length: cuantos }, (_, i) => ({ letra: letras[i % letras.length], extra: i % 5 === 0 })) });
+    const pdf = await renderToBuffer(
+      <AsistenciaPdf d={{
+        empresa: { razon_social: "Sistema Otiniano", ruc: "20123456789", direccion: null, telefono: null }, logo: null,
+        periodo: "Del 01/09/2026 al 04/11/2026", generado: "04/11/2026 16:00 · Gerencia",
+        columnas: [{ titulo: "Trabajador", ancho: 30 }, { titulo: "Asistió", ancho: 8 }, { titulo: "Faltas", ancho: 8 }, { titulo: "Le corresponde", ancho: 13 }],
+        filas: [{ nombre: "Carlos Huamán Quispe", cargo: "Balanza", situacion: "activo", faltas: 2, celdas: ["Carlos Huamán Quispe", "27", "2", "S/ 71.06"] },
+          { nombre: "Wilmer Salazar", cargo: "Estibador", situacion: "cesado", faltas: 0, celdas: ["Wilmer Salazar", "11", "0", "S/ 0.00"] }],
+        totales: ["Total · 2 trabajador(es)", "38", "2", "S/ 71.06"],
+        bloques: [{ titulo: "01/09 al 01/10", dias: dias(1, 31), filas: [fila("Carlos", 31), fila("Wilmer", 31)] },
+          { titulo: "02/10 al 04/11", dias: dias(1, 34 - 31), filas: [fila("Carlos", 3)] }],
+        nota: "Montos estimados; confirme con su contador.",
+      }} />,
+    );
+    expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
   it("ticket de compra de 80 mm", async () => {
     const pdf = await renderToBuffer(
       <TicketPdf d={{

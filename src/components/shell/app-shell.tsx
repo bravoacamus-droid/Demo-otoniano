@@ -126,11 +126,11 @@ export function AppShell({
                       onClick={() => setMenuAbierto(false)}
                       aria-current={activo ? "page" : undefined}
                       className={cx(
-                        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
+                        "group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-[color,background-color,translate] duration-200 hover:translate-x-0.5",
                         FOCO_LATERAL, activo ? ACTIVO_LATERAL : INACTIVO_LATERAL,
                       )}
                     >
-                      <i.icono className={cx("size-4 shrink-0", activo && "text-marca-600")} />
+                      <i.icono className={cx("size-4 shrink-0 transition-transform duration-200 group-hover:scale-110", activo && "text-marca-600")} />
                       {i.texto}
                       <IndicadorNavegacion />
                     </Link>
