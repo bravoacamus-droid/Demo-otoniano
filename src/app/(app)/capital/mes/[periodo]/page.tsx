@@ -105,7 +105,7 @@ export default async function ReporteMes({ params }: { params: Promise<{ periodo
             <Linea signo="−" texto="Lo que nos costó ese material" monto={res?.costo_ventas} detalle="Al costo promedio de compra" />
             <Linea signo="=" texto="Ganancia en ventas" monto={res?.margen_bruto} fuerte />
             {mermas !== 0 && <Linea signo={mermas > 0 ? "−" : "+"} texto={mermas > 0 ? "Mermas y faltantes" : "Sobrantes"} monto={Math.abs(mermas)}
-              detalle={`Diferencia de balanza en ventas y ajustes/conteos${n(res?.merma_ajustes_kg) ? ` (${kg(res?.merma_ajustes_kg)})` : ""}`} />}
+              detalle={`Diferencia de balanza en ventas y ajustes/conteos${n(res?.merma_ajustes_kg) ? ` (${kg(Math.abs(n(res?.merma_ajustes_kg)))})` : ""}`} />}
             {n(res?.gastos) !== 0 && <Linea signo="−" texto="Gastos del mes" monto={res?.gastos} />}
             {n(res?.ajustes_caja) !== 0 && <Linea signo={n(res?.ajustes_caja) > 0 ? "+" : "−"} texto={n(res?.ajustes_caja) > 0 ? "Sobrante de caja (arqueos)" : "Faltante de caja (arqueos)"} monto={Math.abs(n(res?.ajustes_caja))} />}
             <Linea signo="=" texto="Utilidad del mes" monto={res?.utilidad} fuerte />

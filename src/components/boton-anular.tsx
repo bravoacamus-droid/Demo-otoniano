@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, type LucideIcon } from "lucide-react";
+import { Ban, LockOpen } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Textarea } from "@/components/ui/campos";
@@ -9,10 +9,12 @@ import { FormularioAccion } from "@/components/ui/formulario";
 import { Aviso } from "@/components/ui/basicos";
 import type { Resultado } from "@/lib/tipos";
 
+const ICONOS = { anular: Ban, reabrir: LockOpen };
+
 /** Anulación con motivo obligatorio. Nada se borra: queda quién, cuándo y por qué. */
 export function BotonAnular({
   id, accion, titulo, explicacion, etiqueta = "Anular", textoConfirmar = "Confirmar anulación",
-  icono: Icono = Ban, peligro = true, mensajeExito = "Anulación registrada. El registro queda en el historial con su motivo.",
+  icono = "anular", peligro = true, mensajeExito = "Anulación registrada. El registro queda en el historial con su motivo.",
   etiquetaMotivo = "Motivo", chico = false,
 }: {
   id: string;
@@ -21,7 +23,8 @@ export function BotonAnular({
   explicacion?: string;
   etiqueta?: string;
   textoConfirmar?: string;
-  icono?: LucideIcon;
+  /** Nombre del ícono (no el componente: esta prop llega desde páginas del servidor) */
+  icono?: keyof typeof ICONOS;
   /** false: no es una anulación (p. ej. reabrir un mes), el botón no va en rojo */
   peligro?: boolean;
   mensajeExito?: string;
@@ -30,6 +33,7 @@ export function BotonAnular({
   chico?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const Icono = ICONOS[icono];
   return (
     <>
       {chico ? (

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileBarChart, FileImage, LockOpen } from "lucide-react";
+import { FileBarChart, FileImage } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
 import { fecha, fechaHora, nombrePeriodo, periodoActual, porcentaje, soles } from "@/lib/formato";
@@ -172,7 +172,7 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
               titulo: "Reapertura", ocultarMovil: true,
               celda: (c) => c.estado === "cerrado" && esDueno
                 ? <BotonAnular id={c.periodo} accion={reabrirMes} titulo={`Reabrir ${nombrePeriodo(c.periodo)}`} explicacion="Se podrán volver a registrar y anular movimientos de ese mes." etiqueta="Reabrir" textoConfirmar="Reabrir mes"
-                    icono={LockOpen} peligro={false} chico etiquetaMotivo="Motivo de la reapertura" mensajeExito="Mes reabierto. Ya puede registrar y anular movimientos de ese mes." />
+                    icono="reabrir" peligro={false} chico etiquetaMotivo="Motivo de la reapertura" mensajeExito="Mes reabierto. Ya puede registrar y anular movimientos de ese mes." />
                 : c.motivo_reapertura ? <span className="text-xs text-stone-500">{c.motivo_reapertura}</span> : null,
             },
           ]}

@@ -72,10 +72,12 @@ export function Kpi({
 }: { titulo: string; valor: React.ReactNode; detalle?: React.ReactNode; tono?: "positivo" | "negativo" | "aviso" }) {
   return (
     // Franja izquierda según el tono (colores que el modo oscuro no invierte)
-    <Tarjeta className={cx("kpi border-l-4 p-4 transition-[translate,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md",
+    <Tarjeta className={cx("kpi @container border-l-4 p-4 transition-[translate,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md",
       tono === "positivo" ? "border-l-emerald-600" : tono === "negativo" ? "border-l-red-600" : tono === "aviso" ? "border-l-amber-600" : "border-l-marca-600")}>
       <p className="text-[13px] font-medium text-stone-600">{titulo}</p>
-      <p className={cx("cifra mt-1 text-[clamp(1.25rem,5.5vw,1.75rem)] font-bold tracking-tight",
+      <p className={cx("cifra mt-1 whitespace-nowrap font-bold tracking-tight",
+        // Montos largos (millones) se achican al ancho de la tarjeta para no salirse
+        typeof valor === "string" && valor.length > 12 ? "text-[clamp(1rem,10.5cqi,1.75rem)]" : "text-[clamp(1.25rem,5.5vw,1.75rem)]",
         tono === "positivo" && "text-emerald-700", tono === "negativo" && "text-red-700", tono === "aviso" && "text-amber-700")}>{typeof valor === "string" ? <CifraAnimada texto={valor} /> : valor}</p>
       {detalle && <p className="mt-0.5 text-xs text-stone-600">{detalle}</p>}
     </Tarjeta>
