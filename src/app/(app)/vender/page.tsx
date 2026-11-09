@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Vender" };
 export default async function VenderPage() {
   const ctx = await exigir("vender");
   const { supabase, empresa, rol } = ctx;
-  const [{ data: stock }, { data: compradores }, { data: cajas }, { data: precios }, medios, todos] = await Promise.all([
+  const [{ data: stock }, { data: compradores }, { data: cajas }, { data: precios }, medios, todos, { data: series }] = await Promise.all([
     supabase.from("v_stock_metal").select("metal_id, nombre, ruta, nivel, clave_orden, color, kg, costo_promedio, precio_venta")
       .eq("empresa_id", empresa.id).eq("activo", true).gt("kg", 0).order("clave_orden"),
     supabase.from("compradores").select("*").eq("empresa_id", empresa.id).eq("activo", true).order("razon_social"),
@@ -20,6 +20,7 @@ export default async function VenderPage() {
     supabase.rpc("precios_promedio", { p_empresa: empresa.id }),
     cargarMediosPago(ctx),
     cargarProductos(ctx),
+    supabase.from("v_series_comprobante").select("tipo, siguiente").eq("empresa_id", empresa.id),
   ]);
   const verCostos = puede(rol, "verCostos");
   const ventaProm = new Map((precios ?? []).map((p: { metal_id: string; venta_promedio: number | null }) => [p.metal_id, p.venta_promedio]));
@@ -61,6 +62,7 @@ export default async function VenderPage() {
       compradores={compradores as Comprador[]}
       cajas={(cajas ?? []) as Caja[]}
       medios={medios}
+      siguientes={Object.fromEntries((series ?? []).map((s) => [s.tipo, s.siguiente]))}
     />
   );
 }

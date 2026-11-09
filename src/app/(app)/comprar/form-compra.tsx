@@ -255,10 +255,10 @@ export function FormCompra({
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Campo etiqueta="Peso bruto (kg)">
-                <InputNumero id={`bruto-${l.uid}`} value={l.bruto} onChange={(e) => cambiar(l.uid, "bruto", e.target.value)} placeholder="0.000" />
+                <InputNumero id={`bruto-${l.uid}`} value={l.bruto} onChange={(e) => cambiar(l.uid, "bruto", e.target.value)} placeholder="0.00" />
               </Campo>
               <Campo etiqueta="Merma kg (opcional)">
-                <InputNumero value={l.merma} onChange={(e) => cambiar(l.uid, "merma", e.target.value)} placeholder="0.000" />
+                <InputNumero value={l.merma} onChange={(e) => cambiar(l.uid, "merma", e.target.value)} placeholder="0.00" />
               </Campo>
               <Campo etiqueta="Precio S/ por kg">
                 <InputNumero

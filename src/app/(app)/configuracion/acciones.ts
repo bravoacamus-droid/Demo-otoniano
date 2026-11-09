@@ -131,3 +131,16 @@ export async function guardarMedioPago(_: unknown, fd: FormData): Promise<Result
   if (error) return fallo(error);
   return ok(null);
 }
+
+/** Serie y último N° emitido de cada comprobante de venta: la próxima venta toma el siguiente */
+export async function guardarSerieComprobante(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase, empresa } = await exigir("configurar");
+  const tipo = texto(fd, "tipo");
+  if (tipo !== "factura" && tipo !== "boleta" && tipo !== "nota_venta") return fallo("Comprobante no válido.");
+  const ultimo = Number(texto(fd, "ultimo") ?? 0);
+  if (!Number.isInteger(ultimo) || ultimo < 0) return fallo("El último número emitido debe ser un entero (0 si aún no emite ninguno).");
+  const { error } = await supabase.rpc("configurar_serie_comprobante", {
+    p_empresa: empresa.id, p_tipo: tipo, p_serie: texto(fd, "serie") ?? "", p_ultimo: ultimo,
+  });
+  return error ? fallo(error) : ok(null);
+}

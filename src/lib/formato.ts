@@ -1,6 +1,7 @@
 // Formato es-PE. Los valores llegan de Postgres como string (numeric) y solo se formatean.
 const fmtSoles = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtKg = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+// Kilos con 2 decimales («10.00 kg»); el tercero (gramos) solo si hay: «10.000» se leía como diez mil
+const fmtKg = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
 const fmtNum = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 2 });
 
 type Num = string | number | null | undefined;

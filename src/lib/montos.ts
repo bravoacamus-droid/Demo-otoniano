@@ -23,7 +23,8 @@ export function importeCentimos(gramos: number, centimos: number): number {
 }
 
 export const centimosASoles = (c: number) => (c / 100).toFixed(2);
-export const gramosAKg = (g: number) => (g / 1000).toFixed(3);
+/** Kilos con 2 decimales y el de los gramos solo si hay («10.00», «10.125»): «10.000» se leía como diez mil */
+export const gramosAKg = (g: number) => (g / 1000).toFixed(3).replace(/(\.\d\d)0$/, "$1");
 
 /** Acepta coma o punto decimal; devuelve string limpio con punto o "" */
 export function normalizar(v: string): string {

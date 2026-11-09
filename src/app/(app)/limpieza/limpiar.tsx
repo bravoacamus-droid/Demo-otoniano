@@ -32,16 +32,18 @@ const MOTIVOS = ["Tierra / barro", "Humedad", "Otro material mezclado", "Impurez
  * Limpieza de una compra: se vuelve a pesar cada producto. La merma queda en kilos (y su valor en
  * soles); lo que resultó ser otro material pasa al stock de ese producto.
  */
-export function LimpiarCompra({ compra, lineas, productos, verMontos, alertaPct }: {
+export function LimpiarCompra({ compra, lineas, productos, verMontos, alertaPct, abiertoInicial = false }: {
   compra: { id: string; numero: number; proveedor: string | null };
   lineas: LineaPorLimpiar[];
   productos: Producto[];
   verMontos: boolean;
   alertaPct: number;
+  /** Viene de Inventario → «Limpiar»: se abre sin tener que tocar el botón */
+  abiertoInicial?: boolean;
 }) {
   const router = useRouter();
   const notificar = useNotificar();
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(abiertoInicial);
   const [limpio, setLimpio] = useState<Record<string, string>>({});
   const [traslados, setTraslados] = useState<Record<string, Traslado[]>>({});
   const [motivo, setMotivo] = useState("");
@@ -119,7 +121,7 @@ export function LimpiarCompra({ compra, lineas, productos, verMontos, alertaPct 
                       <p className="text-xs text-stone-500">Comprado {kg(l.peso_neto_kg)}{verMontos && <> a {soles(l.precio_kg)}/kg</>}</p>
                     </div>
                     <Campo etiqueta="Peso limpio kg">
-                      <InputNumero value={limpio[l.id] ?? ""} placeholder={l.peso_neto_kg.toFixed(3)}
+                      <InputNumero value={limpio[l.id] ?? ""} placeholder={gramosAKg(Math.round(l.peso_neto_kg * 1000))}
                         onChange={(e) => setLimpio((x) => ({ ...x, [l.id]: e.target.value }))} />
                     </Campo>
                   </div>

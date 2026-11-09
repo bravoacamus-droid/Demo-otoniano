@@ -15,9 +15,11 @@ import { COOKIE_MENU, type Letra, type Tema } from "@/lib/preferencias";
 import { useNotificar } from "@/components/ui/notificaciones";
 import { AvisoConexion } from "./aviso-conexion";
 import { IndicadorNavegacion } from "./indicador-navegacion";
+import { NavLateral } from "./nav-lateral";
 import { CargaNavegacion } from "./carga-navegacion";
 import { MenuUsuario } from "./menu-usuario";
 import { BotonInstalar } from "./instalar-app";
+import { BotonActualizar } from "./boton-actualizar";
 import { AvisosCreditoDiferidos, CampanaEsperando, type AvisoCredito } from "./avisos-credito";
 
 // Accesos de la barra inferior (celular), por prioridad; se muestran los 4 primeros que el rol puede ver.
@@ -83,7 +85,7 @@ export function AppShell({
   }, [menuAbierto]);
 
   const navegacion = (
-    <nav className="sin-barra flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Secciones">
+    <NavLateral className="space-y-5 px-3 py-4">
       {modulos.map((m) => {
         const moduloActivo = actual?.modulo.id === m.id;
         // Módulo de una sola pantalla (Inicio): enlace directo, sin subtítulo
@@ -141,13 +143,13 @@ export function AppShell({
           </div>
         );
       })}
-    </nav>
+    </NavLateral>
   );
 
   // Barra contraída: solo iconos; una franja con el color de cada módulo distingue p. ej. "Historial" de compras y de ventas.
   // El nombre sale al pasar el mouse (title) y lo leen los lectores de pantalla (aria-label).
   const navegacionCompacta = (
-    <nav className="sin-barra flex-1 overflow-y-auto px-2 py-3" aria-label="Secciones">
+    <NavLateral compacto className="px-2 py-3">
       {modulos.map((m, n) => (
         <div key={m.id} className={cx("relative", n > 0 && "mt-2 border-t border-white/10 pt-2")}>
           <span aria-hidden className={cx("absolute -left-2 bottom-1 w-[3px] rounded-r", n > 0 ? "top-3" : "top-1")}
@@ -178,7 +180,7 @@ export function AppShell({
           </ul>
         </div>
       ))}
-    </nav>
+    </NavLateral>
   );
 
   // Pestañas del módulo actual, arriba del contenido (celular y escritorio)
@@ -256,10 +258,13 @@ export function AppShell({
         "fondo-lateral no-imprimir fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-white/10 text-white transition-[width] duration-200 md:flex",
         compacto ? "w-16" : "w-64",
       )}>
-        <Link href="/" prefetch title="Inicio"
-          className={cx("flex h-14 shrink-0 items-center border-b border-white/10", FOCO_LATERAL, compacto ? "justify-center" : "px-5")}>
-          {logoLateral}
-        </Link>
+        {/* Logo (va a Inicio) y, al costado, actualizar los datos de la pantalla (pedido del Sr. Otiniano, 09/11) */}
+        <div className={cx("flex h-14 shrink-0 items-center border-b border-white/10", compacto ? "justify-center" : "justify-between gap-2 pl-5 pr-3")}>
+          <Link href="/" prefetch title="Inicio" className={cx("flex items-center rounded", FOCO_LATERAL)}>
+            {logoLateral}
+          </Link>
+          {!compacto && <BotonActualizar lateral />}
+        </div>
         {compacto ? navegacionCompacta : navegacion}
         <div className="border-t border-white/10 p-2">
           <button
@@ -285,6 +290,7 @@ export function AppShell({
           <div className="min-w-0 flex-1">{selectorEmpresa}</div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <BotonActualizar />
           <BotonInstalar className="mr-0.5" />
           <div className="hidden items-center gap-1 sm:flex">
             <BotonTema p={preferencias} />

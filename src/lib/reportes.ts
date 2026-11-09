@@ -33,7 +33,18 @@ export interface DefReporte {
   usaMetal?: boolean;
   usaCaja?: boolean;
   obtener: (ctx: Pick<Contexto, "supabase" | "empresa">, f: Filtros) => Promise<DatosReporte>;
+  /** Operaciones de cada grupo (misma clave que la fila del resumen): se despliegan al tocar la fila */
+  detalle?: (ctx: Pick<Contexto, "supabase" | "empresa">, f: Filtros) => Promise<DetalleReporte>;
 }
+
+export interface DetalleReporte {
+  columnas: Col[];
+  filas: (Record<string, unknown> & { _clave: string; _enlace: string })[];
+}
+
+/** Agrupado por fecha (día, semana, mes, año): lo más reciente arriba (reunión 09/11) */
+const POR_FECHA = ["dia", "semana", "mes", "anio"];
+const recientePrimero = (filas: Record<string, unknown>[], agrupar: string) => (POR_FECHA.includes(agrupar) ? [...filas].reverse() : filas);
 
 function chequear<T>(r: { data: T | null; error: { message: string } | null }): T {
   if (r.error) throw new Error(r.error.message);
@@ -51,7 +62,7 @@ export const REPORTES: DefReporte[] = [
       { valor: "proveedor", texto: "Por proveedor" }, { valor: "clase", texto: "Mayorista / minorista" },
     ],
     async obtener({ supabase, empresa }, f) {
-      const filas = chequear(await supabase.rpc("rpt_compras", { p_empresa: empresa.id, p_desde: f.desde, p_hasta: f.hasta, p_agrupar: f.agrupar ?? "dia" }));
+      const filas = recientePrimero(chequear(await supabase.rpc("rpt_compras", { p_empresa: empresa.id, p_desde: f.desde, p_hasta: f.hasta, p_agrupar: f.agrupar ?? "dia" })), f.agrupar ?? "dia");
       return {
         columnas: [
           { clave: "etiqueta", titulo: "Grupo", tipo: "texto" },
@@ -61,6 +72,21 @@ export const REPORTES: DefReporte[] = [
           { clave: "precio_promedio", titulo: "Precio prom./kg", tipo: "precio" },
         ],
         filas,
+      };
+    },
+    async detalle({ supabase, empresa }, f) {
+      const filas = chequear(await supabase.rpc("rpt_compras_detalle", { p_empresa: empresa.id, p_desde: f.desde, p_hasta: f.hasta, p_agrupar: f.agrupar ?? "dia" }));
+      return {
+        columnas: [
+          { clave: "fecha", titulo: "Fecha", tipo: "fecha" },
+          { clave: "numero", titulo: "N°", tipo: "texto" },
+          { clave: "proveedor", titulo: "Proveedor", tipo: "texto" },
+          { clave: "producto", titulo: "Producto", tipo: "texto" },
+          { clave: "kg", titulo: "Kg", tipo: "kg" },
+          { clave: "precio", titulo: "Precio/kg", tipo: "precio" },
+          { clave: "importe", titulo: "Importe", tipo: "soles" },
+        ],
+        filas: (filas as { clave: string; numero: number; compra_id: string }[]).map((d) => ({ ...d, numero: `#${d.numero}`, _clave: d.clave, _enlace: `/compras/${d.compra_id}` })),
       };
     },
   },
@@ -74,7 +100,7 @@ export const REPORTES: DefReporte[] = [
       { valor: "comprador", texto: "Por cliente" },
     ],
     async obtener({ supabase, empresa }, f) {
-      const filas = chequear(await supabase.rpc("rpt_ventas", { p_empresa: empresa.id, p_desde: f.desde, p_hasta: f.hasta, p_agrupar: f.agrupar ?? "mes" }));
+      const filas = recientePrimero(chequear(await supabase.rpc("rpt_ventas", { p_empresa: empresa.id, p_desde: f.desde, p_hasta: f.hasta, p_agrupar: f.agrupar ?? "mes" })), f.agrupar ?? "mes");
       return {
         columnas: [
           { clave: "etiqueta", titulo: "Grupo", tipo: "texto" },
@@ -86,6 +112,21 @@ export const REPORTES: DefReporte[] = [
           { clave: "precio_promedio", titulo: "Precio prom./kg", tipo: "precio" },
         ],
         filas,
+      };
+    },
+    async detalle({ supabase, empresa }, f) {
+      const filas = chequear(await supabase.rpc("rpt_ventas_detalle", { p_empresa: empresa.id, p_desde: f.desde, p_hasta: f.hasta, p_agrupar: f.agrupar ?? "mes" }));
+      return {
+        columnas: [
+          { clave: "fecha", titulo: "Fecha", tipo: "fecha" },
+          { clave: "numero", titulo: "N°", tipo: "texto" },
+          { clave: "comprador", titulo: "Cliente", tipo: "texto" },
+          { clave: "producto", titulo: "Producto", tipo: "texto" },
+          { clave: "kg_recibido", titulo: "Kg recibido", tipo: "kg" },
+          { clave: "precio", titulo: "Precio/kg", tipo: "precio" },
+          { clave: "importe", titulo: "Importe", tipo: "soles" },
+        ],
+        filas: (filas as { clave: string; numero: number; venta_id: string }[]).map((d) => ({ ...d, numero: `#${d.numero}`, _clave: d.clave, _enlace: `/ventas/${d.venta_id}` })),
       };
     },
   },
@@ -164,7 +205,8 @@ export const REPORTES: DefReporte[] = [
       if (!f.metal) return { columnas: [], filas: [], nota: "Elija un producto." };
       const filas = chequear(await supabase.from("v_kardex").select("*").eq("metal_id", f.metal)
         .gte("fecha", `${f.desde}T00:00:00-05:00`).lte("fecha", `${f.hasta}T23:59:59.999-05:00`)
-        .order("fecha").order("creado_en"));
+        // Lo más reciente arriba (reunión 09/11); el saldo de cada fila ya viene acumulado de la BD
+        .order("fecha", { ascending: false }).order("creado_en", { ascending: false }));
       return {
         columnas: [
           { clave: "fecha", titulo: "Fecha", tipo: "fecha" },
@@ -197,7 +239,8 @@ export const REPORTES: DefReporte[] = [
           { clave: "egreso", titulo: "Egreso", tipo: "soles", sumar: true },
           { clave: "saldo", titulo: "Saldo", tipo: "soles" },
         ],
-        filas: (filas as Record<string, unknown>[]).map((r) => ({ ...r, origen: ETIQUETA_ORIGEN[String(r.origen)] ?? r.origen })),
+        // Lo más reciente arriba y el saldo inicial al final (reunión 09/11); el saldo acumulado lo calcula la BD
+        filas: (filas as Record<string, unknown>[]).map((r) => ({ ...r, origen: ETIQUETA_ORIGEN[String(r.origen)] ?? r.origen })).reverse(),
       };
     },
   },

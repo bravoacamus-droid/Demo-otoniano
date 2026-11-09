@@ -347,12 +347,29 @@ form[data-pulsado]::after {
     radial-gradient(240px 56px at 0 0, rgb(34 192 248 / 0.18), transparent),
     linear-gradient(180deg, #133d6e 0%, #0f2c50 45%, #0b2140 100%);
 }
-/* Desplazamiento con rueda, touchpad o dedo, sin la barra gris (no va con el azul) */
-.sin-barra {
-  scrollbar-width: none;
+/* Barra de desplazamiento visible en el menú azul (09/11: no se notaba que había más secciones abajo):
+   delgada, celeste sobre el azul, en vez de la gris del sistema */
+.barra-lateral {
+  scrollbar-width: auto;
+  scrollbar-color: rgb(143 179 220 / 0.8) rgb(255 255 255 / 0.08);
 }
-.sin-barra::-webkit-scrollbar {
-  display: none;
+.barra-lateral::-webkit-scrollbar {
+  width: 12px;
+}
+.barra-lateral::-webkit-scrollbar-track {
+  background: rgb(255 255 255 / 0.08);
+  border-radius: 9999px;
+  margin: 6px 0;
+}
+.barra-lateral::-webkit-scrollbar-thumb {
+  background: rgb(143 179 220 / 0.7);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+.barra-lateral::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(191 219 254 / 0.95);
 }
 .fondo-lateral::after {
   content: "";

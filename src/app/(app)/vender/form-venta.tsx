@@ -40,12 +40,14 @@ interface Linea {
 }
 
 export function FormVenta({
-  empresaId, metales, productos, compradores, cajas, medios, verCostos,
+  empresaId, metales, productos, compradores, cajas, medios, verCostos, siguientes,
 }: {
   empresaId: string; metales: MetalConStock[];
   /** Árbol de productos con stock (en el producto o en sus variantes), para el selector */
   productos: Producto[];
   compradores: Comprador[]; cajas: Caja[]; medios: MedioPagoConf[]; verCostos: boolean;
+  /** Siguiente N° de cada tipo de comprobante (lo asigna la BD al guardar; aquí solo se muestra) */
+  siguientes: Partial<Record<TipoComprobante, string>>;
 }) {
   const router = useRouter();
   const [clave] = useState(() => crypto.randomUUID());
@@ -59,7 +61,6 @@ export function FormVenta({
   // Comprobante: se sugiere según el cliente (RUC → factura) hasta que se elija a mano
   const [tipoElegido, setTipoElegido] = useState<TipoComprobante | null>(null);
   const tipoCp = tipoElegido ?? comprobanteSugerido(comprador?.ruc);
-  const [numeroCp, setNumeroCp] = useState("");
   // Cobro al contado (null) o a crédito: se decide al confirmar el pesaje del comprador
   const [plan, setPlan] = useState<PlanCredito | null>(null);
   const sinDineroAhora = !!plan && aCentimos(plan.inicial || "0") === 0;
@@ -158,7 +159,7 @@ export function FormVenta({
         medio_id: confirmarYa ? medioId || null : null,
         comprobante_url: null,
         comprobante_tipo: tipoCp,
-        comprobante_numero: numeroCp.trim() || null,
+        comprobante_numero: null,
         credito: confirmarYa && plan ? { ...plan, inicial: normalizar(plan.inicial) || "0" } : null,
       });
       if (!r.ok) {
@@ -183,7 +184,7 @@ export function FormVenta({
         {/* div y no <label>: dentro de un label, tocar la lista vuelve a enfocar el campo */}
         <div className="min-w-0 sm:col-span-2">
           <p className="mb-1 text-sm font-medium text-stone-700">Comprador</p>
-          <SelectorCliente valor={comprador} onCambio={(c) => { setCompradorId(c?.id ?? ""); setTipoElegido(null); setNumeroCp(""); }} clientes={compradores} />
+          <SelectorCliente valor={comprador} onCambio={(c) => { setCompradorId(c?.id ?? ""); setTipoElegido(null); }} clientes={compradores} />
         </div>
         <div className="min-w-0 sm:col-span-2">
           <p id="etiqueta-comprobante" className="mb-1 text-sm font-medium text-stone-700">Comprobante</p>
@@ -196,7 +197,6 @@ export function FormVenta({
               const d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
               const sig = posibles[(posibles.indexOf(tipoCp) + d + posibles.length) % posibles.length];
               setTipoElegido(sig);
-              setNumeroCp("");
               document.getElementById(`comprobante-${sig}`)?.focus();
             }}>
             {TIPOS_COMPROBANTE.map((t) => {
@@ -204,7 +204,7 @@ export function FormVenta({
               const activo = tipoCp === t;
               return (
                 <button key={t} id={`comprobante-${t}`} type="button" role="radio" aria-checked={activo} disabled={sinRuc}
-                  tabIndex={activo ? 0 : -1} onClick={() => { if (t !== tipoCp) setNumeroCp(""); setTipoElegido(t); }}
+                  tabIndex={activo ? 0 : -1} onClick={() => setTipoElegido(t)}
                   className={cx(
                     "flex min-h-12 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-500 disabled:cursor-not-allowed sm:block",
                     activo ? "border-marca-600 bg-marca-50 ring-1 ring-marca-600"
@@ -220,10 +220,13 @@ export function FormVenta({
               );
             })}
           </div>
-          <p className="mt-1 text-xs text-stone-500">Si aún no se emite, el N° se puede completar luego en el detalle de la venta.</p>
         </div>
-        <Campo etiqueta={tipoCp === "nota_venta" ? "N° interno (opcional)" : `N° de ${COMPROBANTES[tipoCp].corto.toLowerCase()} (opcional)`}>
-          <Input value={numeroCp} onChange={(e) => setNumeroCp(e.target.value)} placeholder={COMPROBANTES[tipoCp].ejemplo} autoCapitalize="characters" />
+        {/* Correlativo: lo pone el sistema al guardar (siguiente de la serie); no se escribe a mano */}
+        <Campo etiqueta={`N° de ${COMPROBANTES[tipoCp].corto.toLowerCase()} que se emite`}>
+          <p className="flex h-[42px] items-center justify-between gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3">
+            <span className="cifra font-semibold text-stone-900">{siguientes[tipoCp] ?? "—"}</span>
+            <span className="text-xs text-stone-500">automático</span>
+          </p>
         </Campo>
         <Campo etiqueta="N° de guía de remisión (opcional)">
           <Input value={guiaNumero} onChange={(e) => setGuiaNumero(e.target.value)} placeholder="T001-000123" />
@@ -281,12 +284,12 @@ export function FormVenta({
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <Campo etiqueta="Salida (kg)">
-                    <InputNumero id={`salida-${l.metal_id}`} value={l.salida} onChange={(e) => cambiar(l.uid, "salida", e.target.value)} placeholder="0.000" />
+                    <InputNumero id={`salida-${l.metal_id}`} value={l.salida} onChange={(e) => cambiar(l.uid, "salida", e.target.value)} placeholder="0.00" />
                   </Campo>
                   {confirmarYa && (
                     <>
                       <Campo etiqueta="Recibido (kg)">
-                        <InputNumero value={l.recibido} onChange={(e) => cambiar(l.uid, "recibido", e.target.value)} placeholder="0.000" />
+                        <InputNumero value={l.recibido} onChange={(e) => cambiar(l.uid, "recibido", e.target.value)} placeholder="0.00" />
                       </Campo>
                       <Campo etiqueta="Precio S/ por kg">
                         <InputNumero value={l.precio} onChange={(e) => cambiar(l.uid, "precio", e.target.value)} />

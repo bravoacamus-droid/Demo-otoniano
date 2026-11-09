@@ -7,7 +7,8 @@ import { cx } from "@/components/ui/clases";
 import { Campo, Input, InputNumero } from "@/components/ui/campos";
 import { FormularioAccion } from "@/components/ui/formulario";
 import { ETIQUETA_ROL } from "@/lib/formato";
-import { guardarEmpresa } from "./acciones";
+import { guardarEmpresa, guardarSerieComprobante } from "./acciones";
+import { COMPROBANTES, type TipoComprobante } from "@/lib/comprobantes";
 import { cargarMediosPago } from "@/lib/productos";
 import { Cajas, Categorias, MediosPago, Usuarios } from "./secciones";
 
@@ -16,15 +17,17 @@ export const metadata: Metadata = { title: "Configuración" };
 export default async function ConfiguracionPage() {
   const ctx = await exigir("configurar");
   const { supabase, empresa, userId } = ctx;
-  const [{ data: miembros }, { data: cajas }, { data: categorias }, { data: uso }, medios] = await Promise.all([
+  const [{ data: miembros }, { data: cajas }, { data: categorias }, { data: uso }, medios, { data: series }] = await Promise.all([
     supabase.from("miembros").select("user_id, rol, nombre, email, activo").eq("empresa_id", empresa.id).order("creado_en"),
     supabase.from("cajas").select("*").eq("empresa_id", empresa.id).order("orden"),
     supabase.from("categorias_gasto").select("*").eq("empresa_id", empresa.id).order("nombre"),
     supabase.rpc("uso_consultas_doc", { p_empresa: empresa.id }),
     cargarMediosPago(ctx, false),
+    supabase.from("v_series_comprobante").select("tipo, serie, ultimo, siguiente").eq("empresa_id", empresa.id),
   ]);
   const consultas = (uso ?? {}) as { total?: number; empresa?: number; hoy?: number; guardados?: number };
   const usadas = Number(consultas.total ?? 0);
+  const numeracion = (series ?? []) as { tipo: TipoComprobante; serie: string; ultimo: number; siguiente: string }[];
 
   return (
     <>
@@ -81,6 +84,28 @@ export default async function ConfiguracionPage() {
         </Tarjeta>
 
         <div className="space-y-4">
+          <Tarjeta>
+            <TituloTarjeta>Numeración de comprobantes de venta</TituloTarjeta>
+            <div className="space-y-3 p-4">
+              <p className="text-sm text-stone-600">
+                Cada venta toma sola el siguiente número de su serie; en la venta ya no se escribe. Ponga el último número que
+                ya emitió para seguir su numeración (0 si empieza de cero).
+              </p>
+              {numeracion.map((s) => (
+                <FormularioAccion key={s.tipo} accion={guardarSerieComprobante} reiniciar={false} textoBoton="Guardar"
+                  mensajeExito={`Numeración de ${COMPROBANTES[s.tipo].corto.toLowerCase()} guardada.`}
+                  className="grid grid-cols-2 items-end gap-2 rounded-lg border border-stone-200 p-3 sm:grid-cols-[1fr_6rem_8rem_auto]">
+                  <input type="hidden" name="tipo" value={s.tipo} />
+                  <div className="col-span-2 sm:col-span-1">
+                    <p className="text-sm font-semibold">{COMPROBANTES[s.tipo].texto}</p>
+                    <p className="text-xs text-stone-500">Próximo: <span className="cifra font-medium text-stone-700">{s.siguiente}</span></p>
+                  </div>
+                  <Campo etiqueta="Serie"><Input name="serie" defaultValue={s.serie ?? ""} maxLength={6} autoCapitalize="characters" required /></Campo>
+                  <Campo etiqueta="Último N° emitido"><InputNumero name="ultimo" inputMode="numeric" defaultValue={String(s.ultimo ?? 0)} /></Campo>
+                </FormularioAccion>
+              ))}
+            </div>
+          </Tarjeta>
           <Tarjeta>
             <TituloTarjeta accion={<Link href="/socios" className="text-xs font-medium text-marca-700">Abrir</Link>}>Socios del negocio</TituloTarjeta>
             <p className="flex items-start gap-3 p-4 text-sm text-stone-600">

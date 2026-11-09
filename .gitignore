@@ -49,6 +49,9 @@ credenciales*.txt
 # transcripciones de reuniones con el cliente y utilidades locales
 reuniones/
 scripts/_captura*.mjs
+scripts/_respaldo.mjs
+# respaldos de datos del cliente (JSON): nunca al repositorio ni a Vercel
+respaldos/
 
 .vercel
 .env*

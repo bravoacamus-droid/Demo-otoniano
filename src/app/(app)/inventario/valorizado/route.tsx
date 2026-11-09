@@ -17,7 +17,7 @@ const TINTE = "FFEFF7FE";
 const CEBRA = "FFFAFAF9";
 const SOLES = '"S/" #,##0.00;[Red]-"S/" #,##0.00';
 const PRECIO = '"S/" #,##0.00##';
-const KG = '#,##0.000" kg"';
+const KG = '#,##0.00#" kg"';
 
 const n = (v: unknown) => Number(v ?? 0);
 

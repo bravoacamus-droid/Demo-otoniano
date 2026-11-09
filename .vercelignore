@@ -12,3 +12,5 @@ scripts/_captura*.mjs
 Logotipos/
 *.pdf
 supabase/.temp/
+respaldos/
+scripts/_respaldo.mjs

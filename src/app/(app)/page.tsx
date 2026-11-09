@@ -173,7 +173,7 @@ async function ResultadoPeriodo({ ctx, f }: { ctx: Contexto; f: FiltroInicio }) 
             clave={(x) => x.nombre}
             vacio="Sin compras ni ventas en este periodo."
             columnas={[
-              { titulo: "Metal", principal: true, celda: (x) => <span className="inline-flex items-center gap-2 font-medium"><PuntoMetal color={x.color} />{x.nombre}</span> },
+              { titulo: "Producto", principal: true, celda: (x) => <span className="inline-flex items-center gap-2 font-medium"><PuntoMetal color={x.color} />{x.nombre}</span> },
               { titulo: "Comprado", alinear: "der", className: "cifra", celda: (x) => kg(x.kg_comprado) },
               { titulo: "Importe compra", alinear: "der", className: "cifra", ocultarMovil: true, celda: (x) => soles(x.compras) },
               { titulo: "Vendido", alinear: "der", className: "cifra", celda: (x) => kg(x.kg_vendido) },
@@ -208,7 +208,7 @@ async function Graficos({ ctx, f }: { ctx: Contexto; f: FiltroInicio }) {
   const ventanaDesde = [`${Number(hoy.slice(0, 4)) - 1}-01-01`, f.serieDesde, f.sdesde].sort()[0].slice(0, 7) + "-01";
   const [{ data }, { data: stock }] = await Promise.all([
     ctx.supabase.rpc("dashboard_serie", { p_empresa: ctx.empresa.id, p_desde: ventanaDesde, p_hasta: hoy }),
-    ctx.supabase.from("v_stock_metal").select("nombre, color, kg, valor_costo")
+    ctx.supabase.from("v_stock_metal").select("nombre, ruta, color, kg, valor_costo")
       .eq("empresa_id", ctx.empresa.id).gt("kg", 0).order("valor_costo", { ascending: false }),
   ]);
   const serie = (data ?? { meses: [], dias: [] }) as unknown as { meses: FilaMes[]; dias: DiaSerie[] };
@@ -224,9 +224,9 @@ async function Graficos({ ctx, f }: { ctx: Contexto; f: FiltroInicio }) {
         stock={
           <Tarjeta className="lg:col-span-2">
             <TituloTarjeta accion={<Link href="/inventario" className="text-xs font-medium text-marca-700">Inventario</Link>}>
-              Stock por metal <span className="font-normal text-stone-500">· hoy</span>
+              Stock por producto <span className="font-normal text-stone-500">· hoy</span>
             </TituloTarjeta>
-            <GraficoStock datos={(stock ?? []).map((s) => ({ nombre: s.nombre, color: s.color, kg: Number(s.kg), valor: Number(s.valor_costo) }))} />
+            <GraficoStock datos={(stock ?? []).map((s) => ({ nombre: s.ruta ?? s.nombre, color: s.color, kg: Number(s.kg), valor: Number(s.valor_costo) }))} />
           </Tarjeta>
         }
       />

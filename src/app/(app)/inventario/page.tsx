@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Clock, FileSpreadsheet, FileText, History } from "lucide-react";
+import { Clock, FileSpreadsheet, FileText } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
 import { fecha, fechaHora, kg, soles } from "@/lib/formato";
@@ -10,6 +10,7 @@ import { TablaDatos } from "@/components/ui/tabla";
 import { Pestanas } from "@/components/ui/pestanas";
 import { ResumenInventario } from "@/components/resumen-modulo";
 import { AccionesInventario } from "./acciones-inventario";
+import { MenuStock } from "./menu-stock";
 
 export const metadata: Metadata = { title: "Inventario" };
 
@@ -23,7 +24,7 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
   const verCostos = puede(rol, "verCostos");
 
   let qLotes = supabase.from("v_lotes").select("*").eq("empresa_id", empresa.id)
-    .or("kg_en_stock.gt.0,por_seleccionar.eq.true").order("fecha", { ascending: true }).limit(300);
+    .or("kg_en_stock.gt.0,por_seleccionar.eq.true").order("fecha", { ascending: false }).limit(300);
   if (sp.metal) qLotes = qLotes.eq("metal_id", sp.metal);
   const [{ data: stock }, { data: ajustes }, { data: lotes }] = await Promise.all([
     supabase.from("v_stock_arbol").select("*").eq("empresa_id", empresa.id).order("clave_orden"),
@@ -113,8 +114,11 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
               { titulo: "Precio venta", alinear: "der", celda: (s) => <span className="cifra">{soles(s.precio_venta)}</span> },
               { titulo: "Valor a venta", alinear: "der", celda: (s) => <span className="cifra">{soles(s.valor_venta)}</span> },
               {
-                titulo: "", alinear: "der", ocultarMovil: true,
-                celda: () => <span className="inline-flex items-center gap-1 text-xs font-medium text-marca-700"><History className="size-3.5" />Historial</span>,
+                titulo: "", alinear: "der",
+                celda: (s) => (
+                  <MenuStock id={s.metal_id} nombre={s.ruta ?? s.nombre} porLimpiar={Number(s.kg_por_limpiar) > 0}
+                    puedeLimpiar={puede(rol, "limpiar")} puedeEditar={puede(rol, "editarPrecios")} />
+                ),
               },
             ]}
           />

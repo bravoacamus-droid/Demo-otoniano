@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
     return [{ source: "/despacho", destination: "/limpieza", permanent: false }];
   },
   serverExternalPackages: ["@react-pdf/renderer", "exceljs"],
+  // pdfkit carga Helvetica con un import dinámico (#standard-fonts/...) que el rastreo de archivos no ve:
+  // sin esto, en Vercel todo PDF fallaba con «Cannot find module .../standard-fonts/Helvetica.cjs»
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/standard-fonts/**", "./node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/data/**"],
+  },
   experimental: {
     // Caché del router en el navegador: volver a una sección ya visitada o precargada (enlaces del
     // menú con prefetch) es inmediato. 30 s como máximo; registrar algo invalida todo al instante

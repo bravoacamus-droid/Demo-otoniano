@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, Clock, Scale, Wallet } from "lucide-react";
+import { AlertTriangle, Clock, Scale, Wallet, X } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
 import { cargarProductos } from "@/lib/productos";
@@ -14,15 +14,15 @@ import { DevolucionProveedor, LimpiarCompra, type LineaPorLimpiar } from "./limp
 
 export const metadata: Metadata = { title: "Limpieza" };
 
-export default async function LimpiezaPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const { tab = "pendientes" } = await searchParams;
+export default async function LimpiezaPage({ searchParams }: { searchParams: Promise<{ tab?: string; producto?: string }> }) {
+  const { tab = "pendientes", producto } = await searchParams;
   const ctx = await exigir("limpiar", "verTodo");
   const { supabase, empresa, rol } = ctx;
   const verMontos = puede(rol, "verCostos") || puede(rol, "caja");
   const alerta = Number(empresa.merma_alerta_pct ?? 5);
 
   const [{ data: pendientes }, { data: limpiezas }, { data: saldos }, { data: devoluciones }, { data: cajas }, productos] = await Promise.all([
-    supabase.from("v_compras").select("id, numero, fecha, proveedor_id, proveedor_nombre, metales, kg_total, total, retrasada")
+    supabase.from("v_compras").select("id, numero, fecha, proveedor_id, proveedor_nombre, metales, metal_ids, kg_total, total, retrasada")
       .eq("empresa_id", empresa.id).eq("por_seleccionar", true)
       .order("fecha", { ascending: false }).order("numero", { ascending: false }),
     supabase.from("v_selecciones").select("*").eq("empresa_id", empresa.id)
@@ -44,6 +44,17 @@ export default async function LimpiezaPage({ searchParams }: { searchParams: Pro
       id: l.id, metal_id: l.metal_id, producto: ruta.get(l.metal_id) ?? l.metal_nombre, metal_color: l.metal_color,
       peso_neto_kg: Number(l.peso_neto_kg), precio_kg: verMontos ? Number(l.precio_kg) : 0,
     }));
+  // Desde Inventario (menú de tres puntos): solo las compras con ese producto o sus variantes, y la primera ya abierta
+  const elegido = producto ? productos.find((p) => p.id === producto) : undefined;
+  const ramas = new Set<string>();
+  if (elegido) {
+    ramas.add(elegido.id);
+    for (let cambio = true; cambio;) {
+      cambio = false;
+      for (const p of productos) if (p.padre_id && ramas.has(p.padre_id) && !ramas.has(p.id)) { ramas.add(p.id); cambio = true; }
+    }
+  }
+  const porLimpiar = elegido ? (pendientes ?? []).filter((p) => ((p.metal_ids ?? []) as string[]).some((m) => ramas.has(m))) : (pendientes ?? []);
   const nombreProv = (id: string) => saldos?.find((s) => s.proveedor_id === id)?.nombre ?? "Proveedor";
   const conSaldos = (saldos ?? []).length > 0;
 
@@ -80,12 +91,18 @@ export default async function LimpiezaPage({ searchParams }: { searchParams: Pro
         ]}
       />
 
+      {tab === "pendientes" && elegido && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-marca-200 bg-marca-50 px-3 py-2 text-sm text-marca-800">
+          <span>Compras por limpiar con <b>{elegido.ruta}</b>: {porLimpiar.length}</span>
+          <Link href="/limpieza" className="ml-auto inline-flex items-center gap-1 font-medium hover:underline"><X className="size-3.5" /> Ver todas</Link>
+        </div>
+      )}
       {tab === "pendientes" && (
         <Tarjeta>
           <TablaDatos
-            filas={pendientes ?? []}
+            filas={porLimpiar}
             clave={(p) => p.id}
-            vacio="Todo limpio: no hay compras esperando."
+            vacio={elegido ? "Ese producto no tiene compras por limpiar." : "Todo limpio: no hay compras esperando."}
             columnas={[
               { titulo: "Compra", principal: true, celda: (p) => <Link href={`/compras/${p.id}`} className="font-medium text-marca-700 hover:underline">N° {p.numero}</Link> },
               { titulo: "Llegó", celda: (p) => fechaHora(p.fecha) },
@@ -106,7 +123,7 @@ export default async function LimpiezaPage({ searchParams }: { searchParams: Pro
                 titulo: "", alinear: "der", principal: true,
                 celda: (p) => (
                   <LimpiarCompra compra={{ id: p.id, numero: p.numero, proveedor: p.proveedor_nombre }} lineas={lineasDe(p.id)}
-                    productos={productos} verMontos={verMontos} alertaPct={alerta} />
+                    productos={productos} verMontos={verMontos} alertaPct={alerta} abiertoInicial={!!elegido && p.id === porLimpiar[0]?.id} />
                 ),
               },
             ]}

@@ -456,14 +456,31 @@ describe("Reunión 23/10 · jerarquía, mayorista, merma, corrección y limpieza
       [empA, comprador, JSON.stringify([{ metal_id: chatarra, peso_salida_kg: "9999" }])]))).rejects.toThrow(/Stock insuficiente/);
   });
 
-  it("comprobante de la venta: factura solo con RUC, se ve en v_ventas y se completa después", async () => {
+  it("comprobante de la venta: factura solo con RUC, correlativo automático por tipo y no se escribe a mano", async () => {
     const items = JSON.stringify([{ metal_id: chatarra, peso_salida_kg: "1" }]);
+    const numeroDe = (id: string) => como(db, DUENO_A, (tx) => uno<{ comprobante_tipo: string; comprobante_numero: string }>(tx,
+      `select comprobante_tipo, comprobante_numero from v_ventas where id = $1`, [id]));
+    // Lo que se escriba se ignora: la BD pone el siguiente de la serie
     const v = await como(db, DUENO_A, (tx) => uno<{ r: { id: string } }>(tx,
       `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'factura', p_comprobante_numero => ' f001-000123 ') as r`,
       [empA, comprador, items])).then((x) => x.r);
-    const vv = await como(db, DUENO_A, (tx) => uno<{ comprobante_tipo: string; comprobante_numero: string }>(tx,
-      `select comprobante_tipo, comprobante_numero from v_ventas where id = $1`, [v.id]));
-    expect(vv).toEqual({ comprobante_tipo: "factura", comprobante_numero: "F001-000123" });
+    expect(await numeroDe(v.id)).toEqual({ comprobante_tipo: "factura", comprobante_numero: "F001-000001" });
+
+    // Administración continúa su numeración real: serie F002, última emitida la 10 → la próxima es la 11
+    await expect(como(db, CAJERO_A, (tx) => tx.query(
+      `select configurar_serie_comprobante($1, 'factura', 'F002', 10)`, [empA]))).rejects.toThrow();
+    await como(db, ADMIN_A, (tx) => tx.query(`select configurar_serie_comprobante($1, 'factura', ' f002 ', 10)`, [empA]));
+    const sig = await como(db, CAJERO_A, (tx) => uno<{ siguiente: string }>(tx,
+      `select siguiente from v_series_comprobante where empresa_id = $1 and tipo = 'factura'`, [empA]));
+    expect(sig.siguiente).toBe("F002-000011");
+    const v2 = await como(db, DUENO_A, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'factura') as r`, [empA, comprador, items])).then((x) => x.r);
+    expect((await numeroDe(v2.id)).comprobante_numero).toBe("F002-000011");
+    // Bajar el «último» a un número ya usado no repite: salta al siguiente libre
+    await como(db, ADMIN_A, (tx) => tx.query(`select configurar_serie_comprobante($1, 'factura', 'F002', 10)`, [empA]));
+    const v3 = await como(db, DUENO_A, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'factura') as r`, [empA, comprador, items])).then((x) => x.r);
+    expect((await numeroDe(v3.id)).comprobante_numero).toBe("F002-000012");
 
     const sinRuc = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
       `insert into compradores (empresa_id, razon_social) values ($1, 'Juan Pérez') returning id`, [empA])).then((x) => x.id);
@@ -471,22 +488,27 @@ describe("Reunión 23/10 · jerarquía, mayorista, merma, corrección y limpieza
       `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'factura')`, [empA, sinRuc, items])))
       .rejects.toThrow(/debe tener RUC/);
 
-    // Boleta al cliente sin RUC; luego Almacén completa la serie-número desde el detalle
+    // Boleta: su propia serie. Editar la venta no cambia el número; cambiar el tipo toma el de esa serie
     const b = await como(db, DUENO_A, (tx) => uno<{ r: { id: string } }>(tx,
       `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'boleta') as r`, [empA, sinRuc, items])).then((x) => x.r);
+    expect((await numeroDe(b.id)).comprobante_numero).toBe("B001-000001");
     await como(db, CAJERO_A, (tx) => tx.query(
-      `select actualizar_venta_guia($1, null, null, null, null, 'boleta', 'b001-45')`, [b.id]));
-    const bb = await como(db, DUENO_A, (tx) => uno<{ comprobante_numero: string }>(tx,
-      `select comprobante_numero from ventas where id = $1`, [b.id]));
-    expect(bb.comprobante_numero).toBe("B001-45");
-    // La misma serie-número no se repite en otra venta vigente; volver a guardar la propia sí se puede
-    await expect(como(db, DUENO_A, (tx) => tx.query(
-      `select registrar_venta($1, $2, $3::jsonb, p_comprobante_tipo => 'boleta', p_comprobante_numero => 'B001-45')`,
-      [empA, sinRuc, items]))).rejects.toThrow(/ya está registrado en la venta/);
-    await como(db, DUENO_A, (tx) => tx.query(
-      `select actualizar_venta_guia($1, 'T001-9', null, null, null, 'boleta', 'B001-45')`, [b.id]));
+      `select actualizar_venta_guia($1, 'T001-9', null, null, null, 'boleta', 'b001-45')`, [b.id]));
+    expect((await numeroDe(b.id)).comprobante_numero).toBe("B001-000001");
+    await como(db, CAJERO_A, (tx) => tx.query(
+      `select actualizar_venta_guia($1, null, null, null, null, 'nota_venta', null)`, [b.id]));
+    expect(await numeroDe(b.id)).toEqual({ comprobante_tipo: "nota_venta", comprobante_numero: "NV01-000001" });
     await expect(como(db, DUENO_A, (tx) => tx.query(
       `select actualizar_venta_guia($1, null, null, null, null, 'factura', null)`, [b.id]))).rejects.toThrow(/debe tener RUC/);
+  });
+
+  it("historiales y líneas muestran el producto con su familia (Aluminio › Perfil)", async () => {
+    const r = await como(db, DUENO_A, (tx) => uno<{ linea: string; historial: string }>(tx,
+      `select (select metal_nombre from v_compra_items i join v_productos p on p.id = i.metal_id
+                where i.empresa_id = $1 and p.nombre = 'Perfil' limit 1) as linea,
+              (select metales from v_compras where empresa_id = $1 and metales like '%Perfil%' limit 1) as historial`, [empA]));
+    expect(r.linea).toBe("Aluminio › Perfil");
+    expect(r.historial).toContain("Aluminio › Perfil");
   });
 });
 

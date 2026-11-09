@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 const FORMATO_EXCEL: Partial<Record<Col["tipo"], string>> = {
   soles: '"S/" #,##0.00;[Red]-"S/" #,##0.00',
   precio: '"S/" #,##0.00##',
-  kg: "#,##0.000",
+  kg: "#,##0.00#",
   num: "#,##0",
   pct: '0.00" %"',
   fecha: "dd/mm/yyyy hh:mm",

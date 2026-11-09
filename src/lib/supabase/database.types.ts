@@ -76,6 +76,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "ajustes_inventario_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "ajustes_inventario_metal_id_fkey"
             columns: ["metal_id"]
             isOneToOne: false
@@ -193,6 +200,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "aportes_retiros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "aportes_retiros_socio_id_fkey"
             columns: ["socio_id"]
             isOneToOne: false
@@ -285,6 +299,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "arqueos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       asistencias: {
@@ -352,6 +373,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "asistencias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "asistencias_trabajador_id_fkey"
             columns: ["trabajador_id"]
             isOneToOne: false
@@ -410,6 +438,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "cajas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       categorias_gasto: {
@@ -444,6 +479,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "categorias_gasto_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -498,6 +540,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "cierres_mes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -563,6 +612,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "compra_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -645,6 +701,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "compradores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -749,6 +812,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "compras_medio_id_fkey"
             columns: ["medio_id"]
             isOneToOne: false
@@ -844,6 +914,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "correcciones_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       correcciones_venta: {
@@ -899,6 +976,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "correcciones_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "correcciones_venta_venta_id_fkey"
             columns: ["venta_id"]
             isOneToOne: false
@@ -943,6 +1027,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "correlativos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -1004,6 +1095,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "credito_ajustes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       credito_cuotas: {
@@ -1058,6 +1156,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -1161,6 +1266,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -1294,6 +1406,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "creditos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "creditos_proveedor_id_fkey"
             columns: ["proveedor_id"]
             isOneToOne: false
@@ -1403,6 +1522,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "devoluciones_proveedor_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -1573,6 +1699,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "gastos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       kardex: {
@@ -1628,6 +1761,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "kardex_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -1724,6 +1864,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "limpieza_traslados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -1865,6 +2012,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "medios_pago_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       metales: {
@@ -1929,6 +2083,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "metales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -2002,6 +2163,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "miembros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -2081,6 +2249,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "movimientos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       padron_documentos: {
@@ -2135,6 +2310,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "padron_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       precios_metal: {
@@ -2181,6 +2363,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "precios_metal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -2274,6 +2463,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "proveedores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       seleccion_items: {
@@ -2334,6 +2530,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "seleccion_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -2478,6 +2681,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "selecciones_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "selecciones_compra_proveedor_id_fkey"
             columns: ["proveedor_id"]
             isOneToOne: false
@@ -2497,6 +2707,49 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saldo_proveedor"
             referencedColumns: ["proveedor_id"]
+          },
+        ]
+      }
+      series_comprobante: {
+        Row: {
+          empresa_id: string
+          serie: string
+          tipo: Database["public"]["Enums"]["tipo_comprobante"]
+          ultimo: number
+        }
+        Insert: {
+          empresa_id: string
+          serie: string
+          tipo: Database["public"]["Enums"]["tipo_comprobante"]
+          ultimo?: number
+        }
+        Update: {
+          empresa_id?: string
+          serie?: string
+          tipo?: Database["public"]["Enums"]["tipo_comprobante"]
+          ultimo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "series_comprobante_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "series_comprobante_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "series_comprobante_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
           },
         ]
       }
@@ -2546,6 +2799,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "socios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       stock_metal: {
@@ -2583,6 +2843,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "stock_metal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -2676,6 +2943,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "trabajadores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       traspasos: {
@@ -2767,6 +3041,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "traspasos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       turnos_caja: {
@@ -2856,6 +3137,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "turnos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       venta_items: {
@@ -2917,6 +3205,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "venta_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -3098,6 +3393,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "ventas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "ventas_medio_id_fkey"
             columns: ["medio_id"]
             isOneToOne: false
@@ -3140,6 +3442,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "ajustes_inventario_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -3226,6 +3535,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "aportes_retiros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "aportes_retiros_socio_id_fkey"
             columns: ["socio_id"]
             isOneToOne: false
@@ -3297,6 +3613,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "arqueos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_capital_socio: {
@@ -3326,6 +3649,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "socios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -3379,6 +3709,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "compra_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -3464,6 +3801,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "compradores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_compras: {
@@ -3542,6 +3886,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "compras_medio_id_fkey"
             columns: ["medio_id"]
             isOneToOne: false
@@ -3614,6 +3965,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "correcciones_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_correcciones_venta: {
@@ -3643,6 +4001,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -3702,6 +4067,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -3769,6 +4141,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -3875,6 +4254,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "creditos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "creditos_proveedor_id_fkey"
             columns: ["proveedor_id"]
             isOneToOne: false
@@ -3967,6 +4353,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "gastos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_kardex: {
@@ -4001,6 +4394,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "kardex_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -4112,6 +4512,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "movimientos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_patrimonio: {
@@ -4168,6 +4575,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "metales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -4235,6 +4649,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "proveedores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_resultado_mes: {
@@ -4285,6 +4706,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "cajas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_saldo_proveedor: {
@@ -4313,6 +4741,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "proveedores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
         ]
@@ -4377,6 +4812,13 @@ export type Database = {
             referencedColumns: ["empresa_id"]
           },
           {
+            foreignKeyName: "selecciones_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
             foreignKeyName: "selecciones_compra_proveedor_id_fkey"
             columns: ["proveedor_id"]
             isOneToOne: false
@@ -4398,6 +4840,16 @@ export type Database = {
             referencedColumns: ["proveedor_id"]
           },
         ]
+      }
+      v_series_comprobante: {
+        Row: {
+          empresa_id: string | null
+          serie: string | null
+          siguiente: string | null
+          tipo: Database["public"]["Enums"]["tipo_comprobante"] | null
+          ultimo: number | null
+        }
+        Relationships: []
       }
       v_stock_arbol: {
         Row: {
@@ -4439,6 +4891,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "metales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -4508,6 +4967,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "metales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -4607,6 +5073,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "trabajadores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_turnos_caja: {
@@ -4662,6 +5135,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "turnos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_utilidad_socio: {
@@ -4705,6 +5185,13 @@ export type Database = {
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "socios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
         ]
       }
       v_venta_items: {
@@ -4746,6 +5233,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "venta_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -4822,6 +5316,8 @@ export type Database = {
             | null
           comprobante_url: string | null
           confirmado_por: string | null
+          corregido_en: string | null
+          corregido_por: string | null
           costo_total: number | null
           costo_vendido: number | null
           creado_en: string | null
@@ -4890,6 +5386,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "ventas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
           {
@@ -4976,6 +5479,17 @@ export type Database = {
       }
       _saldo_proveedor: { Args: { p_proveedor: string }; Returns: number }
       _sembrar_medios_pago: { Args: { p_empresa: string }; Returns: undefined }
+      _serie_por_defecto: {
+        Args: { p_tipo: Database["public"]["Enums"]["tipo_comprobante"] }
+        Returns: string
+      }
+      _siguiente_comprobante: {
+        Args: {
+          p_empresa: string
+          p_tipo: Database["public"]["Enums"]["tipo_comprobante"]
+        }
+        Returns: string
+      }
       _stock_correccion: {
         Args: {
           p_compra: string
@@ -5213,6 +5727,15 @@ export type Database = {
           n_ventas: number
           precio_promedio: number
         }[]
+      }
+      configurar_serie_comprobante: {
+        Args: {
+          p_empresa: string
+          p_serie: string
+          p_tipo: Database["public"]["Enums"]["tipo_comprobante"]
+          p_ultimo: number
+        }
+        Returns: undefined
       }
       confirmar_venta: {
         Args: {
@@ -5545,6 +6068,26 @@ export type Database = {
           precio_promedio: number
         }[]
       }
+      rpt_compras_detalle: {
+        Args: {
+          p_agrupar?: string
+          p_desde: string
+          p_empresa: string
+          p_hasta: string
+        }
+        Returns: {
+          clave: string
+          compra_id: string
+          etiqueta: string
+          fecha: string
+          importe: number
+          kg: number
+          numero: number
+          precio: number
+          producto: string
+          proveedor: string
+        }[]
+      }
       rpt_libro_caja: {
         Args: {
           p_caja?: string
@@ -5637,6 +6180,28 @@ export type Database = {
           merma_kg: number
           n_ventas: number
           precio_promedio: number
+        }[]
+      }
+      rpt_ventas_detalle: {
+        Args: {
+          p_agrupar?: string
+          p_desde: string
+          p_empresa: string
+          p_hasta: string
+        }
+        Returns: {
+          clave: string
+          comprador: string
+          etiqueta: string
+          fecha: string
+          importe: number
+          kg_recibido: number
+          kg_salida: number
+          merma_kg: number
+          numero: number
+          precio: number
+          producto: string
+          venta_id: string
         }[]
       }
       saldo_caja: { Args: { p_caja: string }; Returns: number }

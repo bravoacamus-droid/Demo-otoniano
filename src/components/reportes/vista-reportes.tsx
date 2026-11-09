@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Download, FileText } from "lucide-react";
+import { ChevronRight, Download, FileText } from "lucide-react";
 import { exigir } from "@/lib/contexto";
-import { REPORTES, filtrosDesde, totales, type Col } from "@/lib/reportes";
+import { REPORTES, filtrosDesde, totales, type Col, type DetalleReporte } from "@/lib/reportes";
 import { fechaHora, hoyLima, kg, numero, porcentaje, soles } from "@/lib/formato";
 import { Aviso, Encabezado, Tarjeta } from "@/components/ui/basicos";
 import { claseBoton, claseInput, cx } from "@/components/ui/clases";
 import { cabeTabla } from "@/components/ui/tabla";
 import { EnlaceDescarga } from "@/components/ui/enlace-descarga";
+import { FilaDetalle } from "./fila-detalle";
 
 function celda(c: Col, v: unknown) {
   if (v === null || v === undefined || v === "") return "—";
@@ -56,6 +57,45 @@ function FilaTarjeta({ columnas, fila, fuerte, titulo }: { columnas: Col[]; fila
   );
 }
 
+/** Operaciones de un grupo: tabla compacta en pantalla ancha, lista en celular; cada una abre su detalle */
+function Operaciones({ columnas, filas }: { columnas: Col[]; filas: DetalleReporte["filas"] }) {
+  return (
+    <>
+      <table className="hidden w-full text-xs @3xl:table">
+        <thead>
+          <tr className="text-[10px] uppercase tracking-wider text-stone-500">
+            {columnas.map((c) => <th key={c.clave} className={cx("px-2 py-1.5 font-semibold", alinear(c))}>{c.titulo}</th>)}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-stone-200/70">
+          {filas.map((f, i) => (
+            <tr key={i}>
+              {columnas.map((c, j) => (
+                <td key={c.clave} className={cx("px-2 py-1.5", alinear(c), esNumero(c) && "cifra")}>
+                  {j === 1 ? <Link href={f._enlace} className="font-medium text-marca-700 hover:underline">{celda(c, f[c.clave])}</Link> : celda(c, f[c.clave])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul className="divide-y divide-stone-200/70 @3xl:hidden">
+        {filas.map((f, i) => (
+          <li key={i}>
+            <Link href={f._enlace} className="flex items-center gap-2 py-2 text-xs">
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-marca-700">{columnas.slice(0, 3).map((c) => celda(c, f[c.clave])).join(" · ")}</span>
+                <span className="block truncate text-stone-600">{columnas.slice(3).map((c) => celda(c, f[c.clave])).join(" · ")}</span>
+              </span>
+              <ChevronRight aria-hidden className="size-4 shrink-0 text-stone-400" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export type ParamsReporte = { r?: string; desde?: string; hasta?: string; agrupar?: string; metal?: string; caja?: string };
 
 /** Vista de reportes reutilizable: cada módulo muestra solo los suyos (ids) en su propia ruta (base). */
@@ -67,11 +107,16 @@ export async function VistaReportes({
   const def = lista.find((r) => r.id === sp.r) ?? lista[0];
   const f = filtrosDesde(sp);
 
-  const [datos, metales, cajas] = await Promise.all([
+  const [datos, metales, cajas, detalle] = await Promise.all([
     def.obtener(ctx, f).catch((e: Error) => ({ columnas: [], filas: [], nota: undefined, error: e.message })),
     def.usaMetal ? ctx.supabase.from("v_productos").select("id, nombre:ruta").eq("empresa_id", ctx.empresa.id).order("clave_orden") : null,
     def.usaCaja ? ctx.supabase.from("cajas").select("id, nombre").eq("empresa_id", ctx.empresa.id).order("orden") : null,
+    def.detalle ? def.detalle(ctx, f).catch(() => null) : null,
   ]);
+  // Operaciones de cada grupo (misma clave que la fila del resumen)
+  const porGrupo = new Map<string, DetalleReporte["filas"]>();
+  for (const d of detalle?.filas ?? []) porGrupo.set(d._clave, [...(porGrupo.get(d._clave) ?? []), d]);
+  const operaciones = (r: Record<string, unknown>) => (detalle ? porGrupo.get(String(r.clave)) : undefined);
   const t = totales(datos);
   // Letra compacta: entra un par de columnas más que en una tabla normal del mismo ancho
   const cabe = cabeTabla(datos.columnas.length - 2);
@@ -183,15 +228,23 @@ export async function VistaReportes({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {datos.filas.map((r, i) => (
-                    <tr key={i} className={cx("transition-colors even:bg-stone-50/70 hover:bg-marca-50", Boolean(r._fuerte) && "bg-marca-50/60 font-semibold")}>
-                      {datos.columnas.map((c) => (
-                        <td key={c.clave} className={cx("px-2 py-2 first:pl-4 last:pr-4 @5xl:px-3", alinear(c), esNumero(c) && "cifra")}>
-                          {celda(c, r[c.clave])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {datos.filas.map((r, i) => {
+                    const ops = operaciones(r);
+                    const tds = (desde: number) => datos.columnas.slice(desde).map((c) => (
+                      <td key={c.clave} className={cx("px-2 py-2 first:pl-4 last:pr-4 @5xl:px-3", alinear(c), esNumero(c) && "cifra")}>
+                        {celda(c, r[c.clave])}
+                      </td>
+                    ));
+                    return ops?.length ? (
+                      <FilaDetalle key={i} etiqueta={celda(datos.columnas[0], r[datos.columnas[0].clave])} celdas={tds(1)}
+                        columnas={datos.columnas.length} cantidad={ops.length} className={i % 2 ? "bg-stone-50/70" : undefined}
+                        detalle={<div className="@container"><Operaciones columnas={detalle!.columnas} filas={ops} /></div>} />
+                    ) : (
+                      <tr key={i} className={cx("transition-colors even:bg-stone-50/70 hover:bg-marca-50", Boolean(r._fuerte) && "bg-marca-50/60 font-semibold")}>
+                        {tds(0)}
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 {t && (
                   <tfoot className="border-t-2 border-marca-200 bg-marca-50 font-semibold text-marca-800">
@@ -208,11 +261,27 @@ export async function VistaReportes({
             </div>
 
             <ul className={cx("divide-y divide-stone-100", cabe.tarjetas)}>
-              {datos.filas.map((r, i) => (
-                <li key={i} className={cx("px-4 py-3 even:bg-stone-50/70", Boolean(r._fuerte) && "bg-marca-50/60")}>
-                  <FilaTarjeta columnas={datos.columnas} fila={r} fuerte={Boolean(r._fuerte)} />
-                </li>
-              ))}
+              {datos.filas.map((r, i) => {
+                const ops = operaciones(r);
+                return (
+                  <li key={i} className={cx("px-4 py-3 even:bg-stone-50/70", Boolean(r._fuerte) && "bg-marca-50/60")}>
+                    {ops?.length ? (
+                      <details className="group">
+                        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                          <FilaTarjeta columnas={datos.columnas} fila={r} />
+                          <span className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-marca-700">
+                            <ChevronRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" />
+                            Ver {ops.length} operación(es)
+                          </span>
+                        </summary>
+                        <div className="mt-2 rounded-lg bg-superficie px-3 py-1"><Operaciones columnas={detalle!.columnas} filas={ops} /></div>
+                      </details>
+                    ) : (
+                      <FilaTarjeta columnas={datos.columnas} fila={r} fuerte={Boolean(r._fuerte)} />
+                    )}
+                  </li>
+                );
+              })}
               {t && (
                 <li className="border-t-2 border-marca-200 bg-marca-50 px-4 py-3 text-marca-800">
                   <FilaTarjeta columnas={datos.columnas} fila={t} titulo="Total" fuerte />

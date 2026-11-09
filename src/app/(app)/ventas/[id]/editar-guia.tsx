@@ -33,7 +33,6 @@ export function EditarGuia({
   const [numero, setNumero] = useState(guiaNumero ?? "");
   const [nota, setNota] = useState(notas ?? "");
   const [tipo, setTipo] = useState<TipoComprobante | "">(comprobanteTipo ?? "");
-  const [numeroCp, setNumeroCp] = useState(comprobanteNumero ?? "");
   const [guia, setGuia] = useState<File | null>(null);
   const [comp, setComp] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +49,8 @@ export function EditarGuia({
         comprobante_url: comp ? await subirArchivo(empresaId, "comprobantes", comp) : comprobanteRuta,
         notas: nota.trim() || null,
         comprobante_tipo: tipo || null,
-        comprobante_numero: tipo ? numeroCp.trim() || null : null,
+        // El N° lo pone la BD: se conserva si el tipo no cambia; si cambia, toma el siguiente de esa serie
+        comprobante_numero: null,
       });
       if (!r.ok) setError(r.error);
       else {
@@ -85,7 +85,7 @@ export function EditarGuia({
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo etiqueta="Comprobante">
-          <Select value={tipo} onChange={(e) => { setTipo(e.target.value as TipoComprobante | ""); setNumeroCp(""); }}>
+          <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoComprobante | "")}>
             <option value="">Sin registrar</option>
             {TIPOS_COMPROBANTE.map((t) => (
               <option key={t} value={t} disabled={t === "factura" && !clienteConRuc}>
@@ -95,8 +95,11 @@ export function EditarGuia({
           </Select>
         </Campo>
         <Campo etiqueta="Serie y número">
-          <Input value={numeroCp} onChange={(e) => setNumeroCp(e.target.value)} disabled={!tipo}
-            placeholder={tipo ? COMPROBANTES[tipo].ejemplo : "Elija el comprobante"} autoCapitalize="characters" />
+          <p className="flex h-[42px] items-center rounded-lg border border-stone-200 bg-stone-50 px-3 text-sm">
+            {!tipo ? <span className="text-stone-500">Sin comprobante</span>
+              : tipo === comprobanteTipo && comprobanteNumero ? <span className="cifra font-semibold">{comprobanteNumero}</span>
+              : <span className="text-stone-600">Siguiente de la serie (automático)</span>}
+          </p>
         </Campo>
       </div>
       <Campo etiqueta="N° de guía de remisión"><Input value={numero} onChange={(e) => setNumero(e.target.value)} /></Campo>
