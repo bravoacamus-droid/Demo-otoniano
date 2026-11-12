@@ -10,7 +10,8 @@ import { ETIQUETA_ROL } from "@/lib/formato";
 import { guardarEmpresa, guardarSerieComprobante } from "./acciones";
 import { COMPROBANTES, type TipoComprobante } from "@/lib/comprobantes";
 import { cargarMediosPago } from "@/lib/productos";
-import { Cajas, Categorias, MediosPago, Usuarios } from "./secciones";
+import { Cajas, Categorias, MediosPago } from "./secciones";
+import { Usuarios } from "./usuarios";
 import { Cargos, type Cargo } from "./cargos";
 
 export const metadata: Metadata = { title: "Configuración" };

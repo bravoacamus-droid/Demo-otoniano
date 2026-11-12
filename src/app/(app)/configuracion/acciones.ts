@@ -4,6 +4,7 @@ import { exigir, olvidarMembresias } from "@/lib/contexto";
 import { fallo, ok, texto } from "@/lib/acciones";
 import { normalizar } from "@/lib/montos";
 import { crearUsuarioEmpresa } from "@/lib/usuarios";
+import { crearClienteAdmin } from "@/lib/supabase/admin";
 import type { Resultado, Rol } from "@/lib/tipos";
 import { MODULOS, visible } from "@/components/shell/modulos";
 
@@ -148,4 +149,46 @@ export async function guardarSerieComprobante(_: unknown, fd: FormData): Promise
     p_empresa: empresa.id, p_tipo: tipo, p_serie: texto(fd, "serie") ?? "", p_ultimo: ultimo,
   });
   return error ? fallo(error) : ok(null);
+}
+
+/**
+ * Editar un usuario: nombre, correo, contraseña (opcional) y cargo. El correo y la contraseña son los de su
+ * cuenta (sirven para entrar). Si está unido a un trabajador, su ficha toma el mismo cargo.
+ */
+export async function editarUsuario(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase, empresa, userId: yo } = await exigir("configurar");
+  const userId = texto(fd, "user_id");
+  const nombre = texto(fd, "nombre");
+  const email = texto(fd, "email")?.toLowerCase();
+  const password = texto(fd, "password");
+  const cargoId = texto(fd, "cargo_id");
+  if (!userId || !nombre || !email) return fallo("Ingrese nombre y correo.");
+  if (password && password.length < 6) return fallo("La contraseña debe tener al menos 6 caracteres.");
+
+  // Solo usuarios de esta empresa
+  const { data: m } = await supabase.from("miembros").select("user_id, email, cargo_id").eq("empresa_id", empresa.id).eq("user_id", userId).maybeSingle();
+  if (!m) return fallo("Usuario no encontrado.");
+
+  const admin = crearClienteAdmin();
+  if (email !== (m.email ?? "").toLowerCase() || password) {
+    const { error } = await admin.auth.admin.updateUserById(userId, {
+      ...(email !== (m.email ?? "").toLowerCase() ? { email, email_confirm: true } : {}),
+      ...(password ? { password } : {}),
+      user_metadata: { nombre },
+    });
+    if (error) return fallo(/already|registered|exists/i.test(error.message) ? "Ese correo ya lo usa otra cuenta." : error.message);
+  }
+  const { error: e1 } = await supabase.from("miembros").update({ nombre, email }).eq("empresa_id", empresa.id).eq("user_id", userId);
+  if (e1) return fallo(e1);
+
+  if (cargoId && cargoId !== m.cargo_id) {
+    if (userId === yo) return fallo("Datos guardados, pero no puede cambiar su propio cargo.");
+    const { error: e2 } = await supabase.rpc("asignar_cargo_miembro", { p_empresa: empresa.id, p_user: userId, p_cargo: cargoId });
+    if (e2) return fallo(e2);
+    // Su ficha de trabajador (si tiene) queda con el mismo cargo
+    const { data: c } = await supabase.from("cargos").select("nombre").eq("id", cargoId).maybeSingle();
+    if (c) await supabase.from("trabajadores").update({ cargo: c.nombre }).eq("empresa_id", empresa.id).eq("user_id", userId);
+  }
+  olvidarMembresias();
+  return ok(null);
 }
