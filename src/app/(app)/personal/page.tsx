@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarCheck, FileSpreadsheet, FileText } from "lucide-react";
 import { exigir } from "@/lib/contexto";
-import { diasEntre, marcasAsistencia, periodoPersonal } from "@/lib/personal";
+import { periodoPersonal } from "@/lib/personal";
 import { EnlaceDescarga } from "@/components/ui/enlace-descarga";
 import { puede } from "@/lib/permisos";
 import { fechaDia, hoyLima, numero, soles } from "@/lib/formato";
@@ -13,13 +13,13 @@ import { TablaDatos } from "@/components/ui/tabla";
 import { FormularioAccion } from "@/components/ui/formulario";
 import { aprobarHorasExtra } from "./acciones";
 import { BotonTrabajador, type TrabajadorEditable } from "./form-trabajador";
-import { CalendarioAsistencia, ESTADO_DIA, type TrabajadorCal } from "./calendario-asistencia";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const metadata: Metadata = { title: "Personal" };
 
 type Params = { ver?: string; desde?: string; hasta?: string };
 type Marca = { estado: string; entrada: string | null; salida: string | null; horas_extra: number; nota: string | null };
+const ESTADO_TEXTO: Record<string, string> = { descanso: "Descanso", permiso: "Permiso", vacaciones: "Vacaciones" };
 const VER = { activos: "Activos", cesados: "Cesados", todos: "Todos" } as const;
 
 /** «2 años 3 meses», «5 meses», «12 días» entre dos fechas YYYY-MM-DD */
@@ -47,14 +47,13 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
   const { supabase, empresa, rol } = await exigir("personal");
   const aprueba = puede(rol, "aprobarExtras");
 
-  // Cuadro por día: el periodo elegido, como máximo sus últimos 31 días
-  const diasCal = diasEntre(desde, hasta).slice(-31);
-  const [{ data: todos }, { data: resumen }, { data: hoyAsis }, marcas] = await Promise.all([
+  const [{ data: todos }, { data: resumen }, { data: hoyAsis }, { data: filasCargo }] = await Promise.all([
     supabase.from("v_trabajadores").select("*").eq("empresa_id", empresa.id).order("nombre"),
     supabase.rpc("resumen_personal", { p_empresa: empresa.id, p_desde: desde, p_hasta: hasta }),
     supabase.from("asistencias").select("trabajador_id, estado, entrada, salida, horas_extra, nota").eq("empresa_id", empresa.id).eq("fecha", hoy),
-    marcasAsistencia(supabase, empresa.id, diasCal[0], hasta),
+    supabase.from("cargos").select("nombre").eq("empresa_id", empresa.id).eq("activo", true).order("creado_en"),
   ]);
+  const cargos = (filasCargo ?? []).map((c) => c.nombre);
   const trabajadores = (todos ?? []).filter((t) => ver === "todos" || t.situacion === (ver === "activos" ? "activo" : "cesado"));
   const filas = (resumen ?? []) as Database["public"]["Functions"]["resumen_personal"]["Returns"];
   // Hoy: quiénes estaban en la empresa y qué se marcó de cada uno
@@ -72,7 +71,6 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
   // El domingo no se exige marcar: quien no tiene marca no queda «pendiente»
   const hoyDomingo = new Date(`${hoy}T12:00:00Z`).getUTCDay() === 0;
   const porMarcarHoy = hoyDomingo ? 0 : hoySinMarcar.length;
-  const enCalendario = (todos ?? []).filter((t) => t.fecha_ingreso! <= hasta && (!t.fecha_cese || t.fecha_cese >= diasCal[0]));
   const pendientes = filas.reduce((s, r) => s + Number(r.horas_pendientes), 0);
   const conSueldo = filas.some((r) => r.sueldo_mensual != null);
   const href = (c: Params) => `/personal?${new URLSearchParams({ ver, desde, hasta, ...c })}`;
@@ -88,7 +86,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
       <Encabezado
         titulo="Personal"
         descripcion="Ingreso y cese de cada trabajador, asistencia, domingos trabajados y horas extras"
-        acciones={<><BotonLink href="/personal/asistencia" variante="secundario"><CalendarCheck className="size-4" /> Marcar asistencia</BotonLink><BotonTrabajador /></>}
+        acciones={<><BotonLink href="/personal/asistencia" variante="secundario"><CalendarCheck className="size-4" /> Marcar asistencia</BotonLink><BotonTrabajador cargos={cargos} /></>}
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -114,7 +112,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
                 ? { titulo: "Sin marcar (domingo, no se exige)", tono: "gris" as const, lista: hoySinMarcar, detalle: () => "" }
                 : { titulo: "Sin marcar", tono: "ambar" as const, lista: hoySinMarcar, detalle: () => "" },
               { titulo: "Descanso, permiso o vacaciones", tono: "azul" as const, lista: hoyOtros,
-                detalle: (m?: Marca) => [m && ESTADO_DIA[m.estado]?.texto, m?.nota].filter(Boolean).join(" · ") },
+                detalle: (m?: Marca) => [m && ESTADO_TEXTO[m.estado], m?.nota].filter(Boolean).join(" · ") },
               { titulo: "Asistieron", tono: "verde" as const, lista: hoyAsistieron,
                 detalle: (m?: Marca) => [hora(m?.entrada) && `${hora(m?.entrada)}${hora(m?.salida) ? `–${hora(m?.salida)}` : ""}`,
                   Number(m?.horas_extra) > 0 && `${numero(m!.horas_extra)} h extra`].filter(Boolean).join(" · ") },
@@ -150,7 +148,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
             </EnlaceDescarga>
           </div>
         }>
-          Resumen de asistencia · {fechaDia(desde)} al {fechaDia(hasta)}
+          Totales del periodo · {fechaDia(desde)} al {fechaDia(hasta)}
         </TituloTarjeta>
         <div className="flex flex-wrap items-end gap-2 border-b border-stone-100 px-4 py-3">
           {[
@@ -181,11 +179,10 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
             </div>
           )}
         </div>
-        <p className="px-4 pt-3 text-xs font-medium text-stone-500">
-          Día por día{diasCal[0] > desde ? ` · últimos ${diasCal.length} días del periodo` : ""} · toque un día para abrir su hoja
+        <p className="px-4 pt-3 text-xs text-stone-500">
+          Asistencias, domingos trabajados y horas extras para el pago. Para marcar o ver día por día use el{" "}
+          <Link href="/personal/asistencia" className="font-medium text-marca-700 hover:underline">tareo del mes</Link>.
         </p>
-        <CalendarioAsistencia dias={diasCal} trabajadores={enCalendario as TrabajadorCal[]} marcas={marcas} hoy={hoy} />
-        <p className="border-t border-stone-100 px-4 pt-3 text-xs font-medium text-stone-500">Totales del periodo</p>
         <TablaDatos
           filas={filas}
           clave={(r) => r.trabajador_id}
@@ -285,7 +282,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
             },
             { titulo: "Antigüedad", celda: (t) => antiguedad(t.fecha_ingreso!, t.fecha_cese && t.fecha_cese < hoy ? t.fecha_cese : hoy) },
             { titulo: "Estado", celda: (t) => <Insignia tono={t.situacion === "activo" ? "verde" : "gris"}>{t.situacion === "activo" ? "Activo" : "Cesado"}</Insignia> },
-            { titulo: "", alinear: "der", celda: (t) => <BotonTrabajador inicial={t as unknown as TrabajadorEditable} /> },
+            { titulo: "", alinear: "der", celda: (t) => <BotonTrabajador cargos={cargos} inicial={t as unknown as TrabajadorEditable} /> },
           ]}
         />
       </Tarjeta>

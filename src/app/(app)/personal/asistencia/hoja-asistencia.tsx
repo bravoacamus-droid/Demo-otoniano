@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCheck, Loader2 } from "lucide-react";
 import { Aviso, Insignia, Tarjeta } from "@/components/ui/basicos";
 import { Boton } from "@/components/ui/boton";
-import { Input, InputNumero } from "@/components/ui/campos";
+import { Input } from "@/components/ui/campos";
 import { cx } from "@/components/ui/clases";
 import { useNotificar } from "@/components/ui/notificaciones";
 import { numero } from "@/lib/formato";
@@ -20,7 +20,7 @@ export interface FilaHoja {
   salida: string;
   horas_extra: string;
   nota: string;
-  /** Horas extras ya aprobadas por Gerencia (si se cambian, vuelven a quedar por aprobar) */
+  /** Horas extras (las anota Gerencia con «Horas extras»; aquí solo se muestran y se conservan) */
   aprobada: boolean;
 }
 
@@ -34,21 +34,8 @@ const ESTADOS = [
 
 const minutos = (h: string) => (h ? Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5)) : null);
 
-/** Horas extras según el horario: lo trabajado por encima de la jornada (en medias horas) */
-function extrasSegunHorario(f: FilaHoja, jornada: number) {
-  const e = minutos(f.entrada);
-  const s = minutos(f.salida);
-  if (e === null || s === null || s <= e) return null;
-  const extra = (s - e) / 60 - jornada;
-  return extra > 0 ? Math.floor(extra * 2) / 2 : 0;
-}
-
 /** Hoja del día: una tarjeta por trabajador (sirve igual en celular) y un solo «Guardar» */
-export function HojaAsistencia({ fecha, filas: iniciales, domingo, jornada }: {
-  fecha: string; filas: FilaHoja[]; domingo: boolean;
-  /** Jornada diaria (h) de la empresa, para sugerir horas extras por el horario */
-  jornada: number;
-}) {
+export function HojaAsistencia({ fecha, filas: iniciales, domingo }: { fecha: string; filas: FilaHoja[]; domingo: boolean }) {
   const router = useRouter();
   const notificar = useNotificar();
   const [filas, setFilas] = useState(iniciales);
@@ -99,7 +86,6 @@ export function HojaAsistencia({ fecha, filas: iniciales, domingo, jornada }: {
       </div>
 
       {filas.map((f) => {
-        const sugerido = f.estado === "asistio" ? extrasSegunHorario(f, jornada) : null;
         return (
           <Tarjeta key={f.trabajador_id} className={cx("p-3 sm:p-4", !f.estado && "border-amber-200")}>
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -126,25 +112,14 @@ export function HojaAsistencia({ fecha, filas: iniciales, domingo, jornada }: {
             </div>
 
             {f.estado === "asistio" && (
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-xl sm:grid-cols-3">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-sm">
                 <label className="text-xs font-medium text-stone-600">Entrada
                   <Input type="time" value={f.entrada} onChange={(e) => cambiar(f.trabajador_id, { entrada: e.target.value })} className="mt-1" />
                 </label>
                 <label className="text-xs font-medium text-stone-600">Salida
                   <Input type="time" value={f.salida} onChange={(e) => cambiar(f.trabajador_id, { salida: e.target.value })} className="mt-1" />
                 </label>
-                <label className="col-span-2 text-xs font-medium text-stone-600 sm:col-span-1">Horas extras
-                  <InputNumero value={f.horas_extra} placeholder="0" min={0} step={0.5}
-                    onChange={(e) => cambiar(f.trabajador_id, { horas_extra: e.target.value, aprobada: false })} className="mt-1" />
-                </label>
-                {horarioMal(f) && <p className="col-span-2 text-xs font-medium text-red-700 sm:col-span-3">La salida debe ser posterior a la entrada.</p>}
-                {sugerido !== null && sugerido > 0 && Number(f.horas_extra || 0) !== sugerido && (
-                  <p className="col-span-2 text-xs text-stone-600 sm:col-span-3">
-                    Según el horario: <b>{numero(sugerido)} h extras</b> (jornada de {numero(jornada)} h) ·{" "}
-                    <button type="button" className="font-medium text-marca-700 hover:underline"
-                      onClick={() => cambiar(f.trabajador_id, { horas_extra: String(sugerido), aprobada: false })}>Usar</button>
-                  </p>
-                )}
+                {horarioMal(f) && <p className="col-span-2 text-xs font-medium text-red-700">La salida debe ser posterior a la entrada.</p>}
               </div>
             )}
             {f.estado && (
@@ -152,7 +127,7 @@ export function HojaAsistencia({ fecha, filas: iniciales, domingo, jornada }: {
                 <Input value={f.nota} onChange={(e) => cambiar(f.trabajador_id, { nota: e.target.value })} placeholder="Nota (opcional)" className="h-9 max-w-md text-sm" />
                 {f.estado === "asistio" && domingo && <Insignia tono="azul">Domingo trabajado</Insignia>}
                 {f.estado === "asistio" && Number(f.horas_extra) > 0 && (
-                  <Insignia tono={f.aprobada ? "verde" : "ambar"}>{f.aprobada ? "Horas extras aprobadas" : "Horas extras por aprobar"}</Insignia>
+                  <Insignia tono={f.aprobada ? "verde" : "ambar"}>{numero(Number(f.horas_extra))} h extras{f.aprobada ? "" : " por aprobar"}</Insignia>
                 )}
               </div>
             )}

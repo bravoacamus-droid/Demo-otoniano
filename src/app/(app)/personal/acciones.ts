@@ -4,6 +4,7 @@ import { obtenerContexto } from "@/lib/contexto";
 import { fallo, ok, texto } from "@/lib/acciones";
 import { normalizar } from "@/lib/montos";
 import type { Resultado } from "@/lib/tipos";
+import type { Json } from "@/lib/supabase/database.types";
 import { hoyLima } from "@/lib/formato";
 
 const fechaValida = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
@@ -69,6 +70,31 @@ export async function aprobarHorasExtra(_: unknown, fd: FormData): Promise<Resul
     p_trabajador: texto(fd, "trabajador_id") ?? undefined,
     // Solo lo que Gerencia tenía en pantalla: lo que se marcó después queda por aprobar
     p_visto_en: texto(fd, "visto_en") ?? undefined,
+  });
+  if (error) return fallo(error);
+  return ok(null);
+}
+
+export interface CeldaTareo { trabajador_id: string; fecha: string; estado: string }
+
+/** Casillas cambiadas del tareo del mes (un solo «Guardar cambios») */
+export async function guardarTareo(celdas: CeldaTareo[]): Promise<Resultado<number>> {
+  const { supabase, empresa } = await obtenerContexto();
+  const { data, error } = await supabase.rpc("guardar_tareo", { p_empresa: empresa.id, p_celdas: celdas as unknown as Json });
+  if (error) return fallo(error);
+  return ok(data as number);
+}
+
+/** Horas extras de un día: las anota Gerencia y quedan aprobadas (0 = quitarlas) */
+export async function registrarHorasExtra(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase, empresa } = await obtenerContexto();
+  const horas = normalizar(texto(fd, "horas") ?? "");
+  const fecha = fechaValida(texto(fd, "fecha"));
+  if (!fecha) return fallo("Indique el día.");
+  if (horas === "") return fallo("Ingrese las horas extras (0 para quitarlas).");
+  const { error } = await supabase.rpc("registrar_horas_extra", {
+    p_empresa: empresa.id, p_trabajador: texto(fd, "trabajador_id") ?? "", p_fecha: fecha, p_horas: Number(horas),
+    p_nota: texto(fd, "nota") ?? undefined,
   });
   if (error) return fallo(error);
   return ok(null);

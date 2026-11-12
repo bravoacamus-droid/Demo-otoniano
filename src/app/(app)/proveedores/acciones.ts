@@ -2,6 +2,7 @@
 
 import { obtenerContexto } from "@/lib/contexto";
 import { fallo, ok, texto } from "@/lib/acciones";
+import { normalizar } from "@/lib/montos";
 import type { ClaseProveedor, Proveedor, Resultado, TipoDoc } from "@/lib/tipos";
 
 export async function buscarProveedores(q: string): Promise<Proveedor[]> {
@@ -73,5 +74,25 @@ export async function cambiarEstadoProveedor(id: string, activo: boolean): Promi
   const { error, count } = await supabase.from("proveedores").update({ activo }, { count: "exact" }).eq("id", id);
   if (error) return fallo(error);
   if (!count) return fallo("No tiene permiso para esta operación.");
+  return ok(null);
+}
+
+/** Adelanto al proveedor: sale de la caja del medio elegido y se descuenta en sus próximas compras */
+export async function registrarAdelanto(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase, empresa } = await obtenerContexto();
+  const monto = normalizar(texto(fd, "monto") ?? "");
+  if (!monto) return fallo("Ingrese el monto del adelanto.");
+  const { error } = await supabase.rpc("registrar_adelanto_proveedor", {
+    p_empresa: empresa.id, p_proveedor: texto(fd, "proveedor_id") ?? "", p_monto: Number(monto),
+    p_medio: texto(fd, "medio_id") ?? undefined, p_nota: texto(fd, "nota") ?? undefined,
+  });
+  if (error) return fallo(error);
+  return ok(null);
+}
+
+export async function anularAdelanto(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase } = await obtenerContexto();
+  const { error } = await supabase.rpc("anular_adelanto_proveedor", { p_id: texto(fd, "id") ?? "", p_motivo: texto(fd, "motivo") ?? "" });
+  if (error) return fallo(error);
   return ok(null);
 }

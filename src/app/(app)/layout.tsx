@@ -33,6 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <script dangerouslySetInnerHTML={{ __html: GUARDIA }} />
       <AppShell
         rol={ctx.rol}
+        secciones={ctx.secciones}
         nombre={ctx.nombre}
         empresa={{ id: ctx.empresa.id, razon_social: ctx.empresa.razon_social }}
         empresas={ctx.empresas}

@@ -9,7 +9,7 @@ import { rangoLima } from "@/components/filtros";
 import { Aviso, PuntoMetal, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
 import { cx } from "@/components/ui/clases";
 import { PanelModulo } from "@/components/panel-modulo";
-import { TONOS, type Tono } from "@/components/shell/modulos";
+import { rutaPermitida, TONOS, type Tono } from "@/components/shell/modulos";
 
 interface Hoy {
   caja: number; hoy_compras_n: number; hoy_compras_kg: number; hoy_compras_importe: number;
@@ -103,8 +103,10 @@ export async function InicioOperativo({ ctx }: { ctx: Contexto }) {
   const totalCajas = (cajas ?? []).reduce((s, c) => s + Number(c.saldo), 0);
   const mayorCaja = Math.max(1, ...(cajas ?? []).map((c) => Math.abs(Number(c.saldo))));
 
+  // ¿El cargo del usuario tiene esa pantalla? (Configuración → Cargos y permisos)
+  const ve = (href: string) => rutaPermitida(href.split("?")[0], ctx.secciones);
   // Accesos según lo que puede cada rol (el mosaico de escritorio tiene 6 lugares junto a «Nueva compra»)
-  const accesos: DatosAcceso[] = [
+  const todos: DatosAcceso[] = [
     ...(puede(rol, "vender") ? [{ href: "/vender", texto: "Nueva venta", detalle: "Despachar a un cliente", icono: Truck, tono: "ventas" as const }] : []),
     ...(puede(rol, "caja") ? [{ href: "/caja", texto: "Caja", detalle: "Gastos, traspasos y arqueo", icono: Wallet, tono: "caja" as const }] : []),
     { href: `/compras?desde=${hoy}&hasta=${hoy}`, texto: esBalancero ? "Mis compras" : "Compras de hoy", detalle: "Ver y reimprimir tickets", icono: ClipboardList, tono: "compras" },
@@ -115,6 +117,7 @@ export async function InicioOperativo({ ctx }: { ctx: Contexto }) {
     ...(puede(rol, "verReportes") ? [{ href: "/reportes", texto: "Reportes", detalle: "Compras, ventas, stock y mermas", icono: BarChart3, tono: "gestion" as const }] : []),
     ...(puede(rol, "editarTerceros") ? [{ href: "/proveedores", texto: "Proveedores", detalle: "Buscar o registrar", icono: Contact, tono: "contactos" as const }] : []),
   ];
+  const accesos = todos.filter((a) => ve(a.href));
 
   return (
     <>
@@ -126,7 +129,7 @@ export async function InicioOperativo({ ctx }: { ctx: Contexto }) {
         <p className="rounded-full border border-stone-200 bg-superficie px-3 py-1 text-sm font-medium text-stone-700 shadow-sm">{fechaLarga(hoy)}</p>
       </div>
 
-      {db.ventas_pendientes > 0 && puede(rol, "vender") && (
+      {db.ventas_pendientes > 0 && puede(rol, "vender") && ve("/ventas") && (
         <div className="mb-4">
           <Aviso>
             Hay {db.ventas_pendientes} venta(s) esperando el pesaje del comprador.{" "}
@@ -136,7 +139,7 @@ export async function InicioOperativo({ ctx }: { ctx: Contexto }) {
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5 lg:grid-rows-[repeat(2,minmax(8rem,auto))]">
-        <AccesoPrincipal href="/comprar" texto="Nueva compra" detalle="Pesar y pagar al proveedor" icono={Scale} />
+        {ve("/comprar") && <AccesoPrincipal href="/comprar" texto="Nueva compra" detalle="Pesar y pagar al proveedor" icono={Scale} />}
         {accesos.map((a) => <Acceso key={a.href} {...a} />)}
       </div>
 
@@ -144,14 +147,14 @@ export async function InicioOperativo({ ctx }: { ctx: Contexto }) {
         <PanelModulo
           tono="compras"
           etiqueta="Movimiento de hoy"
-          principal={{ titulo: "Comprado hoy", valor: kg(db.hoy_compras_kg), detalle: `${numero(db.hoy_compras_n)} compra(s)`, href: `/compras?desde=${hoy}&hasta=${hoy}` }}
+          principal={{ titulo: "Comprado hoy", valor: kg(db.hoy_compras_kg), detalle: `${numero(db.hoy_compras_n)} compra(s)`, href: ve("/compras") ? `/compras?desde=${hoy}&hasta=${hoy}` : undefined }}
           // Siempre 3 celdas (llenan la fila): Almacén ve la caja; Administración, las ventas por confirmar
           celdas={[
             { titulo: "Pagado hoy", valor: soles(db.hoy_compras_importe), detalle: "A proveedores" },
             { titulo: "Vendido hoy (salida)", valor: kg(db.hoy_ventas_kg), detalle: `${numero(db.hoy_ventas_n)} venta(s)` },
             puede(rol, "caja")
-              ? { titulo: "En caja", valor: soles(db.caja), detalle: "Todas las cajas", href: "/caja" }
-              : { titulo: "Ventas por confirmar", valor: numero(db.ventas_pendientes), detalle: "Falta el pesaje", href: "/ventas?estado=pendiente" },
+              ? { titulo: "En caja", valor: soles(db.caja), detalle: "Todas las cajas", href: ve("/caja") ? "/caja" : undefined }
+              : { titulo: "Ventas por confirmar", valor: numero(db.ventas_pendientes), detalle: "Falta el pesaje", href: ve("/ventas") ? "/ventas?estado=pendiente" : undefined },
           ]}
         />
       )}
@@ -217,7 +220,7 @@ export async function InicioOperativo({ ctx }: { ctx: Contexto }) {
           )}
 
           <Tarjeta>
-            <TituloTarjeta accion={(compras ?? []).length > 0 && (
+            <TituloTarjeta accion={(compras ?? []).length > 0 && ve("/compras") && (
               <Link href={`/compras?desde=${hoy}&hasta=${hoy}`} className="text-sm font-medium text-marca-700 hover:underline">Ver todas</Link>
             )}>
               {esBalancero ? "Mis compras de hoy" : "Últimas compras de hoy"}
@@ -227,9 +230,9 @@ export async function InicioOperativo({ ctx }: { ctx: Contexto }) {
                 <span className="flex size-12 items-center justify-center rounded-full bg-sky-50 text-sky-700"><ClipboardList className="size-6" /></span>
                 <p className="mt-3 text-sm font-medium text-stone-800">Todavía no hay compras hoy</p>
                 <p className="text-xs text-stone-500">La primera que registre aparecerá aquí.</p>
-                <Link href="/comprar" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-marca-700 hover:underline">
+                {ve("/comprar") && <Link href="/comprar" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-marca-700 hover:underline">
                   Registrar compra <ArrowRight className="size-4" />
-                </Link>
+                </Link>}
               </div>
             ) : (
               <ul className="filas-entran divide-y divide-stone-100">

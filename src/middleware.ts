@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLICAS = ["/login", "/auth"];
 
 export async function middleware(request: NextRequest) {
+  // Las páginas revisan con esta ruta si el cargo del usuario puede entrar (obtenerContexto)
+  request.headers.set("x-ruta", request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

@@ -41,13 +41,15 @@ const INACTIVO_LATERAL = "text-lateral-texto hover:bg-white/10 hover:text-white"
 // Estructura: barra lateral = solo secciones (contraíble a iconos en escritorio);
 // barra superior = empresa a la izquierda; tema, letra y usuario (Mi cuenta / Cerrar sesión) a la derecha.
 export function AppShell({
-  rol, nombre, empresa, empresas, tema, letra, compacto: compactoInicial, avisosCredito, children,
+  rol, secciones, nombre, empresa, empresas, tema, letra, compacto: compactoInicial, avisosCredito, children,
 }: {
   tema: Tema;
   letra: Letra;
   /** Barra lateral contraída (cookie, para que no salte al cargar) */
   compacto: boolean;
   rol: Rol;
+  /** Pantallas que el cargo del usuario tiene marcadas (null = todas las de su nivel) */
+  secciones: string[] | null;
   nombre: string;
   empresa: { id: string; razon_social: string };
   empresas: { id: string; razon_social: string; rol: Rol }[];
@@ -61,7 +63,7 @@ export function AppShell({
   const preferencias = usePreferencias(tema, letra);
   const notificar = useNotificar();
   const cerrarRef = useRef<HTMLButtonElement>(null);
-  const modulos = modulosPara(rol);
+  const modulos = modulosPara(rol, secciones);
   const actual = itemActivo(modulos, ruta);
   const visibles = new Set(modulos.flatMap((m) => m.items.map((i) => i.href)));
 

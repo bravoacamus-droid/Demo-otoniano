@@ -5,6 +5,7 @@ import { fallo, ok, texto } from "@/lib/acciones";
 import { normalizar } from "@/lib/montos";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import type { Resultado, Rol } from "@/lib/tipos";
+import { MODULOS, visible } from "@/components/shell/modulos";
 
 const ROLES: Rol[] = ["dueno", "administrador", "cajero", "balancero", "socio"];
 
@@ -53,9 +54,12 @@ export async function invitarUsuario(_: unknown, fd: FormData): Promise<Resultad
   const email = texto(fd, "email")?.toLowerCase();
   const nombre = texto(fd, "nombre");
   const password = texto(fd, "password");
-  const rol = texto(fd, "rol") as Rol;
+  const cargoId = texto(fd, "cargo_id");
   if (!email || !nombre) return fallo("Ingrese nombre y correo.");
-  if (!ROLES.includes(rol)) return fallo("Rol no válido.");
+  if (!cargoId) return fallo("Elija el cargo del usuario.");
+  const { data: cargo } = await crearClienteAdmin().from("cargos").select("rol").eq("id", cargoId).eq("empresa_id", empresa.id).eq("activo", true).maybeSingle();
+  if (!cargo) return fallo("Cargo no válido.");
+  const rol = cargo.rol as Rol;
 
   const admin = crearClienteAdmin();
   let userId: string | null = null;
@@ -74,18 +78,44 @@ export async function invitarUsuario(_: unknown, fd: FormData): Promise<Resultad
   if (!userId) return fallo("No se pudo crear el usuario.");
 
   const { error: e2 } = await admin.rpc("admin_agregar_miembro", {
-    p_empresa: empresa.id, p_user: userId, p_rol: rol, p_nombre: nombre, p_email: email,
+    p_empresa: empresa.id, p_user: userId, p_rol: rol, p_nombre: nombre, p_email: email, p_cargo: cargoId,
   });
   if (e2) return fallo(e2);
   olvidarMembresias();
   return ok(null);
 }
 
-export async function actualizarMiembro(userId: string, cambios: { rol?: Rol; activo?: boolean }): Promise<Resultado> {
+export async function actualizarMiembro(userId: string, cambios: { cargoId?: string; activo?: boolean }): Promise<Resultado> {
   const { supabase, empresa, userId: yo } = await exigir("configurar");
-  if (userId === yo) return fallo("No puede cambiar su propio rol ni desactivarse.");
-  const { error } = await supabase.from("miembros").update(cambios).eq("empresa_id", empresa.id).eq("user_id", userId);
+  if (userId === yo) return fallo("No puede cambiar su propio cargo ni desactivarse.");
+  const { error } = cambios.cargoId
+    ? await supabase.rpc("asignar_cargo_miembro", { p_empresa: empresa.id, p_user: userId, p_cargo: cambios.cargoId })
+    : await supabase.from("miembros").update({ activo: cambios.activo }).eq("empresa_id", empresa.id).eq("user_id", userId);
   if (error) return fallo(error);
+  olvidarMembresias();
+  return ok(null);
+}
+
+const NIVELES: Rol[] = ["dueno", "administrador", "cajero"];
+
+/** Cargo con su nivel de acceso y las pantallas marcadas. Todas marcadas = null (las pantallas nuevas aparecen solas). */
+export async function guardarCargo(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase, empresa } = await exigir("configurar");
+  const rol = texto(fd, "rol") as Rol;
+  if (!NIVELES.includes(rol)) return fallo("Elija el nivel de acceso.");
+  const posibles = MODULOS.flatMap((m) => m.items).filter((i) => i.href !== "/" && visible(rol, i)).map((i) => i.href);
+  const marcadas = fd.getAll("seccion").map(String).filter((h) => posibles.includes(h));
+  if (rol !== "dueno" && marcadas.length === 0) return fallo("Marque al menos una pantalla.");
+  const { error } = await supabase.rpc("guardar_cargo", {
+    p_empresa: empresa.id,
+    p_id: texto(fd, "id"),
+    p_nombre: texto(fd, "nombre") ?? "",
+    p_rol: rol as "dueno" | "administrador" | "cajero",
+    p_secciones: marcadas.length === posibles.length ? null : marcadas,
+    p_activo: fd.get("activo") !== "off",
+  });
+  if (error) return fallo(error);
+  // El menú de los usuarios con ese cargo cambia en su próxima pantalla
   olvidarMembresias();
   return ok(null);
 }

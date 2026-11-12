@@ -200,8 +200,11 @@ export function FormCompra({
           <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
             <input type="checkbox" checked={aplicarSaldo} onChange={(e) => setAplicarSaldo(e.target.checked)} className="mt-0.5 size-4 accent-emerald-600" />
             <span>
-              <b className="font-semibold">Tiene {soles(saldo)} a favor</b> por descuentos de compras anteriores.
-              <span className="block text-xs text-emerald-800">Descontarlo de este pago (se paga menos en caja).</span>
+              <b className="font-semibold">Tiene {soles(saldo)} a favor</b> (adelantos o descuentos anteriores).
+              <span className="block text-xs text-emerald-800">
+                Descontarlo de este pago (se paga menos en caja)
+                {aplicarSaldo && totalCent > 0 && saldoCent > totalCent && <> · quedarán <b>{soles((saldoCent - totalCent) / 100)}</b> pendientes</>}.
+              </span>
             </span>
           </label>
         )}

@@ -11,20 +11,25 @@ import { guardarEmpresa, guardarSerieComprobante } from "./acciones";
 import { COMPROBANTES, type TipoComprobante } from "@/lib/comprobantes";
 import { cargarMediosPago } from "@/lib/productos";
 import { Cajas, Categorias, MediosPago, Usuarios } from "./secciones";
+import { Cargos, type Cargo } from "./cargos";
 
 export const metadata: Metadata = { title: "Configuración" };
 
 export default async function ConfiguracionPage() {
   const ctx = await exigir("configurar");
   const { supabase, empresa, userId } = ctx;
-  const [{ data: miembros }, { data: cajas }, { data: categorias }, { data: uso }, medios, { data: series }] = await Promise.all([
-    supabase.from("miembros").select("user_id, rol, nombre, email, activo").eq("empresa_id", empresa.id).order("creado_en"),
+  const [{ data: miembros }, { data: cajas }, { data: categorias }, { data: uso }, medios, { data: series }, { data: cargos }] = await Promise.all([
+    supabase.from("miembros").select("user_id, rol, nombre, email, activo, cargo_id").eq("empresa_id", empresa.id).order("creado_en"),
     supabase.from("cajas").select("*").eq("empresa_id", empresa.id).order("orden"),
     supabase.from("categorias_gasto").select("*").eq("empresa_id", empresa.id).order("nombre"),
     supabase.rpc("uso_consultas_doc", { p_empresa: empresa.id }),
     cargarMediosPago(ctx, false),
     supabase.from("v_series_comprobante").select("tipo, serie, ultimo, siguiente").eq("empresa_id", empresa.id),
+    supabase.from("cargos").select("id, nombre, rol, secciones, activo").eq("empresa_id", empresa.id).order("activo", { ascending: false }).order("creado_en"),
   ]);
+  const listaCargos = (cargos ?? []) as Cargo[];
+  const usuariosPorCargo: Record<string, number> = {};
+  for (const m of miembros ?? []) if (m.cargo_id && m.activo) usuariosPorCargo[m.cargo_id] = (usuariosPorCargo[m.cargo_id] ?? 0) + 1;
   const consultas = (uso ?? {}) as { total?: number; empresa?: number; hoy?: number; guardados?: number };
   const usadas = Number(consultas.total ?? 0);
   const numeracion = (series ?? []) as { tipo: TipoComprobante; serie: string; ultimo: number; siguiente: string }[];
@@ -63,9 +68,9 @@ export default async function ConfiguracionPage() {
                 <InputNumero name="monto_doc_obligatorio" defaultValue={empresa.monto_doc_obligatorio ?? ""} />
               </Campo>
               <fieldset>
-                <legend className="mb-1 text-sm font-medium text-stone-700">Pueden digitar un precio/kg distinto al del día</legend>
+                <legend className="mb-1 text-sm font-medium text-stone-700">Niveles de acceso que pueden digitar un precio/kg distinto al del día</legend>
                 <div className="flex flex-wrap gap-4 text-sm">
-                  {(["dueno", "administrador", "cajero", "balancero"] as const).map((r) => (
+                  {(["dueno", "administrador", "cajero"] as const).map((r) => (
                     <label key={r} className="flex items-center gap-1.5">
                       <input
                         type="checkbox"
@@ -132,7 +137,8 @@ export default async function ConfiguracionPage() {
             </div>
           </Tarjeta>
         </div>
-        <Usuarios miembros={miembros ?? []} yo={userId} />
+        <Cargos cargos={listaCargos} usuarios={usuariosPorCargo} />
+        <Usuarios miembros={miembros ?? []} yo={userId} cargos={listaCargos} />
         <Cajas cajas={cajas ?? []} />
         <MediosPago medios={medios} cajas={cajas ?? []} />
         <Categorias categorias={categorias ?? []} />

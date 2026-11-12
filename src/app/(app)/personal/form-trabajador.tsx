@@ -24,18 +24,16 @@ export interface TrabajadorEditable {
   notas: string | null;
 }
 
-/** Cargos que hoy tiene la empresa (pedido del Sr. Otiniano, 12/11) */
-const CARGOS = ["Gerente", "Administración", "Auxiliar", "Balanza"];
-
 /** Alta o edición del trabajador. El cese se registra aquí mismo (fecha + motivo); nada se borra. */
-export function BotonTrabajador({ inicial }: { inicial?: TrabajadorEditable }) {
+/** `cargos`: los de Configuración → Cargos y permisos */
+export function BotonTrabajador({ inicial, cargos: lista }: { inicial?: TrabajadorEditable; cargos: string[] }) {
   const [abierto, setAbierto] = useState(false);
   const [cese, setCese] = useState(inicial?.fecha_cese ?? "");
   const { estado, consultar, limpiar } = useConsultaDocumento("trabajador");
   const dniRef = useRef<HTMLInputElement>(null);
   const nombreRef = useRef<HTMLInputElement>(null);
   // Un cargo antiguo escrito a mano sigue en la lista para no perderlo al editar
-  const cargos = inicial?.cargo && !CARGOS.includes(inicial.cargo) ? [...CARGOS, inicial.cargo] : CARGOS;
+  const cargos = inicial?.cargo && !lista.includes(inicial.cargo) ? [...lista, inicial.cargo] : lista;
 
   /** Con los 8 dígitos del DNI se trae el nombre de RENIEC (o del registro si ya está en el sistema) */
   async function buscar() {

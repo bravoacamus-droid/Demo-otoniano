@@ -907,3 +907,104 @@ describe("Reunión 06/11: capital con voucher, utilidad por socio, conteo, corre
     await como(db, DUENO_A, (tx) => tx.query(`select reabrir_mes($1, $2, 'Prueba')`, [empA, per]));
   });
 });
+
+describe("Cargos y permisos (12/11)", () => {
+  it("cada empresa arranca con sus cargos; el cargo da el nivel al usuario y solo Gerencia los edita", async () => {
+    const nombres = await como(db, DUENO_A, (tx) => tx.query<{ nombre: string }>(
+      `select nombre from cargos where empresa_id = $1 order by nombre`, [empA])).then((r) => r.rows.map((x) => x.nombre));
+    expect(nombres).toEqual(["Administración", "Auxiliar", "Balanza", "Gerente"]);
+
+    const guardar = (id: string | null, nombre: string, rol: string, secciones: string[] | null, activo = true, user = DUENO_A) =>
+      como(db, user, (tx) => uno<{ id: string }>(tx, `select guardar_cargo($1, $2, $3, $4::rol_miembro, $5, $6) as id`,
+        [empA, id, nombre, rol, secciones, activo])).then((x) => x.id);
+    await expect(guardar(null, "Chofer", "cajero", ["/compras"], true, CAJERO_A)).rejects.toThrow(/permiso/);
+    const chofer = await guardar(null, "Chofer", "cajero", ["/compras"]);
+    await expect(guardar(null, "chofer ", "cajero", null)).rejects.toThrow(/Ya existe/);
+
+    const rolCajero = () => como(db, DUENO_A, (tx) => uno<{ rol: string; cargo_id: string | null }>(tx,
+      `select rol, cargo_id from miembros where empresa_id = $1 and user_id = $2`, [empA, CAJERO_A]));
+    await como(db, DUENO_A, (tx) => tx.query(`select asignar_cargo_miembro($1, $2, $3)`, [empA, CAJERO_A, chofer]));
+    expect(await rolCajero()).toEqual({ rol: "cajero", cargo_id: chofer });
+
+    // Subir el nivel del cargo sube a sus usuarios; Gerencia no lleva lista de pantallas (ve todo)
+    await guardar(chofer, "Chofer", "administrador", ["/compras"]);
+    expect((await rolCajero()).rol).toBe("administrador");
+    await guardar(chofer, "Chofer", "cajero", ["/compras"]);
+    expect((await rolCajero()).rol).toBe("cajero");
+    const gerente = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx, `select id from cargos where empresa_id = $1 and nombre = 'Gerente'`, [empA])).then((x) => x.id);
+    await guardar(gerente, "Gerente", "dueno", ["/compras"]);
+    expect(await como(db, DUENO_A, (tx) => uno<{ secciones: string[] | null }>(tx, `select secciones from cargos where id = $1`, [gerente]))).toEqual({ secciones: null });
+
+    await expect(guardar(chofer, "Chofer", "cajero", null, false)).rejects.toThrow(/usuarios activos/);
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select asignar_cargo_miembro($1, $2, $3)`, [empA, DUENO_A, chofer]))).rejects.toThrow(/propio/);
+    // Otra empresa no ve los cargos de A
+    const ajenos = await como(db, DUENO_B, (tx) => tx.query(`select 1 from cargos where empresa_id = $1`, [empA]));
+    expect(ajenos.rows).toHaveLength(0);
+  });
+});
+
+describe("Tareo mensual y horas extras de Gerencia (12/11)", () => {
+  it("marca casillas sin tocar horario; las horas extras las anota Gerencia ya aprobadas", async () => {
+    const trab = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into trabajadores (empresa_id, nombre, dni, fecha_ingreso) values ($1, 'Rosa Tareo', '40000077', '2026-09-01') returning id`, [empA])).then((x) => x.id);
+    const tareo = (celdas: object[], user = DUENO_A) => como(db, user, (tx) =>
+      uno<{ n: number }>(tx, `select guardar_tareo($1, $2::jsonb) n`, [empA, JSON.stringify(celdas)])).then((x) => x.n);
+    const dia = (fecha: string) => como(db, DUENO_A, (tx) => uno<Record<string, unknown>>(tx,
+      `select estado, horas_extra, extra_aprobada from asistencias where trabajador_id = $1 and fecha = $2`, [trab, fecha]));
+
+    expect(await tareo([{ trabajador_id: trab, fecha: "2026-09-02", estado: "asistio" }, { trabajador_id: trab, fecha: "2026-09-03", estado: "falta" }])).toBe(2);
+    expect(await tareo([{ trabajador_id: trab, fecha: "2026-09-02", estado: "asistio" }])).toBe(0);   // sin cambio
+    await expect(tareo([{ trabajador_id: trab, fecha: "2026-08-31", estado: "asistio" }])).rejects.toThrow(/no trabajaba/);
+    await expect(tareo([{ trabajador_id: trab, fecha: "2026-09-04", estado: "asistio" }], CAJERO_A)).rejects.toThrow();
+
+    await como(db, DUENO_A, (tx) => tx.query(`select registrar_horas_extra($1, $2, '2026-09-02', 2.5)`, [empA, trab]));
+    expect(await dia("2026-09-02")).toEqual({ estado: "asistio", horas_extra: "2.50", extra_aprobada: true });
+    // Pasar ese día a falta quita las horas extras
+    await tareo([{ trabajador_id: trab, fecha: "2026-09-02", estado: "falta" }]);
+    expect(await dia("2026-09-02")).toEqual({ estado: "falta", horas_extra: "0.00", extra_aprobada: false });
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select registrar_horas_extra($1, $2, '2026-09-02', 1)`, [empA, trab]))).rejects.toThrow();
+  });
+});
+
+describe("Adelantos a proveedores (12/11)", () => {
+  it("el adelanto sale de caja como saldo a favor y se va descontando en las compras", async () => {
+    const prov = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into proveedores (empresa_id, tipo_doc, nro_doc, nombre) values ($1, 'DNI', '47770001', 'Prov Adelanto') returning id`, [empA])).then((x) => x.id);
+    const saldo = () => como(db, DUENO_A, (tx) => uno<{ saldo: string; adelantos: string }>(tx,
+      `select saldo, adelantos from v_saldo_proveedor where proveedor_id = $1`, [prov])).then((r) => [num(r.saldo), num(r.adelantos)]);
+    const ganancia = () => como(db, DUENO_A, (tx) => uno<{ g: string }>(tx,
+      `select ganancia_acumulada g from v_patrimonio where empresa_id = $1`, [empA])).then((r) => num(r.g));
+    const compra = (kg: string) => como(db, DUENO_A, (tx) => uno<{ r: { id: string; saldo_aplicado: string } }>(tx,
+      `select registrar_compra(p_empresa => $1, p_items => $2::jsonb, p_caja => $3, p_proveedor => $4, p_aplicar_saldo => true) r`,
+      [empA, JSON.stringify([{ metal_id: cobre, peso_bruto_kg: kg, precio_kg: "20" }]), caja, prov])).then((x) => x.r);
+
+    const g0 = await ganancia();
+    const c0 = await saldoCaja();
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select registrar_adelanto_proveedor($1, $2, 0, null, $3)`, [empA, prov, caja]))).rejects.toThrow(/mayor a cero/);
+    const ad = await como(db, CAJERO_A, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_adelanto_proveedor($1, $2, 500, null, $3, 'Para chatarra de la semana') r`, [empA, prov, caja])).then((x) => x.r.id);
+    expect(await saldo()).toEqual([500, 500]);
+    expect(await saldoCaja()).toBeCloseTo(c0 - 500, 2);
+    expect(await ganancia()).toBeCloseTo(g0, 2);                    // la plata pasa de caja a «por cobrar»
+
+    // Trae menos (S/ 200): no sale nada de caja y quedan 300
+    expect(num((await compra("10")).saldo_aplicado)).toBe(200);
+    expect(await saldoCaja()).toBeCloseTo(c0 - 500, 2);
+    expect((await saldo())[0]).toBe(300);
+    // Ya se usó: no se puede anular
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select anular_adelanto_proveedor($1, 'error')`, [ad]))).rejects.toThrow(/ya se descontó/);
+    // Trae más (S/ 400): se descuentan los 300 y se paga la diferencia
+    expect(num((await compra("20")).saldo_aplicado)).toBe(300);
+    expect(await saldoCaja()).toBeCloseTo(c0 - 600, 2);
+    expect((await saldo())[0]).toBe(0);
+    expect(await ganancia()).toBeCloseTo(g0, 2);
+
+    // Un adelanto sin usar se anula y la plata vuelve a la caja
+    const ad2 = await como(db, CAJERO_A, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_adelanto_proveedor($1, $2, 50, null, $3) r`, [empA, prov, caja])).then((x) => x.r.id);
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select anular_adelanto_proveedor($1, 'error')`, [ad2]))).rejects.toThrow();
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_adelanto_proveedor($1, 'Monto equivocado')`, [ad2]));
+    expect(await saldoCaja()).toBeCloseTo(c0 - 600, 2);
+    expect((await saldo())[0]).toBe(0);
+  });
+});

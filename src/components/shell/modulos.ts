@@ -108,9 +108,32 @@ export const MODULOS: Modulo[] = [
 
 export const visible = (rol: Rol, i: SubItem) => !i.permiso || i.permiso.some((p) => puede(rol, p));
 
-/** Módulos con solo las pantallas que el rol puede ver (los vacíos se quitan). */
-export function modulosPara(rol: Rol): Modulo[] {
-  return MODULOS.map((m) => ({ ...m, items: m.items.filter((i) => visible(rol, i)) })).filter((m) => m.items.length > 0);
+/**
+ * Módulos con solo las pantallas que el rol puede ver (los vacíos se quitan). `secciones` = pantallas que el
+ * CARGO del usuario tiene marcadas (null = todas las de su nivel); Inicio siempre queda.
+ */
+export function modulosPara(rol: Rol, secciones: string[] | null = null): Modulo[] {
+  const marcada = (href: string) => href === "/" || !secciones || secciones.includes(href);
+  return MODULOS.map((m) => ({ ...m, items: m.items.filter((i) => visible(rol, i) && marcada(i.href)) })).filter((m) => m.items.length > 0);
+}
+
+// Rutas de apoyo (detalle, ticket, descargas, fichas): basta con tener alguna de estas pantallas.
+// Así quien solo registra compras puede ver e imprimir el ticket que acaba de emitir.
+const APOYO: [RegExp, string[]][] = [
+  [/^\/reportes\/exportar(\/|$)/, ["/reportes", "/compras/reportes", "/ventas/reportes", "/inventario/reportes", "/caja/reportes", "/inventario"]],
+  [/^\/compras\/(?!reportes(\/|$))[^/]+(\/|$)/, ["/compras", "/comprar"]],
+  [/^\/ventas\/(?!reportes(\/|$))[^/]+(\/|$)/, ["/ventas", "/vender"]],
+  [/^\/(proveedores|compradores)\/[^/]+(\/|$)/, ["/proveedores", "/compradores", "/contactos", "/comprar", "/vender", "/compras", "/ventas"]],
+  [/^\/creditos\/[^/]+(\/|$)/, ["/creditos", "/comprar", "/vender"]],
+];
+
+/** ¿El cargo deja entrar a esta ruta? Se mira la pantalla del menú a la que pertenece (p. ej. /compras/123 → Historial). */
+export function rutaPermitida(ruta: string, secciones: string[] | null): boolean {
+  if (!secciones) return true;
+  const apoyo = APOYO.find(([re]) => re.test(ruta));
+  if (apoyo) return apoyo[1].some((h) => secciones.includes(h));
+  const item = itemActivo(MODULOS, ruta)?.item;
+  return !item || item.href === "/" || secciones.includes(item.href);
 }
 
 const coincide = (ruta: string, href: string) => (href === "/" ? ruta === "/" : ruta === href || ruta.startsWith(href + "/"));

@@ -24,6 +24,8 @@ const PERMISOS = {
   editarTerceros: ["dueno", "administrador", "cajero"],
   /** Créditos: ver cuentas por cobrar/pagar y registrar pagos de cuotas (anular un pago: «corregir») */
   creditos: ["dueno", "administrador", "cajero"],
+  /** Dar adelantos a proveedores (salen de caja; se descuentan en sus compras) */
+  adelantos: ["dueno", "administrador", "cajero"],
   /** Avisos de cuotas vencidas o por vencer (campana de la barra superior) */
   avisosCredito: ["dueno"],
   /** Personal: fichas (ingreso, cese, sueldo) y asistencia diaria. Solo Gerencia */
