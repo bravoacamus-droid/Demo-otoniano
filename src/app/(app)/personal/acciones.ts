@@ -1,6 +1,7 @@
 "use server";
 
-import { obtenerContexto } from "@/lib/contexto";
+import { obtenerContexto, olvidarMembresias } from "@/lib/contexto";
+import { crearUsuarioEmpresa } from "@/lib/usuarios";
 import { fallo, ok, texto } from "@/lib/acciones";
 import { normalizar } from "@/lib/montos";
 import type { Resultado } from "@/lib/tipos";
@@ -31,11 +32,32 @@ export async function guardarTrabajador(_: unknown, fd: FormData): Promise<Resul
   if (datos.fecha_ingreso > hoyLima()) return fallo("La fecha de ingreso no puede ser futura.");
   if (datos.fecha_cese && datos.fecha_cese < datos.fecha_ingreso) return fallo("La fecha de cese no puede ser anterior al ingreso.");
   if (!datos.fecha_cese) datos.motivo_cese = null;
-  const { error, count } = id
-    ? await supabase.from("trabajadores").update(datos, { count: "exact" }).eq("id", id)
-    : await supabase.from("trabajadores").insert({ ...datos, fecha_ingreso: datos.fecha_ingreso, nombre: datos.nombre, empresa_id: empresa.id }, { count: "exact" });
+  // Acceso al sistema: correo y contraseña; su usuario toma el cargo de la ficha
+  const acceso = fd.get("acceso") === "on";
+  const email = texto(fd, "email");
+  let cargoId: string | null = null;
+  if (acceso) {
+    if (!email) return fallo("Ingrese el correo con el que entrará al sistema.");
+    if (!datos.cargo) return fallo("Elija el cargo: define qué pantallas verá en el sistema.");
+    const { data: c } = await supabase.from("cargos").select("id").eq("empresa_id", empresa.id).eq("activo", true).eq("nombre", datos.cargo).maybeSingle();
+    if (!c) return fallo("Ese cargo no existe en Cargos y permisos: elija uno de la lista.");
+    cargoId = c.id;
+  }
+
+  const { data: fila, error } = id
+    ? await supabase.from("trabajadores").update(datos).eq("id", id).select("id, user_id").maybeSingle()
+    : await supabase.from("trabajadores").insert({ ...datos, fecha_ingreso: datos.fecha_ingreso, nombre: datos.nombre, empresa_id: empresa.id })
+      .select("id, user_id").maybeSingle();
   if (error) return fallo(error.code === "23505" ? "Ya hay un trabajador con ese DNI." : error);
-  if (!count) return fallo("Solo Gerencia puede gestionar el personal.");
+  if (!fila) return fallo("Solo Gerencia puede gestionar el personal.");
+
+  if (acceso && cargoId && !fila.user_id) {
+    const u = await crearUsuarioEmpresa(empresa.id, { email: email!, nombre: datos.nombre, password: texto(fd, "password"), cargoId });
+    if (!u.ok) return fallo(`Trabajador guardado, pero no se pudo crear su acceso: ${u.error}`);
+    const { error: e2 } = await supabase.from("trabajadores").update({ user_id: u.data }).eq("id", fila.id);
+    if (e2) return fallo(e2.code === "23505" ? "Ese usuario ya está unido a otro trabajador." : e2);
+  }
+  olvidarMembresias();
   return ok(null);
 }
 

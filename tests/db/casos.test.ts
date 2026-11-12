@@ -1008,3 +1008,21 @@ describe("Adelantos a proveedores (12/11)", () => {
     expect((await saldo())[0]).toBe(0);
   });
 });
+
+describe("Trabajador con acceso al sistema (12/11)", () => {
+  it("el cargo de la ficha manda en su usuario y el cese le quita el acceso", async () => {
+    const miembro = () => como(db, DUENO_A, (tx) => uno<{ rol: string; activo: boolean; cargo: string | null }>(tx,
+      `select m.rol, m.activo, c.nombre cargo from miembros m left join cargos c on c.id = m.cargo_id
+        where m.empresa_id = $1 and m.user_id = $2`, [empA, CAJERO_A]));
+    const t = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into trabajadores (empresa_id, nombre, cargo, fecha_ingreso, user_id) values ($1, 'Cajero Uno', 'Administración', '2026-09-01', $2) returning id`,
+      [empA, CAJERO_A])).then((x) => x.id);
+    expect(await miembro()).toEqual({ rol: "administrador", activo: true, cargo: "Administración" });
+    await como(db, DUENO_A, (tx) => tx.query(`update trabajadores set cargo = 'Balanza' where id = $1`, [t]));
+    expect(await miembro()).toEqual({ rol: "cajero", activo: true, cargo: "Balanza" });
+    await como(db, DUENO_A, (tx) => tx.query(`update trabajadores set fecha_cese = '2026-10-01', motivo_cese = 'Renuncia' where id = $1`, [t]));
+    expect((await miembro()).activo).toBe(false);
+    await como(db, DUENO_A, (tx) => tx.query(`update trabajadores set fecha_cese = null, motivo_cese = null where id = $1`, [t]));
+    expect((await miembro()).activo).toBe(true);
+  });
+});

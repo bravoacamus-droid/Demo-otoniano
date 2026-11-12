@@ -26,6 +26,15 @@ const posibles = (rol: Rol) => GRUPOS.flatMap((m) => m.items).filter((i) => visi
 /** Nivel más bajo que deja entrar a una pantalla */
 const nivelMinimo = (i: SubItem) => (["cajero", "administrador", "dueno"] as Rol[]).find((r) => visible(r, i)) ?? "dueno";
 
+/** Pantallas que ve el cargo, por módulo: «Compras: Nueva compra, Historial» (null = acceso total) */
+export function pantallasDe(c: Pick<Cargo, "rol" | "secciones">): { modulo: string; pantallas: string[] }[] | null {
+  if (c.rol === "dueno") return null;
+  return GRUPOS.map((m) => ({
+    modulo: m.texto,
+    pantallas: m.items.filter((i) => visible(c.rol, i) && (!c.secciones || c.secciones.includes(i.href))).map((i) => i.texto),
+  })).filter((g) => g.pantallas.length > 0);
+}
+
 /** Cuántas pantallas tiene el cargo, para la lista */
 function resumen(c: Cargo) {
   if (c.rol === "dueno") return "Acceso total";
@@ -68,7 +77,8 @@ export function Cargos({ cargos, usuarios }: { cargos: Cargo[]; usuarios: Record
   );
 }
 
-function EditarCargo({ cargo, onCerrar }: { cargo: Cargo | null; onCerrar: () => void }) {
+/** Editor de un cargo (también se abre desde la ficha del trabajador: «Cambiar permisos») */
+export function EditarCargo({ cargo, onCerrar }: { cargo: Cargo | null; onCerrar: () => void }) {
   const [rol, setRol] = useState<Rol>(cargo?.rol ?? "cajero");
   // Marcadas: arrancan como estaban (null = todas); al cambiar de nivel se conservan las que sigan permitidas
   const [marcadas, setMarcadas] = useState<Set<string>>(

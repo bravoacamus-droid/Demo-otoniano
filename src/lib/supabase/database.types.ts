@@ -3081,6 +3081,7 @@ export type Database = {
       }
       trabajadores: {
         Row: {
+          user_id: string | null
           cargo: string | null
           creado_en: string
           creado_por: string | null
@@ -3096,6 +3097,7 @@ export type Database = {
           telefono: string | null
         }
         Insert: {
+          user_id?: string | null
           cargo?: string | null
           creado_en?: string
           creado_por?: string | null
@@ -3111,6 +3113,7 @@ export type Database = {
           telefono?: string | null
         }
         Update: {
+          user_id?: string | null
           cargo?: string | null
           creado_en?: string
           creado_por?: string | null

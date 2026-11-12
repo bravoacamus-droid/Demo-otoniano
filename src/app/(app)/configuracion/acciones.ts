@@ -3,7 +3,7 @@
 import { exigir, olvidarMembresias } from "@/lib/contexto";
 import { fallo, ok, texto } from "@/lib/acciones";
 import { normalizar } from "@/lib/montos";
-import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { crearUsuarioEmpresa } from "@/lib/usuarios";
 import type { Resultado, Rol } from "@/lib/tipos";
 import { MODULOS, visible } from "@/components/shell/modulos";
 
@@ -48,41 +48,16 @@ export async function guardarEmpresa(_: unknown, fd: FormData): Promise<Resultad
   return ok(null);
 }
 
-/** Crea el usuario en Supabase Auth (o reutiliza uno existente) y lo agrega como miembro. */
+/** Alta de usuario con su cargo (Configuración → Usuarios) */
 export async function invitarUsuario(_: unknown, fd: FormData): Promise<Resultado> {
   const { empresa } = await exigir("configurar");
-  const email = texto(fd, "email")?.toLowerCase();
+  const email = texto(fd, "email");
   const nombre = texto(fd, "nombre");
-  const password = texto(fd, "password");
   const cargoId = texto(fd, "cargo_id");
   if (!email || !nombre) return fallo("Ingrese nombre y correo.");
   if (!cargoId) return fallo("Elija el cargo del usuario.");
-  const { data: cargo } = await crearClienteAdmin().from("cargos").select("rol").eq("id", cargoId).eq("empresa_id", empresa.id).eq("activo", true).maybeSingle();
-  if (!cargo) return fallo("Cargo no válido.");
-  const rol = cargo.rol as Rol;
-
-  const admin = crearClienteAdmin();
-  let userId: string | null = null;
-  const { data: creado, error } = await admin.auth.admin.createUser({
-    email, password: password ?? undefined, email_confirm: true, user_metadata: { nombre },
-  });
-  if (creado?.user) {
-    userId = creado.user.id;
-  } else if (error && /already|registered|exists/i.test(error.message)) {
-    // Ya tiene cuenta (p. ej. trabaja en otra empresa): solo se agrega como miembro
-    const { data: lista } = await admin.auth.admin.listUsers({ perPage: 1000 });
-    userId = lista?.users.find((u) => u.email?.toLowerCase() === email)?.id ?? null;
-  } else if (error) {
-    return fallo(error.message.includes("Password") ? "La contraseña debe tener al menos 6 caracteres." : error.message);
-  }
-  if (!userId) return fallo("No se pudo crear el usuario.");
-
-  const { error: e2 } = await admin.rpc("admin_agregar_miembro", {
-    p_empresa: empresa.id, p_user: userId, p_rol: rol, p_nombre: nombre, p_email: email, p_cargo: cargoId,
-  });
-  if (e2) return fallo(e2);
-  olvidarMembresias();
-  return ok(null);
+  const r = await crearUsuarioEmpresa(empresa.id, { email, nombre, password: texto(fd, "password"), cargoId });
+  return r.ok ? ok(null) : r;
 }
 
 export async function actualizarMiembro(userId: string, cambios: { cargoId?: string; activo?: boolean }): Promise<Resultado> {

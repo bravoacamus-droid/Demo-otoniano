@@ -12,7 +12,8 @@ import { claseBoton, cx } from "@/components/ui/clases";
 import { TablaDatos } from "@/components/ui/tabla";
 import { FormularioAccion } from "@/components/ui/formulario";
 import { aprobarHorasExtra } from "./acciones";
-import { BotonTrabajador, type TrabajadorEditable } from "./form-trabajador";
+import { BotonTrabajador, type AccesoTrabajador, type TrabajadorEditable } from "./form-trabajador";
+import type { Cargo } from "../configuracion/cargos";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const metadata: Metadata = { title: "Personal" };
@@ -47,13 +48,20 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
   const { supabase, empresa, rol } = await exigir("personal");
   const aprueba = puede(rol, "aprobarExtras");
 
-  const [{ data: todos }, { data: resumen }, { data: hoyAsis }, { data: filasCargo }] = await Promise.all([
+  const [{ data: todos }, { data: resumen }, { data: hoyAsis }, { data: filasCargo }, { data: usuarios }, { data: miembros }] = await Promise.all([
     supabase.from("v_trabajadores").select("*").eq("empresa_id", empresa.id).order("nombre"),
     supabase.rpc("resumen_personal", { p_empresa: empresa.id, p_desde: desde, p_hasta: hasta }),
     supabase.from("asistencias").select("trabajador_id, estado, entrada, salida, horas_extra, nota").eq("empresa_id", empresa.id).eq("fecha", hoy),
-    supabase.from("cargos").select("nombre").eq("empresa_id", empresa.id).eq("activo", true).order("creado_en"),
+    supabase.from("cargos").select("id, nombre, rol, secciones, activo").eq("empresa_id", empresa.id).eq("activo", true).order("creado_en"),
+    supabase.from("trabajadores").select("id, user_id").eq("empresa_id", empresa.id).not("user_id", "is", null),
+    supabase.from("miembros").select("user_id, email, activo").eq("empresa_id", empresa.id),
   ]);
-  const cargos = (filasCargo ?? []).map((c) => c.nombre);
+  const cargos = (filasCargo ?? []) as Cargo[];
+  // Trabajadores que entran al sistema: su usuario (correo y si está activo)
+  const accesos = new Map<string, AccesoTrabajador>((usuarios ?? []).map((u) => {
+    const m = (miembros ?? []).find((x) => x.user_id === u.user_id);
+    return [u.id, m ? { email: m.email, activo: m.activo } : null];
+  }));
   const trabajadores = (todos ?? []).filter((t) => ver === "todos" || t.situacion === (ver === "activos" ? "activo" : "cesado"));
   const filas = (resumen ?? []) as Database["public"]["Functions"]["resumen_personal"]["Returns"];
   // Hoy: quiénes estaban en la empresa y qué se marcó de cada uno
@@ -272,7 +280,15 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
                 </span>
               ),
             },
-            { titulo: "Cargo", celda: (t) => t.cargo ?? "—" },
+            {
+              titulo: "Cargo",
+              celda: (t) => (
+                <span className="block leading-tight">
+                  {t.cargo ?? "—"}
+                  {accesos.get(t.id!) && <span className="block text-xs text-stone-500">{accesos.get(t.id!)!.activo ? "Usa el sistema" : "Sin acceso al sistema"}</span>}
+                </span>
+              ),
+            },
             { titulo: "Ingreso", celda: (t) => fechaDia(t.fecha_ingreso) },
             {
               titulo: "Cese",
@@ -282,7 +298,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
             },
             { titulo: "Antigüedad", celda: (t) => antiguedad(t.fecha_ingreso!, t.fecha_cese && t.fecha_cese < hoy ? t.fecha_cese : hoy) },
             { titulo: "Estado", celda: (t) => <Insignia tono={t.situacion === "activo" ? "verde" : "gris"}>{t.situacion === "activo" ? "Activo" : "Cesado"}</Insignia> },
-            { titulo: "", alinear: "der", celda: (t) => <BotonTrabajador cargos={cargos} inicial={t as unknown as TrabajadorEditable} /> },
+            { titulo: "", alinear: "der", celda: (t) => <BotonTrabajador cargos={cargos} inicial={t as unknown as TrabajadorEditable} acceso={accesos.get(t.id!) ?? null} /> },
           ]}
         />
       </Tarjeta>
