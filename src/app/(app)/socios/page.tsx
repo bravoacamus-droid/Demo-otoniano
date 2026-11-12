@@ -7,6 +7,7 @@ import { Aviso, Encabezado, Insignia, Tarjeta } from "@/components/ui/basicos";
 import { TablaDatos } from "@/components/ui/tabla";
 import { Filtros } from "@/components/filtros";
 import { NuevoSocio } from "./formularios";
+import { MenuSocio } from "./menu-socio";
 
 export const metadata: Metadata = { title: "Socios" };
 
@@ -23,10 +24,12 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
     q = /^\d+$/.test(t) ? q.like("dni", `${t}%`) : q.ilike("nombre", `%${t}%`);
   }
   // La suma de % se valida siempre sobre TODOS los activos, no sobre el filtro
-  const [{ data }, { data: activos }] = await Promise.all([
+  const [{ data }, { data: activos }, { data: cajas }] = await Promise.all([
     q,
     supabase.from("socios").select("porcentaje").eq("empresa_id", empresa.id).eq("activo", true),
+    supabase.from("cajas").select("id, nombre").eq("empresa_id", empresa.id).eq("activo", true).order("orden"),
   ]);
+  const esDueno = puede(rol, "socios");
   const sumaPct = (activos ?? []).reduce((s, x) => s + Number(x.porcentaje), 0);
 
   return (
@@ -34,7 +37,7 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
       <Encabezado
         titulo="Socios"
         descripcion={<>Quiénes son dueños del negocio y con qué %. El dinero (aportes, retiros, cierres) está en <Link href="/capital" className="font-medium text-marca-700 hover:underline">Capital y cierres</Link>.</>}
-        acciones={puede(rol, "socios") && <NuevoSocio />}
+        acciones={esDueno && <NuevoSocio />}
       />
       {(activos ?? []).length > 0 && Math.abs(sumaPct - 100) > 0.001 && (
         <div className="mb-4"><Aviso>Los porcentajes de los socios activos suman {porcentaje(sumaPct)}; deberían sumar 100 %.</Aviso></div>
@@ -49,7 +52,6 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
         <TablaDatos
           filas={data ?? []}
           clave={(s) => s.socio_id}
-          enlace={(s) => `/socios/${s.socio_id}`}
           vacio="Sin socios con esos filtros."
           columnas={[
             { titulo: "Nombre", principal: true, celda: (s) => <span className={s.activo ? "" : "text-stone-400"}>{s.nombre}</span> },
@@ -57,6 +59,11 @@ export default async function SociosPage({ searchParams }: { searchParams: Promi
             { titulo: "Participación", alinear: "der", celda: (s) => <span className="cifra">{porcentaje(s.porcentaje)}</span> },
             { titulo: "Capital", alinear: "der", principal: true, celda: (s) => <span className="cifra font-medium">{soles(s.capital)}</span> },
             { titulo: "Estado", ocultarMovil: true, celda: (s) => s.activo ? <Insignia tono="verde">Activo</Insignia> : <Insignia>Inactivo</Insignia> },
+            {
+              titulo: "", alinear: "der",
+              celda: (s) => <MenuSocio puedeEditar={esDueno} cajas={cajas ?? []} empresaId={empresa.id}
+                socio={{ id: s.socio_id!, nombre: s.nombre!, dni: s.dni, porcentaje: s.porcentaje ?? 0, activo: !!s.activo, capital: s.capital ?? 0 }} />,
+            },
           ]}
         />
       </Tarjeta>

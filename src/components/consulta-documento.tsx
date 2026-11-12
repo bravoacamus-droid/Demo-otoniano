@@ -15,7 +15,7 @@ export interface DatosDocumento {
   estado?: string | null;
   condicion?: string | null;
   origen: "registrado" | "guardado" | "consulta";
-  registrado?: { tipo: "proveedor" | "comprador" | "socio"; id: string; nombre: string } | null;
+  registrado?: { tipo: "proveedor" | "comprador" | "socio" | "trabajador"; id: string; nombre: string } | null;
 }
 
 type Estado =
@@ -37,7 +37,7 @@ export function ruc10DesdeDni(dni: string): string | null {
   return base + (dv === 10 ? 0 : dv === 11 ? 1 : dv);
 }
 
-export function useConsultaDocumento(para: "proveedor" | "comprador" | "socio") {
+export function useConsultaDocumento(para: "proveedor" | "comprador" | "socio" | "trabajador") {
   const [estado, setEstado] = useState<Estado>({ fase: "libre" });
   const ultimo = useRef<string>("");
 
@@ -89,7 +89,7 @@ export function AvisoConsulta({ estado, tipo }: { estado: Estado; tipo: string }
 
   const d = estado.datos;
   if (d.registrado) {
-    const href = { proveedor: "/proveedores", comprador: "/compradores", socio: "/socios" }[d.registrado.tipo] + `/${d.registrado.id}`;
+    const href = d.registrado.tipo === "trabajador" ? "/personal" : { proveedor: "/proveedores", comprador: "/compradores", socio: "/socios" }[d.registrado.tipo] + `/${d.registrado.id}`;
     return (
       <p className="flex items-start gap-1.5 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-900" role="status">
         <Info className="mt-px size-3.5 shrink-0" />

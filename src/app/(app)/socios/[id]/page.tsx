@@ -10,7 +10,7 @@ import { Dato, Encabezado, Insignia, Kpi, Tarjeta, TituloTarjeta } from "@/compo
 import { Pestanas } from "@/components/ui/pestanas";
 import { TablaDatos } from "@/components/ui/tabla";
 import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
-import { AjustarCapital, EditarSocio, MovimientoSocio } from "../formularios";
+import { AjustarCapital, MovimientoSocio } from "../formularios";
 
 export const metadata: Metadata = { title: "Socio" };
 
@@ -123,15 +123,10 @@ export default async function SocioDetalle({
       <Encabezado
         titulo={s.nombre!}
         descripcion={<span className="flex flex-wrap items-center gap-2">{s.dni ? `DNI ${s.dni}` : "Sin DNI"} {!s.activo && <Insignia>Inactivo</Insignia>}</span>}
-        acciones={esDueno && (
+        acciones={esDueno && s.activo && (
           <>
-            {s.activo && (
-              <>
-                <AjustarCapital socio={{ id: s.socio_id!, nombre: s.nombre!, capital: s.capital ?? 0 }} cajas={listaCajas} empresaId={empresa.id} />
-                <MovimientoSocio socios={yo} cajas={listaCajas} empresaId={empresa.id} periodos={ultimosPeriodos(12)} inicial={{ socioId: s.socio_id! }} />
-              </>
-            )}
-            <EditarSocio socio={{ id: s.socio_id!, nombre: s.nombre!, dni: s.dni, porcentaje: s.porcentaje ?? 0, activo: !!s.activo }} />
+            <AjustarCapital socio={{ id: s.socio_id!, nombre: s.nombre!, capital: s.capital ?? 0 }} cajas={listaCajas} empresaId={empresa.id} />
+            <MovimientoSocio socios={yo} cajas={listaCajas} empresaId={empresa.id} periodos={ultimosPeriodos(12)} inicial={{ socioId: s.socio_id! }} />
           </>
         )}
       />

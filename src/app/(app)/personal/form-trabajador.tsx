@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Pencil, UserRoundPlus } from "lucide-react";
+import { useRef, useState } from "react";
+import { Pencil, Search, UserRoundPlus } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Boton } from "@/components/ui/boton";
-import { Campo, Input, InputNumero, Textarea } from "@/components/ui/campos";
+import { Campo, Input, InputNumero, Select, Textarea } from "@/components/ui/campos";
 import { FormularioAccion } from "@/components/ui/formulario";
 import { hoyLima } from "@/lib/formato";
 import { Aviso } from "@/components/ui/basicos";
+import { AvisoConsulta, useConsultaDocumento } from "@/components/consulta-documento";
 import { guardarTrabajador } from "./acciones";
 
 export interface TrabajadorEditable {
@@ -23,10 +24,25 @@ export interface TrabajadorEditable {
   notas: string | null;
 }
 
+/** Cargos que hoy tiene la empresa (pedido del Sr. Otiniano, 12/11) */
+const CARGOS = ["Gerente", "Administración", "Auxiliar", "Balanza"];
+
 /** Alta o edición del trabajador. El cese se registra aquí mismo (fecha + motivo); nada se borra. */
 export function BotonTrabajador({ inicial }: { inicial?: TrabajadorEditable }) {
   const [abierto, setAbierto] = useState(false);
   const [cese, setCese] = useState(inicial?.fecha_cese ?? "");
+  const { estado, consultar, limpiar } = useConsultaDocumento("trabajador");
+  const dniRef = useRef<HTMLInputElement>(null);
+  const nombreRef = useRef<HTMLInputElement>(null);
+  // Un cargo antiguo escrito a mano sigue en la lista para no perderlo al editar
+  const cargos = inicial?.cargo && !CARGOS.includes(inicial.cargo) ? [...CARGOS, inicial.cargo] : CARGOS;
+
+  /** Con los 8 dígitos del DNI se trae el nombre de RENIEC (o del registro si ya está en el sistema) */
+  async function buscar() {
+    const d = await consultar("DNI", dniRef.current?.value ?? "");
+    if (d?.nombre && nombreRef.current) nombreRef.current.value = d.nombre;
+  }
+
   return (
     <>
       {inicial ? (
@@ -36,17 +52,34 @@ export function BotonTrabajador({ inicial }: { inicial?: TrabajadorEditable }) {
       ) : (
         <Boton onClick={() => setAbierto(true)}><UserRoundPlus className="size-4" /> Nuevo trabajador</Boton>
       )}
-      <Modal abierto={abierto} onCerrar={() => { setAbierto(false); setCese(inicial?.fecha_cese ?? ""); }} titulo={inicial ? `Editar · ${inicial.nombre}` : "Nuevo trabajador"}>
+      <Modal abierto={abierto} onCerrar={() => { setAbierto(false); setCese(inicial?.fecha_cese ?? ""); limpiar(); }} titulo={inicial ? `Editar · ${inicial.nombre}` : "Nuevo trabajador"}>
         <FormularioAccion accion={guardarTrabajador} textoBoton="Guardar" reiniciar={!inicial}
-          mensajeExito={inicial ? "Ficha actualizada." : "Trabajador registrado."} onExito={() => setAbierto(false)}>
+          mensajeExito={inicial ? "Ficha actualizada." : "Trabajador registrado."} onExito={() => { setAbierto(false); limpiar(); }}>
           {inicial && <input type="hidden" name="id" value={inicial.id} />}
-          <Campo etiqueta="Nombre completo"><Input name="nombre" required defaultValue={inicial?.nombre} autoFocus={!inicial} /></Campo>
           <div className="grid grid-cols-2 gap-3">
-            <Campo etiqueta="DNI (opcional)">
-              <Input name="dni" inputMode="numeric" maxLength={8} defaultValue={inicial?.dni ?? ""}
-                onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); if (v !== e.target.value) e.target.value = v; }} />
+            <Campo etiqueta="DNI" ayuda="Con los 8 dígitos se trae el nombre">
+              <div className="flex gap-1.5">
+                <Input ref={dniRef} name="dni" inputMode="numeric" maxLength={8} defaultValue={inicial?.dni ?? ""} autoFocus={!inicial}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "");
+                    if (v !== e.target.value) e.target.value = v;
+                    if (!inicial && v.length === 8) buscar();
+                    else if (estado.fase !== "libre") limpiar();
+                  }} />
+                <Boton variante="secundario" onClick={buscar} disabled={estado.fase === "consultando"} className="shrink-0 px-3"
+                  aria-label="Consultar RENIEC" title="Consultar RENIEC"><Search className="size-4" /></Boton>
+              </div>
             </Campo>
-            <Campo etiqueta="Cargo"><Input name="cargo" defaultValue={inicial?.cargo ?? ""} placeholder="Ej.: Balanza, Chofer" /></Campo>
+            <Campo etiqueta="Cargo">
+              <Select name="cargo" defaultValue={inicial?.cargo ?? ""}>
+                <option value="">Elija el cargo…</option>
+                {cargos.map((c) => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            </Campo>
+          </div>
+          <AvisoConsulta estado={estado} tipo="DNI" />
+          <Campo etiqueta="Nombre completo"><Input ref={nombreRef} name="nombre" required defaultValue={inicial?.nombre} /></Campo>
+          <div className="grid grid-cols-2 gap-3">
             <Campo etiqueta="Fecha de ingreso"><Input type="date" name="fecha_ingreso" required max={hoyLima()} defaultValue={inicial?.fecha_ingreso ?? hoyLima()} /></Campo>
             <Campo etiqueta="Teléfono (opcional)"><Input name="telefono" inputMode="tel" defaultValue={inicial?.telefono ?? ""} /></Campo>
             <Campo etiqueta="Sueldo mensual (S/)" ayuda="Opcional; sirve para estimar horas extras y domingos">

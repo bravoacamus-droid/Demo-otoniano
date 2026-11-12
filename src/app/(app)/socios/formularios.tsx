@@ -87,17 +87,14 @@ export function NuevoSocio() {
   );
 }
 
-export function EditarSocio({ socio }: { socio: SocioEditable }) {
-  const [abierto, setAbierto] = useState(false);
+/** Editar nombre, DNI, % y estado. Se abre desde el menú ⋮ de la lista de socios */
+export function ModalEditarSocio({ socio, abierto, onCerrar }: { socio: SocioEditable; abierto: boolean; onCerrar: () => void }) {
   return (
-    <>
-      <Boton variante="secundario" onClick={() => setAbierto(true)}><Pencil className="size-4" /> Editar datos</Boton>
-      <Modal abierto={abierto} onCerrar={() => setAbierto(false)} titulo="Editar socio">
-        <FormularioAccion accion={guardarSocio} onExito={() => setAbierto(false)} textoBoton="Guardar cambios" mensajeExito="Socio actualizado.">
-          <CamposSocio inicial={socio} />
-        </FormularioAccion>
-      </Modal>
-    </>
+    <Modal abierto={abierto} onCerrar={onCerrar} titulo={`Editar · ${socio.nombre}`}>
+      <FormularioAccion accion={guardarSocio} onExito={onCerrar} textoBoton="Guardar cambios" mensajeExito="Socio actualizado.">
+        <CamposSocio inicial={socio} />
+      </FormularioAccion>
+    </Modal>
   );
 }
 
@@ -202,13 +199,30 @@ export function AjustarCapital({ socio, cajas, empresaId, chico = false }: {
   chico?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
+  return (
+    <>
+      <Boton variante="secundario" tamano={chico ? "sm" : undefined} onClick={() => setAbierto(true)}><Pencil className={chico ? "size-3.5" : "size-4"} /> Editar capital</Boton>
+      <ModalCapital socio={socio} cajas={cajas} empresaId={empresaId} abierto={abierto} onCerrar={() => setAbierto(false)} />
+    </>
+  );
+}
+
+export function ModalCapital({ socio, cajas, empresaId, abierto, onCerrar }: {
+  socio: { id: string; nombre: string; capital: number | string }; cajas: Opcion[]; empresaId: string;
+  abierto: boolean; onCerrar: () => void;
+}) {
   const [nuevo, setNuevo] = useState(String(Number(socio.capital)));
+  // Cada vez que se abre parte del capital vigente
+  const [antes, setAntes] = useState(abierto);
+  if (abierto !== antes) {
+    setAntes(abierto);
+    if (abierto) setNuevo(String(Number(socio.capital)));
+  }
   const dif = aCentimos(nuevo) - aCentimos(String(socio.capital));
   return (
     <>
-      <Boton variante="secundario" tamano={chico ? "sm" : undefined} onClick={() => { setNuevo(String(Number(socio.capital))); setAbierto(true); }}><Pencil className={chico ? "size-3.5" : "size-4"} /> Editar capital</Boton>
-      <Modal abierto={abierto} onCerrar={() => setAbierto(false)} titulo={`Capital de ${socio.nombre}`}>
-        <FormularioAccion accion={conVoucher(empresaId, ajustarCapital)} onExito={() => setAbierto(false)}
+      <Modal abierto={abierto} onCerrar={onCerrar} titulo={`Capital de ${socio.nombre}`}>
+        <FormularioAccion accion={conVoucher(empresaId, ajustarCapital)} onExito={onCerrar}
           textoBoton="Guardar capital" mensajeExito="Capital actualizado.">
           <input type="hidden" name="socio_id" value={socio.id} />
           <p className="text-sm text-stone-600">

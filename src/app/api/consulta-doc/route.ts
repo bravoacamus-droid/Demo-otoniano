@@ -20,7 +20,7 @@ interface Respuesta {
   condicion?: string | null;
   /** registrado = ya existe en esta empresa; guardado = consulta previa; consulta = se gastó una consulta */
   origen: "registrado" | "guardado" | "consulta";
-  registrado?: { tipo: "proveedor" | "comprador" | "socio"; id: string; nombre: string } | null;
+  registrado?: { tipo: "proveedor" | "comprador" | "socio" | "trabajador"; id: string; nombre: string } | null;
 }
 
 const NEGATIVO_DIAS = 7; // un documento no encontrado se vuelve a consultar recién después de estos días
@@ -51,12 +51,12 @@ export async function GET(request: Request) {
   const sp = new URL(request.url).searchParams;
   const tipo = sp.get("tipo") as Tipo | null;
   const numero = (sp.get("numero") ?? "").trim();
-  const para = sp.get("para") === "comprador" ? "comprador" : sp.get("para") === "socio" ? "socio" : "proveedor";
+  const para = (["comprador", "socio", "trabajador"] as const).find((p) => p === sp.get("para")) ?? "proveedor";
   const valido = (tipo === "DNI" && /^\d{8}$/.test(numero)) || (tipo === "RUC" && /^\d{11}$/.test(numero));
   if (!valido) return NextResponse.json({ error: tipo === "DNI" ? "El DNI debe tener 8 dígitos." : "El RUC debe tener 11 dígitos." }, { status: 400 });
 
-  // 1) Ya registrado en esta empresa (como proveedor, cliente o socio): sin consulta y con sus datos completos
-  const [{ data: prov }, { data: comp }, { data: soc }] = await Promise.all([
+  // 1) Ya registrado en esta empresa (como proveedor, cliente, socio o trabajador): sin consulta y con sus datos completos
+  const [{ data: prov }, { data: comp }, { data: soc }, { data: trab }] = await Promise.all([
     supabase.from("proveedores").select("id, nombre, direccion, telefono").eq("empresa_id", empresa.id)
       .eq("tipo_doc", tipo).eq("nro_doc", numero).maybeSingle(),
     tipo === "RUC"
@@ -65,17 +65,22 @@ export async function GET(request: Request) {
     tipo === "DNI"
       ? supabase.from("socios").select("id, nombre").eq("empresa_id", empresa.id).eq("dni", numero).limit(1).maybeSingle()
       : Promise.resolve({ data: null }),
+    tipo === "DNI"
+      ? supabase.from("trabajadores").select("id, nombre, telefono").eq("empresa_id", empresa.id).eq("dni", numero).limit(1).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
   const mismo = para === "proveedor"
     ? prov && { tipo: "proveedor" as const, id: prov.id, nombre: prov.nombre }
     : para === "comprador"
       ? comp && { tipo: "comprador" as const, id: comp.id, nombre: comp.razon_social }
-      : soc && { tipo: "socio" as const, id: soc.id, nombre: soc.nombre };
-  if (prov || comp || soc) {
+      : para === "socio"
+        ? soc && { tipo: "socio" as const, id: soc.id, nombre: soc.nombre }
+        : trab && { tipo: "trabajador" as const, id: trab.id, nombre: trab.nombre };
+  if (prov || comp || soc || trab) {
     return NextResponse.json({
-      nombre: prov?.nombre ?? comp?.razon_social ?? soc?.nombre ?? null,
+      nombre: prov?.nombre ?? comp?.razon_social ?? soc?.nombre ?? trab?.nombre ?? null,
       direccion: prov?.direccion ?? comp?.direccion ?? null,
-      telefono: prov?.telefono ?? comp?.telefono ?? null,
+      telefono: prov?.telefono ?? comp?.telefono ?? trab?.telefono ?? null,
       origen: "registrado",
       registrado: mismo || null,
     } satisfies Respuesta);
