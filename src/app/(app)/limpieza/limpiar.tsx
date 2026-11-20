@@ -129,7 +129,7 @@ export function LimpiarCompra({ compra, lineas, productos, verMontos, alertaPct,
                   {(traslados[l.id] ?? []).map((t) => (
                     <div key={t.uid} className="mt-2 grid grid-cols-[auto_1fr_6.5rem_auto] items-center gap-2">
                       <ArrowRight className="size-4 text-stone-400" />
-                      <Select aria-label="Pasa a" value={t.metal_id} onChange={(e) => cambiarTraslado(l.id, t.uid, "metal_id", e.target.value)} className="py-1.5 text-sm">
+                      <Select aria-label="Pasa a" value={t.metal_id} onChange={(e) => cambiarTraslado(l.id, t.uid, "metal_id", e.target.value)} className="min-w-0 py-1.5 text-sm">
                         <option value="">Pasa a…</option>
                         <OpcionesProducto productos={productos} excluir={l.metal_id} />
                       </Select>

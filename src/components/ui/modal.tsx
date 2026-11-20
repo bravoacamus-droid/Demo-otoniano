@@ -24,14 +24,15 @@ export function Modal({
       className={`modal-animado m-0 mt-auto w-full ${ancho} max-h-[92dvh] rounded-t-2xl bg-superficie p-0 shadow-xl sm:m-auto sm:rounded-2xl`}
     >
       {abierto && (
-        <div className="flex max-h-[92dvh] flex-col text-left font-normal">
+        // Se abre desde celdas de tabla (p. ej. columna .cifra con nowrap): no heredar su alineación ni el nowrap
+        <div className="flex max-h-[92dvh] flex-col whitespace-normal text-left font-normal [font-variant-numeric:normal]">
           <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
             <h2 className="font-semibold">{titulo}</h2>
             <button type="button" onClick={onCerrar} className="rounded-md p-1 text-stone-500 hover:bg-stone-100" aria-label="Cerrar">
               <X className="size-5" />
             </button>
           </div>
-          <div className="overflow-y-auto p-4">{children}</div>
+          <div className="overflow-y-auto overflow-x-hidden p-4">{children}</div>
         </div>
       )}
     </dialog>
