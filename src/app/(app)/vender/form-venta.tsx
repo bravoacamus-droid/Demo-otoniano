@@ -9,6 +9,7 @@ import { cx } from "@/components/ui/clases";
 import { SelectorCliente } from "@/components/selector-cliente";
 import { SelectorProducto, partesRuta } from "@/components/selector-producto";
 import { Boton } from "@/components/ui/boton";
+import { MenuPuntos, opcionMenu } from "@/components/ui/menu-puntos";
 import { aCentimos, aGramos, centimosASoles, gramosAKg, importeCentimos, normalizar } from "@/lib/montos";
 import { cantidad, soles, unidadCorta } from "@/lib/formato";
 import { subirArchivo } from "@/lib/archivos";
@@ -37,9 +38,13 @@ interface Linea {
   uid: string;
   metal_id: string;
   salida: string;
-  recibido: string;
+  /** null = sin merma (el comprador recibe lo mismo que sale); se activa con los tres puntitos */
+  merma: string | null;
   precio: string;
 }
+
+/** Lo que recibe el comprador: la salida menos la merma, si se registró */
+const recibidoDe = (l: Linea) => l.merma === null ? l.salida : gramosAKg(Math.max(aGramos(l.salida) - aGramos(l.merma), 0));
 
 export function FormVenta({
   empresaId, metales, productos, compradores, cajas, medios, verCostos, siguientes,
@@ -110,23 +115,27 @@ export function FormVenta({
     }
     if (desdeTeclado) enfocar.current = p.id;
     // Lo último que se agrega va arriba, junto al buscador: no hay que bajar a llenarlo
-    setLineas((ls) => [{ uid: crypto.randomUUID(), metal_id: p.id, salida: "", recibido: "", precio: m.precio_venta }, ...ls]);
+    setLineas((ls) => [{ uid: crypto.randomUUID(), metal_id: p.id, salida: "", merma: null, precio: m.precio_venta }, ...ls]);
   }
   function elegirMedio(id: string) {
     setMedioId(id);
     const caja = medios.find((m) => m.id === id)?.caja_id;
     if (caja && cajas.some((c) => c.id === caja)) setCajaId(caja);
   }
-  function cambiar(uid: string, campo: keyof Linea, v: string) {
+  function cambiar(uid: string, campo: "salida" | "precio", v: string) {
     setLineas((ls) => ls.map((l) => (l.uid === uid ? { ...l, [campo]: v } : l)));
   }
+  function ponerMerma(uid: string, v: string | null) {
+    setLineas((ls) => ls.map((l) => (l.uid === uid ? { ...l, merma: v } : l)));
+    if (v === "") setTimeout(() => document.getElementById(`merma-${uid}`)?.focus());
+  }
 
-  const totalImporte = lineas.reduce((s, l) => s + importeCentimos(aGramos(l.recibido), aCentimos(l.precio)), 0);
+  const totalImporte = lineas.reduce((s, l) => s + importeCentimos(aGramos(recibidoDe(l)), aCentimos(l.precio)), 0);
   // Kilos y venta promedio por kg: solo de los productos que se pesan (no de los que van por unidad)
   const enKg = lineas.filter((l) => metal(l.metal_id).unidad === "kg");
   const totalSalida = enKg.reduce((s, l) => s + aGramos(l.salida), 0);
-  const totalRecibido = enKg.reduce((s, l) => s + aGramos(l.recibido), 0);
-  const importeKg = enKg.reduce((s, l) => s + importeCentimos(aGramos(l.recibido), aCentimos(l.precio)), 0);
+  const totalRecibido = enKg.reduce((s, l) => s + aGramos(recibidoDe(l)), 0);
+  const importeKg = enKg.reduce((s, l) => s + importeCentimos(aGramos(recibidoDe(l)), aCentimos(l.precio)), 0);
   const ventaPromCent = totalRecibido > 0 ? Math.round((importeKg * 1000) / totalRecibido) : 0;
 
   async function guardar() {
@@ -140,11 +149,9 @@ export function FormVenta({
       const m = metal(l.metal_id);
       if (aGramos(l.salida) <= 0) return setError(`Ingrese el peso de salida de ${m.nombre}.`);
       if (aGramos(l.salida) > aGramos(m.kg)) return setError(`No hay suficiente ${m.nombre}: disponible ${cantidad(m.kg, m.unidad)}.`);
-      if (confirmarYa && (!normalizar(l.recibido) || !normalizar(l.precio))) {
-        return setError(`Ingrese el peso recibido y el precio de ${m.nombre}.`);
-      }
-      if (confirmarYa && aGramos(l.recibido) > Math.round(aGramos(l.salida) * 1.02)) {
-        return setError(`El peso recibido de ${m.nombre} es mayor a lo que salió. Revise el dato.`);
+      if (confirmarYa && !normalizar(l.precio)) return setError(`Ingrese el precio de ${m.nombre}.`);
+      if (confirmarYa && l.merma !== null && aGramos(l.merma) >= aGramos(l.salida)) {
+        return setError(`La merma de ${m.nombre} no puede ser igual o mayor a lo que sale. Revise el dato.`);
       }
     }
     setGuardando(true);
@@ -156,7 +163,7 @@ export function FormVenta({
         items: lineas.map((l) => ({
           metal_id: l.metal_id,
           peso_salida_kg: normalizar(l.salida),
-          ...(confirmarYa ? { peso_recibido_kg: normalizar(l.recibido), precio_kg: normalizar(l.precio) } : {}),
+          ...(confirmarYa ? { peso_recibido_kg: normalizar(recibidoDe(l)), precio_kg: normalizar(l.precio) } : {}),
         })),
         guia_numero: guiaNumero.trim() || null,
         guia_url: rutaGuia,
@@ -267,9 +274,8 @@ export function FormVenta({
           {lineas.map((l, i) => {
             const m = metal(l.metal_id);
             const u = unidadCorta(m.unidad);
-            const merma = aGramos(l.salida) - aGramos(l.recibido);
             const costo = m.costo_promedio ? aCentimos(String(m.costo_promedio)) : 0;
-            const margen = importeCentimos(aGramos(l.recibido), aCentimos(l.precio)) - importeCentimos(aGramos(l.recibido), costo);
+            const margen = importeCentimos(aGramos(recibidoDe(l)), aCentimos(l.precio)) - importeCentimos(aGramos(recibidoDe(l)), costo);
             return (
               <div key={l.uid} id={`linea-${l.metal_id}`}
                 className={cx("scroll-mt-4 rounded-xl border border-l-4 border-stone-200 p-3 transition-shadow", resaltada === l.metal_id && "ring-2 ring-marca-400")}
@@ -284,6 +290,19 @@ export function FormVenta({
                   </span>
                   <span className={`flex shrink-0 items-center gap-2 text-xs ${aGramos(l.salida) > aGramos(m.kg) ? "font-semibold text-red-700" : "text-stone-500"}`}>
                     Disponible {cantidad(m.kg, m.unidad)}
+                    {confirmarYa && (
+                      <MenuPuntos etiqueta={`Opciones de ${m.nombre}`} alto={60}>
+                        {(cerrar) => l.merma === null ? (
+                          <button type="button" role="menuitem" className={opcionMenu} onClick={() => { cerrar(); ponerMerma(l.uid, ""); }}>
+                            Registrar merma o descuento
+                          </button>
+                        ) : (
+                          <button type="button" role="menuitem" className={opcionMenu} onClick={() => { cerrar(); ponerMerma(l.uid, null); }}>
+                            Quitar merma (recibe lo mismo)
+                          </button>
+                        )}
+                      </MenuPuntos>
+                    )}
                     <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.uid !== l.uid))} className="rounded p-1 hover:bg-red-50 hover:text-red-600" aria-label="Quitar">
                       <Trash2 className="size-4" />
                     </button>
@@ -295,15 +314,17 @@ export function FormVenta({
                   </Campo>
                   {confirmarYa && (
                     <>
-                      <Campo etiqueta={`Recibido (${u})`}>
-                        <InputNumero value={l.recibido} onChange={(e) => cambiar(l.uid, "recibido", e.target.value)} placeholder="0.00" />
-                      </Campo>
                       <Campo etiqueta={`Precio S/ por ${u}`}>
                         <InputNumero value={l.precio} onChange={(e) => cambiar(l.uid, "precio", e.target.value)} />
                       </Campo>
-                      <div className="rounded-lg bg-stone-50 px-3 py-2 text-right">
-                        <p className="text-xs text-stone-500">Merma {gramosAKg(Math.max(merma, 0))} {u}</p>
-                        <p className="cifra font-semibold">S/ {centimosASoles(importeCentimos(aGramos(l.recibido), aCentimos(l.precio)))}</p>
+                      {l.merma !== null && (
+                        <Campo etiqueta={`Merma / descuento (${u})`}>
+                          <InputNumero id={`merma-${l.uid}`} value={l.merma} onChange={(e) => ponerMerma(l.uid, e.target.value)} placeholder="0.00" />
+                        </Campo>
+                      )}
+                      <div className={cx("rounded-lg bg-stone-50 px-3 py-2 text-right", l.merma === null && "col-span-2")}>
+                        <p className="text-xs text-stone-500">Recibe {gramosAKg(aGramos(recibidoDe(l)))} {u}{l.merma === null && " · sin merma"}</p>
+                        <p className="cifra font-semibold">S/ {centimosASoles(importeCentimos(aGramos(recibidoDe(l)), aCentimos(l.precio)))}</p>
                       </div>
                     </>
                   )}
@@ -312,7 +333,7 @@ export function FormVenta({
                   {verCostos && m.costo_promedio && <span>Costo promedio: <b className="cifra font-medium text-stone-700">{soles(m.costo_promedio)}/{u}</b></span>}
                   {m.venta_promedio != null && <span>Venta promedio (90 días): <b className="cifra font-medium text-stone-700">{soles(m.venta_promedio)}/{u}</b></span>}
                   <span>Precio del día: <b className="cifra font-medium text-stone-700">{soles(m.precio_venta)}/{u}</b></span>
-                  {verCostos && confirmarYa && aGramos(l.recibido) > 0 && costo > 0 && (
+                  {verCostos && confirmarYa && aGramos(recibidoDe(l)) > 0 && costo > 0 && (
                     <span className={margen < 0 ? "font-medium text-red-700" : "font-medium text-emerald-700"}>Margen estimado S/ {centimosASoles(margen)}</span>
                   )}
                 </p>

@@ -6,6 +6,8 @@ import { FileUp } from "lucide-react";
 import { Campo, InputNumero, Select } from "@/components/ui/campos";
 import { Aviso, PuntoMetal, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
 import { Boton } from "@/components/ui/boton";
+import { MenuPuntos, opcionMenu } from "@/components/ui/menu-puntos";
+import { cx } from "@/components/ui/clases";
 import { aCentimos, aGramos, centimosASoles, gramosAKg, importeCentimos, normalizar } from "@/lib/montos";
 import { cantidad, unidadCorta } from "@/lib/formato";
 import { subirArchivo } from "@/lib/archivos";
@@ -23,7 +25,16 @@ export function ConfirmarVenta({
   medios: MedioPagoConf[];
 }) {
   const router = useRouter();
-  const [datos, setDatos] = useState(() => Object.fromEntries(items.map((i) => [i.id, { recibido: "", precio: "" }])));
+  // merma null = el comprador recibió lo mismo que salió; con los tres puntitos se escribe la merma o descuento
+  const [datos, setDatos] = useState(() => Object.fromEntries(items.map((i) => [i.id, { merma: null as string | null, precio: "" }])));
+  const recibido = (i: (typeof items)[number]) => {
+    const m = datos[i.id].merma;
+    return m === null ? i.salida : gramosAKg(Math.max(aGramos(i.salida) - aGramos(m), 0));
+  };
+  function ponerMerma(id: string, v: string | null) {
+    setDatos((d) => ({ ...d, [id]: { ...d[id], merma: v } }));
+    if (v === "") setTimeout(() => document.getElementById(`merma-${id}`)?.focus());
+  }
   const medioInicial = medios.find((m) => m.tipo === "transferencia") ?? medios[0] ?? null;
   const [medioId, setMedioId] = useState(medioInicial?.id ?? "");
   const [cajaId, setCajaId] = useState(() => medioInicial?.caja_id ?? cajas.find((c) => c.tipo === "banco")?.id ?? cajas[0]?.id ?? "");
@@ -38,13 +49,15 @@ export function ConfirmarVenta({
   const [plan, setPlan] = useState<PlanCredito | null>(null);
   const sinDineroAhora = !!plan && aCentimos(plan.inicial || "0") === 0;
 
-  const total = items.reduce((s, i) => s + importeCentimos(aGramos(datos[i.id].recibido), aCentimos(datos[i.id].precio)), 0);
+  const total = items.reduce((s, i) => s + importeCentimos(aGramos(recibido(i)), aCentimos(datos[i.id].precio)), 0);
 
   async function confirmar() {
     setError(null);
     for (const i of items) {
-      if (!normalizar(datos[i.id].recibido) || !normalizar(datos[i.id].precio)) {
-        return setError(`Ingrese el peso recibido y el precio de ${i.metal}.`);
+      if (!normalizar(datos[i.id].precio)) return setError(`Ingrese el precio de ${i.metal}.`);
+      const m = datos[i.id].merma;
+      if (m !== null && aGramos(m) >= aGramos(i.salida)) {
+        return setError(`La merma de ${i.metal} no puede ser igual o mayor a lo que salió. Revise el dato.`);
       }
     }
     const errCredito = plan ? errorPlan(plan, total) : null;
@@ -60,7 +73,7 @@ export function ConfirmarVenta({
         credito: plan ? { ...plan, inicial: normalizar(plan.inicial) || "0" } : null,
         items: items.map((i) => ({
           item_id: i.id,
-          peso_recibido_kg: normalizar(datos[i.id].recibido),
+          peso_recibido_kg: normalizar(recibido(i)),
           precio_kg: normalizar(datos[i.id].precio),
         })),
       });
@@ -78,27 +91,41 @@ export function ConfirmarVenta({
       <TituloTarjeta>Confirmar pesaje del comprador</TituloTarjeta>
       <div className="space-y-3 p-4">
         <p className="text-sm text-stone-600">
-          Ingrese lo que pesó y pagó el comprador. La diferencia con la salida se registra sola como merma.
+          Ingrese el precio que pagó el comprador. Se cobra lo mismo que salió; si hubo merma o descuento, regístrelo con los tres puntitos (⋮).
         </p>
         {items.map((i) => {
           const d = datos[i.id];
-          const merma = aGramos(i.salida) - aGramos(d.recibido);
           const u = unidadCorta(i.unidad);
           return (
             <div key={i.id} className="grid grid-cols-2 items-end gap-2 rounded-lg bg-stone-50 p-3 sm:grid-cols-4">
-              <div className="col-span-2 sm:col-span-1">
-                <p className="flex items-center gap-2 font-semibold"><PuntoMetal color={i.color} />{i.metal}</p>
-                <p className="text-xs text-stone-500">Salió {cantidad(i.salida, i.unidad)}</p>
+              <div className="col-span-2 flex items-start justify-between gap-2 sm:col-span-1">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 font-semibold"><PuntoMetal color={i.color} />{i.metal}</p>
+                  <p className="text-xs text-stone-500">Salió {cantidad(i.salida, i.unidad)}</p>
+                </div>
+                <MenuPuntos etiqueta={`Opciones de ${i.metal}`} alto={60}>
+                  {(cerrar) => d.merma === null ? (
+                    <button type="button" role="menuitem" className={opcionMenu} onClick={() => { cerrar(); ponerMerma(i.id, ""); }}>
+                      Registrar merma o descuento
+                    </button>
+                  ) : (
+                    <button type="button" role="menuitem" className={opcionMenu} onClick={() => { cerrar(); ponerMerma(i.id, null); }}>
+                      Quitar merma (recibe lo mismo)
+                    </button>
+                  )}
+                </MenuPuntos>
               </div>
-              <Campo etiqueta={`Recibido (${u})`}>
-                <InputNumero value={d.recibido} onChange={(e) => setDatos({ ...datos, [i.id]: { ...d, recibido: e.target.value } })} />
-              </Campo>
               <Campo etiqueta={`Precio S/ por ${u}`}>
                 <InputNumero value={d.precio} onChange={(e) => setDatos({ ...datos, [i.id]: { ...d, precio: e.target.value } })} />
               </Campo>
-              <div className="text-right text-sm">
-                <p className="text-xs text-stone-500">Merma {d.recibido ? gramosAKg(merma) : "—"} {u}</p>
-                <p className="cifra font-semibold">S/ {centimosASoles(importeCentimos(aGramos(d.recibido), aCentimos(d.precio)))}</p>
+              {d.merma !== null && (
+                <Campo etiqueta={`Merma / descuento (${u})`}>
+                  <InputNumero id={`merma-${i.id}`} value={d.merma} onChange={(e) => ponerMerma(i.id, e.target.value)} placeholder="0.00" />
+                </Campo>
+              )}
+              <div className={cx("text-right text-sm", d.merma === null && "sm:col-span-2")}>
+                <p className="text-xs text-stone-500">Recibe {gramosAKg(aGramos(recibido(i)))} {u}{d.merma === null && " · sin merma"}</p>
+                <p className="cifra font-semibold">S/ {centimosASoles(importeCentimos(aGramos(recibido(i)), aCentimos(d.precio)))}</p>
               </div>
             </div>
           );
