@@ -18,3 +18,12 @@ export async function cargarMediosPago(ctx: Pick<Contexto, "supabase" | "empresa
   const { data } = await q.order("orden").order("nombre");
   return (data ?? []) as MedioPagoConf[];
 }
+
+export type UnidadMedida = { id: string; codigo: string; nombre: string; plural: string | null; orden: number; activo: boolean };
+
+export async function cargarUnidades(ctx: Pick<Contexto, "supabase" | "empresa">, soloActivas = true): Promise<UnidadMedida[]> {
+  let q = ctx.supabase.from("unidades_medida").select("id, codigo, nombre, plural, orden, activo").eq("empresa_id", ctx.empresa.id);
+  if (soloActivas) q = q.eq("activo", true);
+  const { data } = await q.order("orden").order("nombre");
+  return data ?? [];
+}

@@ -1026,3 +1026,198 @@ describe("Trabajador con acceso al sistema (12/11)", () => {
     expect((await miembro()).activo).toBe(true);
   });
 });
+
+describe("Reunión 23/11 · caja, gastos y unidades", () => {
+  const ganancia = () => como(db, DUENO_A, (tx) => uno<{ g: string }>(tx,
+    `select ganancia_acumulada g from v_patrimonio where empresa_id = $1`, [empA])).then((r) => num(r.g));
+  const manual = (tipo: string, clase: string, monto: number, motivo: string, persona: string | null = null, user = DUENO_A) =>
+    como(db, user, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_movimiento_manual($1, $2, $3::tipo_mov_caja, $4, $5, $6, $7) r`,
+      [empA, caja, tipo, clase, monto, motivo, persona])).then((x) => x.r.id);
+
+  it("ingreso y salida de dinero con motivo mueven la caja; el almacén no los corrige", async () => {
+    const c0 = await saldoCaja();
+    await expect(manual("ingreso", "ajuste", 100, " ")).rejects.toThrow(/motivo/);
+    const ing = await manual("ingreso", "ajuste", 100, "La caja no cuadró: sobrante", null, CAJERO_A);
+    expect(await saldoCaja()).toBeCloseTo(c0 + 100, 2);
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select editar_movimiento_manual($1, $2, 80, 'x', null, 'y')`, [ing, caja]))).rejects.toThrow();
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select editar_movimiento_manual($1, $2, 80, 'Sobrante', null, ' ')`, [ing, caja]))).rejects.toThrow(/por qué/);
+    // Corregir: el movimiento anterior queda anulado y entra uno nuevo; el historial guarda lo anterior
+    await como(db, DUENO_A, (tx) => tx.query(`select editar_movimiento_manual($1, $2, 80, 'Sobrante del día', null, 'Monto mal digitado')`, [ing, caja]));
+    expect(await saldoCaja()).toBeCloseTo(c0 + 80, 2);
+    const r = await como(db, DUENO_A, (tx) => uno<{ monto: string; n: number; anulados: number; antes: string }>(tx,
+      `select mm.monto, jsonb_array_length(mm.historial) n, mm.historial->0->>'monto' antes,
+              (select count(*)::int from movimientos_caja where origen_id = mm.id and anulado) anulados
+         from movimientos_manuales mm where id = $1`, [ing]));
+    expect([num(r.monto), r.n, num(r.antes), r.anulados]).toEqual([80, 1, 100, 1]);
+    const sal = await manual("egreso", "ajuste", 30, "Faltante");
+    expect(await saldoCaja()).toBeCloseTo(c0 + 50, 2);
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_movimiento_manual($1, 'Registrado por error')`, [sal]));
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_movimiento_manual($1, 'Prueba')`, [ing]));
+    expect(await saldoCaja()).toBeCloseTo(c0, 2);
+  });
+
+  it("un préstamo baja la caja pero no la ganancia, y su devolución no puede pasar lo prestado", async () => {
+    const c0 = await saldoCaja();
+    const g0 = await ganancia();
+    await expect(manual("egreso", "prestamo", 500, "Para viaje")).rejects.toThrow(/persona/);
+    const pr = await manual("egreso", "prestamo", 500, "Para viaje", "Socio 1");
+    expect(await saldoCaja()).toBeCloseTo(c0 - 500, 2);
+    expect(await ganancia()).toBeCloseTo(g0, 2);
+    await expect(manual("ingreso", "prestamo", 600, "Devuelve", "socio 1")).rejects.toThrow(/solo debe/);
+    await expect(manual("ingreso", "prestamo", 10, "Devuelve", "Otra persona")).rejects.toThrow(/no tiene préstamos/);
+    await manual("ingreso", "prestamo", 200, "Primera parte", " socio 1 ");
+    const pend = await como(db, DUENO_A, (tx) => uno<{ pendiente: string }>(tx,
+      `select pendiente from v_prestamos_pendientes where empresa_id = $1`, [empA]));
+    expect(num(pend.pendiente)).toBe(300);
+    expect(await ganancia()).toBeCloseTo(g0, 2);
+    // Con devoluciones no se anula el préstamo ni se baja de lo devuelto
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select anular_movimiento_manual($1, 'x')`, [pr]))).rejects.toThrow(/devoluciones/);
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select editar_movimiento_manual($1, $2, 150, 'Para viaje', 'Socio 1', 'x')`, [pr, caja]))).rejects.toThrow(/devoluciones/);
+    // patrimonio_al cuadra con la vista
+    const pa = await como(db, DUENO_A, (tx) => uno<{ g: string }>(tx,
+      `select (patrimonio_al($1, now() + interval '1 day')->>'ganancia_acumulada') g`, [empA]));
+    expect(num(pa.g)).toBeCloseTo(g0, 2);
+  });
+
+  it("gastos: se corrigen o anulan (Gerencia/Administración) y los de solo registro no tocan caja ni ganancia", async () => {
+    const c0 = await saldoCaja();
+    const g = await como(db, CAJERO_A, (tx) => uno<{ id: string }>(tx,
+      `select registrar_gasto($1, $2, 40, 'Combustible motos') id`, [empA, caja])).then((x) => x.id);
+    expect(await saldoCaja()).toBeCloseTo(c0 - 40, 2);
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select editar_gasto($1, 45, 'Combustible', null, $2, 'x')`, [g, caja]))).rejects.toThrow();
+    await como(db, DUENO_A, (tx) => tx.query(`select editar_gasto($1, 45, 'Combustible motos', null, $2, 'Faltó el vuelto')`, [g, caja]));
+    expect(await saldoCaja()).toBeCloseTo(c0 - 45, 2);
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_gasto($1, 'Duplicado')`, [g]));
+    expect(await saldoCaja()).toBeCloseTo(c0, 2);
+
+    const g0 = await ganancia();
+    const s = await como(db, CAJERO_A, (tx) => uno<{ id: string }>(tx,
+      `select registrar_gasto_sin_caja($1, 9000, 'Dos motos cargueras') id`, [empA])).then((x) => x.id);
+    expect(await saldoCaja()).toBeCloseTo(c0, 2);
+    expect(await ganancia()).toBeCloseTo(g0, 2);
+    await como(db, DUENO_A, (tx) => tx.query(`select editar_gasto_sin_caja($1, 9500, 'Dos motos cargueras', null, 'Precio final')`, [s]));
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_gasto_sin_caja($1, 'Prueba')`, [s]));
+    const e = await como(db, DUENO_A, (tx) => uno<{ estado: string; monto: string }>(tx, `select estado, monto from v_gastos_sin_caja where id = $1`, [s]));
+    expect([e.estado, num(e.monto)]).toEqual(["anulada", 9500]);
+  });
+
+  it("la apertura se corrige o se anula, y la caja anulada vuelve a abrirse", async () => {
+    const c0 = await saldoCaja();
+    const t = await como(db, CAJERO_A, (tx) => uno<{ r: { id: string } }>(tx,
+      `select abrir_caja($1, $2, 17440) r`, [empA, caja])).then((x) => x.r.id);
+    expect(await saldoCaja()).toBeCloseTo(c0, 2);                   // la apertura no mete dinero
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select abrir_caja($1, $2, 1)`, [empA, caja]))).rejects.toThrow(/ya está abierta/);
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select corregir_apertura($1, 100, null, 'x')`, [t]))).rejects.toThrow();
+    await como(db, DUENO_A, (tx) => tx.query(`select corregir_apertura($1, 1744, 'Era 1744', 'Un cero de más')`, [t]));
+    const r = await como(db, DUENO_A, (tx) => uno<{ contado_apertura: string; n: number }>(tx,
+      `select contado_apertura, jsonb_array_length(historial) n from v_turnos_caja where id = $1`, [t]));
+    expect([num(r.contado_apertura), r.n]).toEqual([1744, 1]);
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_turno($1, 'Abierta dos veces')`, [t]));
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select cerrar_caja($1, 0)`, [t]))).rejects.toThrow(/anulado/);
+    const t2 = await como(db, CAJERO_A, (tx) => uno<{ r: { id: string } }>(tx, `select abrir_caja($1, $2, 0) r`, [empA, caja])).then((x) => x.r.id);
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select corregir_cierre($1, 0, null, 'x')`, [t2]))).rejects.toThrow(/aún no se cierra/);
+    // Cierre con ajuste: al corregir lo contado, el ajuste se rehace con la diferencia nueva
+    const c1 = await saldoCaja();
+    await como(db, DUENO_A, (tx) => tx.query(`select cerrar_caja($1, $2, null, true)`, [t2, c1 - 10]));
+    expect(await saldoCaja()).toBeCloseTo(c1 - 10, 2);
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select corregir_cierre($1, $2, null, 'x')`, [t2, c1]))).rejects.toThrow();
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select corregir_cierre($1, $2, null, ' ')`, [t2, c1]))).rejects.toThrow(/por qué/);
+    await como(db, DUENO_A, (tx) => tx.query(`select corregir_cierre($1, $2, 'Recontado', 'Faltaba un billete')`, [t2, c1 - 4]));
+    expect(await saldoCaja()).toBeCloseTo(c1 - 4, 2);
+    await como(db, DUENO_A, (tx) => tx.query(`select corregir_cierre($1, $2, null, 'Cuadra')`, [t2, c1]));
+    expect(await saldoCaja()).toBeCloseTo(c1, 2);
+  });
+
+  it("la unidad del producto solo admite las de la lista y llega al stock y a las líneas", async () => {
+    const id = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into metales (empresa_id, nombre, unidad, precio_compra, precio_venta) values ($1, 'Baterías', 'und', 15, 18) returning id`, [empA])).then((x) => x.id);
+    await expect(como(db, DUENO_A, (tx) => tx.query(`update metales set unidad = 'g' where id = $1`, [id]))).rejects.toThrow(/metales_unidad_fk/);
+    await comprar(id, "4", "0", "15");
+    const s = await como(db, DUENO_A, (tx) => uno<{ unidad: string; kg: string }>(tx, `select unidad, kg from v_stock_arbol where metal_id = $1`, [id]));
+    expect([s.unidad, num(s.kg)]).toEqual(["und", 4]);
+    const l = await como(db, DUENO_A, (tx) => uno<{ metal_unidad: string }>(tx, `select metal_unidad from v_compra_items where metal_id = $1`, [id]));
+    expect(l.metal_unidad).toBe("und");
+    // Unidades nuevas desde Configuración; el almacén no las crea y kg no se desactiva
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`insert into unidades_medida (empresa_id, codigo, nombre) values ($1, 'saco', 'Sacos')`, [empA]))).rejects.toThrow();
+    await como(db, DUENO_A, (tx) => tx.query(`insert into unidades_medida (empresa_id, codigo, nombre, plural) values ($1, 'saco', 'Sacos', 'sacos')`, [empA]));
+    await como(db, DUENO_A, (tx) => tx.query(`update metales set unidad = 'saco' where id = $1`, [id]));
+    await expect(como(db, DUENO_A, (tx) => tx.query(`update unidades_medida set activo = false where empresa_id = $1 and codigo = 'kg'`, [empA]))).rejects.toThrow(/no se puede desactivar/);
+    await expect(como(db, DUENO_A, (tx) => tx.query(`update unidades_medida set codigo = 'sc' where empresa_id = $1 and codigo = 'saco'`, [empA]))).rejects.toThrow(/no se cambia/);
+  });
+});
+
+describe("Pagos al personal (23/11)", () => {
+  it("la planilla del mes suma sueldo proporcional, descuenta adelantos y pagos, y cada pago queda como gasto", async () => {
+    const trab = await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `insert into trabajadores (empresa_id, nombre, fecha_ingreso, sueldo_mensual) values ($1, 'Pedro Pago', '2026-08-16', 1500) returning id`, [empA])).then((x) => x.id);
+    const fila = (periodo: string) => como(db, DUENO_A, (tx) => uno<{ dias_mes: number; sueldo_periodo: string; a_pagar: string; adelantos: string; pagado: string; saldo: string }>(tx,
+      `select * from planilla_mes($1, $2) where trabajador_id = $3`, [empA, periodo, trab]));
+    const pagar = (tipo: string, monto: number, cajaId: string | null, user = DUENO_A) => como(db, user, (tx) => uno<{ id: string }>(tx,
+      `select registrar_pago_personal($1, $2, '2026-09', $3, $4, $5, null) id`, [empA, trab, tipo, monto, cajaId])).then((x) => x.id);
+
+    // Agosto: entró el 16 → 16 días de 31 (sueldo / 30 por día)
+    expect(num((await fila("2026-08")).sueldo_periodo)).toBe(800);
+    expect(num((await fila("2026-09")).a_pagar)).toBe(1500);
+
+    const c0 = await saldoCaja();
+    await expect(pagar("adelanto", 300, caja, CAJERO_A)).rejects.toThrow();
+    const ad = await pagar("adelanto", 300, caja);
+    expect(await saldoCaja()).toBeCloseTo(c0 - 300, 2);
+    const fuera = await pagar("pago", 1000, null);            // por fuera: no toca la caja
+    expect(await saldoCaja()).toBeCloseTo(c0 - 300, 2);
+    let f = await fila("2026-09");
+    expect([num(f.adelantos), num(f.pagado), num(f.saldo)]).toEqual([300, 1300, 200]);
+
+    // El gasto del pago se ve en gastos con la categoría Personal y no se anula desde Caja
+    const g = await como(db, DUENO_A, (tx) => uno<{ gasto_id: string; categoria: string }>(tx,
+      `select p.gasto_id, cg.nombre categoria from pagos_personal p join gastos g on g.id = p.gasto_id
+         join categorias_gasto cg on cg.id = g.categoria_id where p.id = $1`, [ad]));
+    expect(g.categoria).toBe("Personal");
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select anular_gasto($1, 'x')`, [g.gasto_id]))).rejects.toThrow(/desde Personal/);
+
+    // Corregir: el adelanto pasa a 250 y a otra forma (por fuera); la caja recupera los 300
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select editar_pago_personal($1, '2026-09', 'adelanto', 250, null, null, ' ')`, [ad]))).rejects.toThrow(/por qué/);
+    await como(db, DUENO_A, (tx) => tx.query(`select editar_pago_personal($1, '2026-09', 'adelanto', 250, null, null, 'Se pagó en Yape personal')`, [ad]));
+    expect(await saldoCaja()).toBeCloseTo(c0, 2);
+    f = await fila("2026-09");
+    expect([num(f.adelantos), num(f.saldo)]).toEqual([250, 250]);
+
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_pago_personal($1, 'Duplicado')`, [fuera]));
+    expect(num((await fila("2026-09")).saldo)).toBe(1250);
+    const anulados = await como(db, DUENO_A, (tx) => uno<{ n: number }>(tx,
+      `select count(*)::int n from gastos_sin_caja g join pagos_personal p on p.gasto_sin_caja_id = g.id where p.id = $1 and g.estado = 'anulada'`, [fuera]));
+    expect(anulados.n).toBe(1);
+
+    // Cálculo automático: falta (−1 día), tardanza marcada (15 min por defecto) y tardanza por hora de entrada (08:40 → 40 min)
+    await como(db, DUENO_A, (tx) => tx.query(`select guardar_tareo($1, $2::jsonb)`, [empA, JSON.stringify([
+      { trabajador_id: trab, fecha: "2026-09-02", estado: "falta" },
+      { trabajador_id: trab, fecha: "2026-09-03", estado: "tardanza" },
+    ])]));
+    await como(db, DUENO_A, (tx) => tx.query(`select guardar_asistencia($1, '2026-09-04', $2::jsonb)`, [empA, JSON.stringify([
+      { trabajador_id: trab, estado: "asistio", entrada: "08:40", salida: "17:00" },
+    ])]));
+    const est = await como(db, DUENO_A, (tx) => uno<{ estado: string }>(tx, `select estado from asistencias where trabajador_id = $1 and fecha = '2026-09-04'`, [trab]));
+    expect(est.estado).toBe("tardanza");
+    const d = await como(db, DUENO_A, (tx) => uno<{ tardanzas: number; minutos_tarde: number; desc_faltas: string; desc_tardanzas: string; a_pagar: string; saldo: string }>(tx,
+      `select * from planilla_mes($1, '2026-09') where trabajador_id = $2`, [empA, trab]));
+    // valor minuto = 1500 / 30 / 8 / 60; 55 min → 5.73
+    expect([d.tardanzas, d.minutos_tarde, num(d.desc_faltas), num(d.desc_tardanzas)]).toEqual([2, 55, 50, 5.73]);
+    expect([num(d.a_pagar), num(d.saldo)]).toEqual([1444.27, 1194.27]);
+
+    // Pago por Yape: exige el celular; guarda a dónde se envió, la operación y el voucher
+    const yape = (destino: string | null) => como(db, DUENO_A, (tx) => uno<{ id: string }>(tx,
+      `select registrar_pago_personal($1, $2, '2026-09', 'pago', 100, $3, null, 'yape', $4, 'OP-123', 'emp/vouchers/x.jpg') id`,
+      [empA, trab, caja, destino])).then((x) => x.id);
+    await expect(yape(null)).rejects.toThrow(/celular/);
+    await expect(yape("12345")).rejects.toThrow(/celular/);
+    const py = await yape("987654321");
+    const r = await como(db, DUENO_A, (tx) => uno<{ medio: string; destino: string; operacion: string; voucher_url: string }>(tx,
+      `select medio, destino, operacion, voucher_url from v_pagos_personal where id = $1`, [py]));
+    expect(r).toEqual({ medio: "yape", destino: "987654321", operacion: "OP-123", voucher_url: "emp/vouchers/x.jpg" });
+    // Corregir sin archivo nuevo conserva el voucher
+    await como(db, DUENO_A, (tx) => tx.query(`select editar_pago_personal($1, '2026-09', 'pago', 120, $2, null, 'Monto', 'yape', '987654321', 'OP-124', null)`, [py, caja]));
+    const r2 = await como(db, DUENO_A, (tx) => uno<{ voucher_url: string; operacion: string }>(tx, `select voucher_url, operacion from pagos_personal where id = $1`, [py]));
+    expect(r2).toEqual({ voucher_url: "emp/vouchers/x.jpg", operacion: "OP-124" });
+  });
+});

@@ -13,7 +13,7 @@ export default async function VenderPage() {
   const ctx = await exigir("vender");
   const { supabase, empresa, rol } = ctx;
   const [{ data: stock }, { data: compradores }, { data: cajas }, { data: precios }, medios, todos, { data: series }] = await Promise.all([
-    supabase.from("v_stock_metal").select("metal_id, nombre, ruta, nivel, clave_orden, color, kg, costo_promedio, precio_venta")
+    supabase.from("v_stock_metal").select("metal_id, nombre, ruta, nivel, clave_orden, color, unidad, kg, costo_promedio, precio_venta")
       .eq("empresa_id", empresa.id).eq("activo", true).gt("kg", 0).order("clave_orden"),
     supabase.from("compradores").select("*").eq("empresa_id", empresa.id).eq("activo", true).order("razon_social"),
     supabase.from("cajas").select("*").eq("empresa_id", empresa.id).eq("activo", true).order("orden"),

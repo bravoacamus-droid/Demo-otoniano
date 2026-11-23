@@ -9,7 +9,7 @@ import { Campo, InputNumero, Textarea } from "@/components/ui/campos";
 import { Aviso } from "@/components/ui/basicos";
 import { useNotificar } from "@/components/ui/notificaciones";
 import { aCentimos, aGramos, gramosAKg, importeCentimos } from "@/lib/montos";
-import { kg, soles } from "@/lib/formato";
+import { cantidad, soles, unidadCorta } from "@/lib/formato";
 import { corregirCompra } from "../acciones";
 
 export interface LineaCorregible {
@@ -18,6 +18,7 @@ export interface LineaCorregible {
   peso_bruto_kg: string;
   descuento_kg: string;
   precio_kg: string;
+  unidad?: string | null;
 }
 
 /** Gerencia o Administración corrigen peso, merma o precio de un ticket ya emitido; queda registrado */
@@ -83,15 +84,16 @@ export function CorregirCompra({ compra, lineas, total, abrirAlInicio = false }:
               const v = valores[l.id];
               const cambia = (campo: "bruto" | "merma" | "precio", x: string) => setValores((s) => ({ ...s, [l.id]: { ...s[l.id], [campo]: x } }));
               const neto = Math.max(aGramos(v.bruto) - aGramos(v.merma), 0);
+              const u = unidadCorta(l.unidad);
               return (
                 <div key={l.id} className="space-y-2 p-3">
                   <p className="font-medium">{l.producto}</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <Campo etiqueta="Bruto kg"><InputNumero value={v.bruto} onChange={(e) => cambia("bruto", e.target.value)} /></Campo>
-                    <Campo etiqueta="Merma kg"><InputNumero value={v.merma} onChange={(e) => cambia("merma", e.target.value)} /></Campo>
-                    <Campo etiqueta="Precio S/ kg"><InputNumero value={v.precio} onChange={(e) => cambia("precio", e.target.value)} /></Campo>
+                    <Campo etiqueta={u === "kg" || u === "t" ? `Bruto ${u}` : `Cantidad ${u}`}><InputNumero value={v.bruto} onChange={(e) => cambia("bruto", e.target.value)} /></Campo>
+                    <Campo etiqueta={`Merma ${u}`}><InputNumero value={v.merma} onChange={(e) => cambia("merma", e.target.value)} /></Campo>
+                    <Campo etiqueta={`Precio S/ ${u}`}><InputNumero value={v.precio} onChange={(e) => cambia("precio", e.target.value)} /></Campo>
                   </div>
-                  <p className="cifra text-right text-xs text-stone-500">{kg(gramosAKg(neto))} neto · {soles(importeCentimos(neto, aCentimos(v.precio)) / 100)}</p>
+                  <p className="cifra text-right text-xs text-stone-500">{cantidad(gramosAKg(neto), l.unidad)} neto · {soles(importeCentimos(neto, aCentimos(v.precio)) / 100)}</p>
                 </div>
               );
             })}

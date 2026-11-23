@@ -1,4 +1,4 @@
-import { ETIQUETA_MEDIO, fechaHora, kg, soles } from "@/lib/formato";
+import { ETIQUETA_MEDIO, cantidad, fechaHora, soles } from "@/lib/formato";
 import type { DatosTicket } from "@/lib/pdf/ticket";
 import { AutoImprimir } from "./auto-imprimir";
 
@@ -67,10 +67,10 @@ export function Ticket80({ d }: { d: DatosTicket }) {
           <div key={i} className="item">
             <div className="b">{it.metal}</div>
             {it.bruto && (
-              <div className="fila"><span>Bruto {kg(it.bruto)}</span><span>{Number(it.descuento) > 0 ? `Merma ${kg(it.descuento)}` : ""}</span></div>
+              <div className="fila"><span>Bruto {cantidad(it.bruto, it.unidad)}</span><span>{Number(it.descuento) > 0 ? `Merma ${cantidad(it.descuento, it.unidad)}` : ""}</span></div>
             )}
             <div className="fila">
-              <span>{kg(it.neto)} x {it.precio ? soles(it.precio) : "—"}</span>
+              <span>{cantidad(it.neto, it.unidad)} x {it.precio ? soles(it.precio) : "—"}</span>
               <span className="b">{it.importe ? soles(it.importe) : "—"}</span>
             </div>
           </div>

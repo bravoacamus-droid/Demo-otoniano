@@ -19,13 +19,19 @@ export interface FilaHoja {
   entrada: string;
   salida: string;
   horas_extra: string;
+  /** Minutos tarde (si no se anota la hora de entrada) */
+  minutos_tarde: string;
   nota: string;
   /** Horas extras (las anota Gerencia con «Horas extras»; aquí solo se muestran y se conservan) */
   aprobada: boolean;
 }
 
+/** Asistió o llegó tarde: día trabajado (horario, horas extras y domingo cuentan igual) */
+const trabajo = (estado: string) => estado === "asistio" || estado === "tardanza";
+
 const ESTADOS = [
   { valor: "asistio", texto: "Asistió" },
+  { valor: "tardanza", texto: "Tardanza" },
   { valor: "falta", texto: "Falta" },
   { valor: "descanso", texto: "Descanso" },
   { valor: "permiso", texto: "Permiso" },
@@ -45,10 +51,10 @@ export function HojaAsistencia({ fecha, filas: iniciales, domingo }: { fecha: st
   useEffect(() => { setFilas(iniciales); }, [iniciales]);
   const cambiar = (id: string, c: Partial<FilaHoja>) => setFilas((fs) => fs.map((f) => (f.trabajador_id === id ? { ...f, ...c } : f)));
   const sinMarcar = filas.filter((f) => !f.estado).length;
-  const asistieron = filas.filter((f) => f.estado === "asistio").length;
+  const asistieron = filas.filter((f) => trabajo(f.estado)).length;
   const faltas = filas.filter((f) => f.estado === "falta").length;
   const sucio = useMemo(() => JSON.stringify(filas) !== JSON.stringify(iniciales), [filas, iniciales]);
-  const horarioMal = (f: FilaHoja) => f.estado === "asistio" && !!f.entrada && !!f.salida && minutos(f.salida)! <= minutos(f.entrada)!;
+  const horarioMal = (f: FilaHoja) => trabajo(f.estado) && !!f.entrada && !!f.salida && minutos(f.salida)! <= minutos(f.entrada)!;
   const conError = filas.filter(horarioMal);
 
   // Cambiar de día (flechas o fecha) recarga la página: avisar si hay algo sin guardar
@@ -63,8 +69,8 @@ export function HojaAsistencia({ fecha, filas: iniciales, domingo }: { fecha: st
     setError(null);
     if (conError.length) return setError(`Revise el horario de ${conError.map((f) => f.nombre).join(", ")}: la salida debe ser posterior a la entrada.`);
     setGuardando(true);
-    const r = await guardarAsistencia(fecha, filas.filter((f) => f.estado).map(({ trabajador_id, estado, entrada, salida, horas_extra, nota }) =>
-      ({ trabajador_id, estado, entrada, salida, horas_extra: estado === "asistio" ? horas_extra : "", nota })));
+    const r = await guardarAsistencia(fecha, filas.filter((f) => f.estado).map(({ trabajador_id, estado, entrada, salida, horas_extra, minutos_tarde, nota }) =>
+      ({ trabajador_id, estado, entrada, salida, horas_extra: trabajo(estado) ? horas_extra : "", minutos_tarde: estado === "tardanza" ? minutos_tarde : "", nota })));
     setGuardando(false);
     if (!r.ok) return setError(r.error);
     notificar({ titulo: "Asistencia guardada", mensaje: `${r.data} trabajador${r.data === 1 ? "" : "es"} registrado${r.data === 1 ? "" : "s"}.` });
@@ -93,7 +99,7 @@ export function HojaAsistencia({ fecha, filas: iniciales, domingo }: { fecha: st
                 <p className="truncate font-semibold">{f.nombre}</p>
                 {f.cargo && <p className="text-xs text-stone-500">{f.cargo}</p>}
               </div>
-              <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:grid-cols-5" role="radiogroup" aria-label={`Asistencia de ${f.nombre}`}>
+              <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:grid-cols-6" role="radiogroup" aria-label={`Asistencia de ${f.nombre}`}>
                 {ESTADOS.map((e) => {
                   const activo = f.estado === e.valor;
                   return (
@@ -103,6 +109,7 @@ export function HojaAsistencia({ fecha, filas: iniciales, domingo }: { fecha: st
                         !activo ? "border-stone-200 bg-superficie text-stone-700 hover:border-marca-300"
                           : e.valor === "asistio" ? "border-marca-600 bg-marca-600 text-white"
                             : e.valor === "falta" ? "border-red-600 bg-red-50 text-red-700 ring-1 ring-red-600"
+                            : e.valor === "tardanza" ? "border-amber-600 bg-amber-50 text-amber-800 ring-1 ring-amber-600"
                               : "border-marca-600 bg-marca-50 text-marca-700 ring-1 ring-marca-600")}>
                       {e.texto}
                     </button>
@@ -111,22 +118,28 @@ export function HojaAsistencia({ fecha, filas: iniciales, domingo }: { fecha: st
               </div>
             </div>
 
-            {f.estado === "asistio" && (
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-sm">
+            {trabajo(f.estado) && (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-md sm:grid-cols-3">
                 <label className="text-xs font-medium text-stone-600">Entrada
                   <Input type="time" value={f.entrada} onChange={(e) => cambiar(f.trabajador_id, { entrada: e.target.value })} className="mt-1" />
                 </label>
                 <label className="text-xs font-medium text-stone-600">Salida
                   <Input type="time" value={f.salida} onChange={(e) => cambiar(f.trabajador_id, { salida: e.target.value })} className="mt-1" />
                 </label>
+                {f.estado === "tardanza" && (
+                  <label className="text-xs font-medium text-stone-600">Minutos tarde
+                    <Input inputMode="numeric" value={f.minutos_tarde} onChange={(e) => cambiar(f.trabajador_id, { minutos_tarde: e.target.value.replace(/D/g, "") })}
+                      placeholder={f.entrada ? "según entrada" : "por defecto"} className="mt-1" />
+                  </label>
+                )}
                 {horarioMal(f) && <p className="col-span-2 text-xs font-medium text-red-700">La salida debe ser posterior a la entrada.</p>}
               </div>
             )}
             {f.estado && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Input value={f.nota} onChange={(e) => cambiar(f.trabajador_id, { nota: e.target.value })} placeholder="Nota (opcional)" className="h-9 max-w-md text-sm" />
-                {f.estado === "asistio" && domingo && <Insignia tono="azul">Domingo trabajado</Insignia>}
-                {f.estado === "asistio" && Number(f.horas_extra) > 0 && (
+                {trabajo(f.estado) && domingo && <Insignia tono="azul">Domingo trabajado</Insignia>}
+                {trabajo(f.estado) && Number(f.horas_extra) > 0 && (
                   <Insignia tono={f.aprobada ? "verde" : "ambar"}>{numero(Number(f.horas_extra))} h extras{f.aprobada ? "" : " por aprobar"}</Insignia>
                 )}
               </div>

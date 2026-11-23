@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
-import { fecha, fechaHora, hoyLima, kg, soles } from "@/lib/formato";
+import { cantidad, fecha, fechaHora, hoyLima, soles, unidadCorta } from "@/lib/formato";
 import { Encabezado, Insignia, Kpi, PuntoMetal, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
 import { EnlaceDescarga } from "@/components/ui/enlace-descarga";
 import { TablaDatos } from "@/components/ui/tabla";
@@ -60,6 +60,8 @@ export default async function HistorialMetal({
       : null,
   ]);
   if (!s) notFound();
+  const u = unidadCorta(s.unidad);
+  const cant = (v: string | number | null | undefined) => cantidad(v, s.unidad);
   const res = (r ?? {}) as unknown as Resumen;
   const qs = new URLSearchParams({ metal: metalId, desde, hasta });
   const base = `/inventario/${metalId}`;
@@ -86,28 +88,28 @@ export default async function HistorialMetal({
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi titulo="Stock hoy" valor={kg(s.kg)} detalle={verCostos && s.costo_promedio ? `Costo promedio ${soles(s.costo_promedio)}/kg` : `Precio venta ${soles(s.precio_venta)}/kg`} />
-        <Kpi titulo="Comprado" valor={kg(res.kg_comprado)}
-          detalle={`${res.compras_n ?? 0} compras${res.precio_prom_compra ? ` · prom. ${soles(res.precio_prom_compra)}/kg` : ""}`} />
-        <Kpi titulo="Vendido" valor={kg(res.kg_vendido)}
-          detalle={`${res.ventas_n ?? 0} ventas${res.precio_prom_venta ? ` · prom. ${soles(res.precio_prom_venta)}/kg` : ""}`} />
+        <Kpi titulo="Stock hoy" valor={cant(s.kg)} detalle={verCostos && s.costo_promedio ? `Costo promedio ${soles(s.costo_promedio)}/${u}` : `Precio venta ${soles(s.precio_venta)}/${u}`} />
+        <Kpi titulo="Comprado" valor={cant(res.kg_comprado)}
+          detalle={`${res.compras_n ?? 0} compras${res.precio_prom_compra ? ` · prom. ${soles(res.precio_prom_compra)}/${u}` : ""}`} />
+        <Kpi titulo="Vendido" valor={cant(res.kg_vendido)}
+          detalle={`${res.ventas_n ?? 0} ventas${res.precio_prom_venta ? ` · prom. ${soles(res.precio_prom_venta)}/${u}` : ""}`} />
         {verCostos
           ? <Kpi titulo="Margen" valor={soles(res.margen)} tono={Number(res.margen) >= 0 ? "positivo" : "negativo"} detalle={`Ventas ${soles(res.ventas)}`} />
-          : <Kpi titulo="Descontado en selección" valor={kg(res.descuento_kg)} />}
+          : <Kpi titulo="Descontado en selección" valor={cant(res.descuento_kg)} />}
       </div>
 
       <Filtros valores={{ desde, hasta }} ocultos={{ tab }} />
 
       <Tarjeta className="mb-4">
-        <TituloTarjeta>Kilos por mes y precio promedio</TituloTarjeta>
+        <TituloTarjeta>{u === "kg" ? "Kilos" : "Cantidad"} por mes y precio promedio</TituloTarjeta>
         <div className="p-4">
           <GraficoHistorialMetal datos={res.por_mes ?? []} />
           <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500">
             <span>Primera compra: {fecha(res.primera_compra)}</span>
             <span>Última compra: {fecha(res.ultima_compra)}</span>
             <span>Última venta: {fecha(res.ultima_venta)}</span>
-            {Number(res.descuento_kg) > 0 && <span>Descontado en selección: {kg(res.descuento_kg)}{verCostos && ` (${soles(res.descuento_importe)})`}</span>}
-            {Number(res.merma_kg) !== 0 && <span>Diferencia de balanza en ventas: {kg(res.merma_kg)}</span>}
+            {Number(res.descuento_kg) > 0 && <span>Descontado en selección: {cant(res.descuento_kg)}{verCostos && ` (${soles(res.descuento_importe)})`}</span>}
+            {Number(res.merma_kg) !== 0 && <span>Diferencia de balanza en ventas: {cant(res.merma_kg)}</span>}
           </p>
         </div>
       </Tarjeta>
@@ -137,8 +139,8 @@ export default async function HistorialMetal({
               { titulo: "Fecha", principal: true, celda: (c) => fechaHora(c.fecha) },
               { titulo: "Compra", celda: (c) => <span className="flex items-center gap-1">N° {c.numero}{c.estado === "anulada" && <Insignia tono="rojo">Anulada</Insignia>}</span> },
               { titulo: "Proveedor", celda: (c) => c.proveedor_nombre ?? "Sin documento" },
-              { titulo: "Kg", alinear: "der", principal: true, className: "cifra", celda: (c) => kg(c.peso_neto_kg) },
-              { titulo: "Precio/kg", alinear: "der", className: "cifra", celda: (c) => soles(c.precio_kg) },
+              { titulo: u === "kg" ? "Kg" : "Cantidad", alinear: "der", principal: true, className: "cifra", celda: (c) => cant(c.peso_neto_kg) },
+              { titulo: `Precio/${u}`, alinear: "der", className: "cifra", celda: (c) => soles(c.precio_kg) },
               { titulo: "Importe", alinear: "der", className: "cifra", celda: (c) => <span className={c.estado === "anulada" ? "text-stone-500 line-through" : "font-medium"}>{soles(c.importe)}</span> },
             ]}
           />
@@ -156,10 +158,10 @@ export default async function HistorialMetal({
               { titulo: "Fecha", principal: true, celda: (v) => fechaHora(v.fecha_confirmacion ?? v.fecha) },
               { titulo: "Venta", celda: (v) => <span className="flex items-center gap-1">N° {v.numero}{v.estado !== "confirmada" && <Insignia tono={v.estado === "anulada" ? "rojo" : "ambar"}>{v.estado === "anulada" ? "Anulada" : "Por pesar"}</Insignia>}</span> },
               { titulo: "Cliente", celda: (v) => v.comprador_nombre },
-              { titulo: "Salió", alinear: "der", className: "cifra", celda: (v) => kg(v.peso_salida_kg) },
-              { titulo: "Recibido", alinear: "der", principal: true, className: "cifra", celda: (v) => v.peso_recibido_kg === null ? "—" : kg(v.peso_recibido_kg) },
-              { titulo: "Precio/kg", alinear: "der", className: "cifra", celda: (v) => v.precio_kg === null ? "—" : soles(v.precio_kg) },
-              ...(verCostos ? [{ titulo: "Costo/kg", alinear: "der" as const, className: "cifra", celda: (v: NonNullable<NonNullable<typeof ventas>["data"]>[number]) => soles(v.costo_kg) }] : []),
+              { titulo: "Salió", alinear: "der", className: "cifra", celda: (v) => cant(v.peso_salida_kg) },
+              { titulo: "Recibido", alinear: "der", principal: true, className: "cifra", celda: (v) => v.peso_recibido_kg === null ? "—" : cant(v.peso_recibido_kg) },
+              { titulo: `Precio/${u}`, alinear: "der", className: "cifra", celda: (v) => v.precio_kg === null ? "—" : soles(v.precio_kg) },
+              ...(verCostos ? [{ titulo: `Costo/${u}`, alinear: "der" as const, className: "cifra", celda: (v: NonNullable<NonNullable<typeof ventas>["data"]>[number]) => soles(v.costo_kg) }] : []),
               { titulo: "Importe", alinear: "der", className: "cifra", celda: (v) => v.importe === null ? "—" : soles(v.importe) },
             ]}
           />
@@ -181,12 +183,12 @@ export default async function HistorialMetal({
                   : m.origen_tabla === "ventas" ? <Link className="text-marca-700 hover:underline" href={`/ventas/${m.origen_id}`}>{m.detalle}</Link>
                   : m.detalle,
               },
-              { titulo: "Kg", alinear: "der", principal: true, celda: (m) => <span className={`cifra ${m.anulado ? "text-stone-500 line-through" : Number(m.kg) < 0 ? "text-red-700" : "text-emerald-700"}`}>{Number(m.kg) > 0 ? "+" : ""}{kg(m.kg)}</span> },
+              { titulo: u === "kg" ? "Kg" : "Cantidad", alinear: "der", principal: true, celda: (m) => <span className={`cifra ${m.anulado ? "text-stone-500 line-through" : Number(m.kg) < 0 ? "text-red-700" : "text-emerald-700"}`}>{Number(m.kg) > 0 ? "+" : ""}{cant(m.kg)}</span> },
               ...(verCostos ? [
-                { titulo: "Costo/kg", alinear: "der" as const, celda: (m: NonNullable<NonNullable<typeof movs>["data"]>[number]) => <span className="cifra">{m.costo_kg ? soles(m.costo_kg) : "—"}</span> },
+                { titulo: `Costo/${u}`, alinear: "der" as const, celda: (m: NonNullable<NonNullable<typeof movs>["data"]>[number]) => <span className="cifra">{m.costo_kg ? soles(m.costo_kg) : "—"}</span> },
                 { titulo: "Costo", alinear: "der" as const, celda: (m: NonNullable<NonNullable<typeof movs>["data"]>[number]) => <span className="cifra">{soles(m.costo_total)}</span> },
               ] : []),
-              { titulo: "Saldo kg", alinear: "der", celda: (m) => <span className="cifra font-medium">{kg(m.saldo_kg)}</span> },
+              { titulo: `Saldo ${u}`, alinear: "der", celda: (m) => <span className="cifra font-medium">{cant(m.saldo_kg)}</span> },
               ...(verCostos ? [{ titulo: "Saldo S/", alinear: "der" as const, celda: (m: NonNullable<NonNullable<typeof movs>["data"]>[number]) => <span className="cifra">{soles(m.saldo_costo)}</span> }] : []),
             ]}
           />

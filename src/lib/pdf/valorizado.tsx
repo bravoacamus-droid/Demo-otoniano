@@ -1,5 +1,5 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { fecha, kg, soles } from "@/lib/formato";
+import { cantidad, fecha, kg, soles, unidadCorta } from "@/lib/formato";
 import { BandaMarca, MARCA, MARCA_OSCURO, fechaHoraLima, PieMarca, TINTE, type EmpresaPdf } from "./marca";
 
 // Inventario valorizado con la marca de la empresa (banda y pie en marca.tsx).
@@ -30,11 +30,13 @@ export interface DatosValorizado {
   generado: Date;
   usuario: string;
   totales: { kg: number; valor_costo: number; valor_venta: number; ganancia: number; en_transito: number; por_cobrar: number };
-  metales: { nombre: string; color: string | null; kg: number; costo_promedio: number | null; valor_costo: number; precio_venta: number; valor_venta: number }[];
-  lotes: { fecha: string; numero: number; proveedor: string | null; metal: string; color: string | null; kg_en_stock: number; dias: number; por_seleccionar: boolean; retrasado: boolean }[];
+  metales: { nombre: string; color: string | null; unidad?: string | null; kg: number; costo_promedio: number | null; valor_costo: number; precio_venta: number; valor_venta: number }[];
+  lotes: { fecha: string; numero: number; proveedor: string | null; metal: string; color: string | null; unidad?: string | null; kg_en_stock: number; dias: number; por_seleccionar: boolean; retrasado: boolean }[];
 }
 
 const precio = (v: number | null) => (v === null ? "-" : `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`);
+// En kg la columna ya dice «/kg»; en otra unidad se aclara en la celda
+const porU = (u?: string | null) => (unidadCorta(u) === "kg" ? "" : `/${unidadCorta(u)}`);
 const pct = (v: number) => `${v.toLocaleString("es-PE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 type Columna = { titulo: string; ancho: number; der?: boolean };
 const COL_METAL: Columna[] = [
@@ -102,10 +104,10 @@ export function ValorizadoPdf({ d }: { d: DatosValorizado }) {
                 <View style={[s.punto, { backgroundColor: m.color ?? "#a8a29e" }]} />
                 <Text style={{ fontFamily: "Helvetica-Bold" }}>{m.nombre}</Text>
               </Celda>
-              <Celda cols={COL_METAL} i={1}>{kg(m.kg)}</Celda>
-              <Celda cols={COL_METAL} i={2}>{precio(m.costo_promedio)}</Celda>
+              <Celda cols={COL_METAL} i={1}>{cantidad(m.kg, m.unidad)}</Celda>
+              <Celda cols={COL_METAL} i={2}>{m.costo_promedio === null ? "-" : `${precio(m.costo_promedio)}${porU(m.unidad)}`}</Celda>
               <Celda cols={COL_METAL} i={3}>{soles(m.valor_costo)}</Celda>
-              <Celda cols={COL_METAL} i={4}>{precio(m.precio_venta)}</Celda>
+              <Celda cols={COL_METAL} i={4}>{`${precio(m.precio_venta)}${porU(m.unidad)}`}</Celda>
               <Celda cols={COL_METAL} i={5}>{soles(m.valor_venta)}</Celda>
               <Celda cols={COL_METAL} i={6}>{soles(Math.round(m.valor_venta * 100 - m.valor_costo * 100) / 100)}</Celda>
               <Celda cols={COL_METAL} i={7}>{sumaCostoCent > 0 ? pct((Math.round(m.valor_costo * 100) * 100) / sumaCostoCent) : "-"}</Celda>
@@ -138,7 +140,7 @@ export function ValorizadoPdf({ d }: { d: DatosValorizado }) {
                     <View style={[s.punto, { backgroundColor: l.color ?? "#a8a29e" }]} />
                     <Text>{l.metal}</Text>
                   </Celda>
-                  <Celda cols={COL_LOTE} i={4}>{kg(l.kg_en_stock)}</Celda>
+                  <Celda cols={COL_LOTE} i={4}>{cantidad(l.kg_en_stock, l.unidad)}</Celda>
                   <Celda cols={COL_LOTE} i={5}>{String(l.dias)}</Celda>
                   <Celda cols={COL_LOTE} i={6}>
                     {l.retrasado

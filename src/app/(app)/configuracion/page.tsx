@@ -9,8 +9,8 @@ import { FormularioAccion } from "@/components/ui/formulario";
 import { ETIQUETA_ROL } from "@/lib/formato";
 import { guardarEmpresa, guardarSerieComprobante } from "./acciones";
 import { COMPROBANTES, type TipoComprobante } from "@/lib/comprobantes";
-import { cargarMediosPago } from "@/lib/productos";
-import { Cajas, Categorias, MediosPago } from "./secciones";
+import { cargarMediosPago, cargarUnidades } from "@/lib/productos";
+import { Cajas, Categorias, MediosPago, UnidadesMedida } from "./secciones";
 import { Usuarios } from "./usuarios";
 import { Cargos, type Cargo } from "./cargos";
 
@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: "Configuración" };
 export default async function ConfiguracionPage() {
   const ctx = await exigir("configurar");
   const { supabase, empresa, userId } = ctx;
-  const [{ data: miembros }, { data: cajas }, { data: categorias }, { data: uso }, medios, { data: series }, { data: cargos }] = await Promise.all([
+  const [{ data: miembros }, { data: cajas }, { data: categorias }, { data: uso }, medios, { data: series }, { data: cargos }, unidades] = await Promise.all([
     supabase.from("miembros").select("user_id, rol, nombre, email, activo, cargo_id").eq("empresa_id", empresa.id).order("creado_en"),
     supabase.from("cajas").select("*").eq("empresa_id", empresa.id).order("orden"),
     supabase.from("categorias_gasto").select("*").eq("empresa_id", empresa.id).order("nombre"),
@@ -27,6 +27,7 @@ export default async function ConfiguracionPage() {
     cargarMediosPago(ctx, false),
     supabase.from("v_series_comprobante").select("tipo, serie, ultimo, siguiente").eq("empresa_id", empresa.id),
     supabase.from("cargos").select("id, nombre, rol, secciones, activo").eq("empresa_id", empresa.id).order("activo", { ascending: false }).order("creado_en"),
+    cargarUnidades(ctx, false),
   ]);
   const listaCargos = (cargos ?? []) as Cargo[];
   const usuariosPorCargo: Record<string, number> = {};
@@ -64,6 +65,19 @@ export default async function ConfiguracionPage() {
                   <Campo etiqueta="Domingo trabajado (+% del día)"><InputNumero name="domingo_tasa" min={0} max={300} defaultValue={String(Number(empresa.domingo_tasa ?? 100))} /></Campo>
                 </div>
                 <p className="mt-2 text-xs text-stone-500">Valores de ley usuales en Perú (25 %, 35 % y 100 % sin descanso sustitutorio). Confírmelos con su contador.</p>
+              </fieldset>
+              <fieldset className="rounded-lg border border-stone-200 p-3">
+                <legend className="px-1 text-sm font-medium text-stone-700">Personal: descuentos automáticos de la planilla</legend>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <Campo etiqueta="Hora de entrada"><Input type="time" name="hora_entrada" defaultValue={String(empresa.hora_entrada ?? "08:00").slice(0, 5)} /></Campo>
+                  <Campo etiqueta="Tolerancia (min)"><InputNumero name="tolerancia_min" min={0} max={120} defaultValue={String(empresa.tolerancia_min ?? 10)} /></Campo>
+                  <Campo etiqueta="Tardanza sin hora (min)"><InputNumero name="tardanza_min_def" min={0} max={480} defaultValue={String(empresa.tardanza_min_def ?? 15)} /></Campo>
+                </div>
+                <div className="mt-3 space-y-2 text-sm">
+                  <label className="flex items-center gap-2"><input type="checkbox" name="descontar_faltas" defaultChecked={empresa.descontar_faltas ?? true} className="size-4 accent-marca-600" /> Descontar un día de sueldo por cada falta</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" name="permiso_con_goce" defaultChecked={empresa.permiso_con_goce ?? true} className="size-4 accent-marca-600" /> Los permisos son con goce (no se descuentan)</label>
+                </div>
+                <p className="mt-2 text-xs text-stone-500">Quien llega después de la hora de entrada más la tolerancia queda con tardanza y se le descuentan los minutos de retraso. Si se marca tardanza sin anotar la hora, se descuentan los minutos por defecto. Confírmelo con su contador.</p>
               </fieldset>
               <Campo etiqueta="Exigir DNI/RUC desde (S/)" ayuda="Vacío = nunca obligatorio. Por confirmar con el cliente.">
                 <InputNumero name="monto_doc_obligatorio" defaultValue={empresa.monto_doc_obligatorio ?? ""} />
@@ -143,6 +157,7 @@ export default async function ConfiguracionPage() {
         <Cajas cajas={cajas ?? []} />
         <MediosPago medios={medios} cajas={cajas ?? []} />
         <Categorias categorias={categorias ?? []} />
+        <UnidadesMedida unidades={unidades} />
       </div>
     </>
   );

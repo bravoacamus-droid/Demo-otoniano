@@ -24,6 +24,12 @@ export interface TrabajadorEditable {
   motivo_cese: string | null;
   sueldo_mensual: number | string | null;
   notas: string | null;
+  /** Datos para el pago: cómo cobra y a dónde se le envía */
+  pago_medio?: string | null;
+  pago_celular?: string | null;
+  pago_banco?: string | null;
+  pago_cuenta?: string | null;
+  pago_cci?: string | null;
 }
 
 /** Acceso al sistema que ya tiene el trabajador (su usuario) */
@@ -69,7 +75,7 @@ export function BotonTrabajador({ inicial, cargos: lista, acceso = null }: {
           <Pencil className="size-3.5" /> Editar
         </button>
       ) : (
-        <Boton onClick={() => setAbierto(true)}><UserRoundPlus className="size-4" /> Nuevo trabajador</Boton>
+        <Boton variante="secundario" onClick={() => setAbierto(true)}><UserRoundPlus className="size-4" /> Nuevo trabajador</Boton>
       )}
       <Modal abierto={abierto} onCerrar={cerrar} titulo={inicial ? `Editar · ${inicial.nombre}` : "Nuevo trabajador"}>
         <FormularioAccion accion={guardarTrabajador} textoBoton="Guardar" reiniciar={!inicial}
@@ -139,6 +145,7 @@ export function BotonTrabajador({ inicial, cargos: lista, acceso = null }: {
               </Campo>
             )}
           </div>
+          <DatosPago inicial={inicial} />
           {inicial && cese && (
             <>
               <Campo etiqueta="Motivo del cese"><Input name="motivo_cese" required defaultValue={inicial.motivo_cese ?? ""} placeholder="Ej.: renuncia, fin de contrato" /></Campo>
@@ -149,5 +156,46 @@ export function BotonTrabajador({ inicial, cargos: lista, acceso = null }: {
         </FormularioAccion>
       </Modal>
     </>
+  );
+}
+
+const MEDIOS_COBRO = [
+  { valor: "efectivo", texto: "Efectivo" },
+  { valor: "yape", texto: "Yape" },
+  { valor: "plin", texto: "Plin" },
+  { valor: "transferencia", texto: "Transferencia" },
+] as const;
+
+/** A dónde le llega el pago: se propone al pagarle desde Personal → Pagos */
+function DatosPago({ inicial }: { inicial?: TrabajadorEditable }) {
+  const [medio, setMedio] = useState(inicial?.pago_medio ?? "efectivo");
+  return (
+    <fieldset className="rounded-xl border border-stone-200 p-3">
+      <legend className="px-1 text-sm font-semibold text-stone-800">Datos para el pago</legend>
+      <input type="hidden" name="pago_medio" value={medio} />
+      <p className="mb-2 text-xs text-stone-500">Cómo cobra su sueldo. Al pagarle, el sistema propone estos datos.</p>
+      <div role="radiogroup" aria-label="Cómo cobra" className="mb-3 flex flex-wrap gap-2">
+        {MEDIOS_COBRO.map((m) => (
+          <button key={m.valor} type="button" role="radio" aria-checked={medio === m.valor} onClick={() => setMedio(m.valor)}
+            className={`min-w-[6.5rem] flex-1 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition ${medio === m.valor ? "border-marca-600 bg-marca-600 text-white" : "border-stone-200 bg-superficie text-stone-700 hover:border-marca-300 hover:bg-marca-50"}`}>
+            {m.texto}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Campo etiqueta={`Celular Yape / Plin${medio === "yape" || medio === "plin" ? "" : " (opcional)"}`}>
+          <Input name="pago_celular" inputMode="numeric" maxLength={9} required={medio === "yape" || medio === "plin"} placeholder="9XXXXXXXX" defaultValue={inicial?.pago_celular ?? ""} />
+        </Campo>
+        <Campo etiqueta={`Banco${medio === "transferencia" ? "" : " (opcional)"}`}>
+          <Input name="pago_banco" required={medio === "transferencia"} placeholder="Ej.: BCP, Interbank, BBVA" defaultValue={inicial?.pago_banco ?? ""} />
+        </Campo>
+        <Campo etiqueta={`N° de cuenta${medio === "transferencia" ? "" : " (opcional)"}`}>
+          <Input name="pago_cuenta" inputMode="numeric" required={medio === "transferencia"} defaultValue={inicial?.pago_cuenta ?? ""} />
+        </Campo>
+        <Campo etiqueta="CCI (opcional)" ayuda="20 dígitos, para transferir desde otro banco">
+          <Input name="pago_cci" inputMode="numeric" maxLength={20} defaultValue={inicial?.pago_cci ?? ""} />
+        </Campo>
+      </div>
+    </fieldset>
   );
 }

@@ -9,6 +9,25 @@ const n = (v: Num) => (v === null || v === undefined || v === "" ? 0 : Number(v)
 
 export const soles = (v: Num) => `S/ ${fmtSoles.format(n(v))}`;
 export const kg = (v: Num) => `${fmtKg.format(n(v))} kg`;
+
+/** Unidades de partida (tabla unidades_medida; se agregan más en Configuración). La cantidad va en las columnas de kg */
+export const UNIDADES = {
+  kg: { texto: "Kilogramos", corto: "kg", plural: "kg" },
+  t: { texto: "Toneladas", corto: "t", plural: "t" },
+  und: { texto: "Unidades", corto: "und", plural: "und" },
+  caja: { texto: "Cajas", corto: "caja", plural: "cajas" },
+  balde: { texto: "Baldes", corto: "balde", plural: "baldes" },
+} as const;
+export type Unidad = keyof typeof UNIDADES;
+// Las unidades que se agregan en Configuración se muestran con su abreviatura (código)
+const unidadDe = (u: string | null | undefined) => UNIDADES[(u || "kg") as Unidad] ?? { texto: u!, corto: u!, plural: u! };
+/** «kg», «und», «caja»: para «S/ por …» y etiquetas de campos */
+export const unidadCorta = (u: string | null | undefined) => unidadDe(u).corto;
+/** Cantidad con su unidad: «10.50 kg», «12 und», «3 cajas» (kg y toneladas con decimales de peso) */
+export const cantidad = (v: Num, u: string | null | undefined) => {
+  const d = unidadDe(u);
+  return d === UNIDADES.kg ? kg(v) : `${(d === UNIDADES.t ? fmtKg : fmtNum).format(n(v))} ${d.plural}`;
+};
 export const numero = (v: Num) => fmtNum.format(n(v));
 export const porcentaje = (v: Num) => `${fmtNum.format(n(v))} %`;
 
@@ -49,5 +68,5 @@ export const ETIQUETA_MEDIO: Record<string, string> = {
 export const ETIQUETA_ORIGEN: Record<string, string> = {
   compra: "Compra", venta: "Venta", gasto: "Gasto", aporte: "Aporte", retiro: "Retiro",
   traspaso: "Traspaso", ajuste: "Ajuste", saldo_inicial: "Saldo inicial", devolucion: "Devolución", adelanto: "Adelanto",
-  pago_credito: "Pago de crédito",
+  pago_credito: "Pago de crédito", prestamo: "Préstamo",
 };

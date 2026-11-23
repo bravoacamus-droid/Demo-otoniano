@@ -73,6 +73,7 @@ export default async function AsistenciaPage({ searchParams }: { searchParams: P
         trabajador_id: t.id, nombre: t.nombre, cargo: t.cargo,
         estado: m?.estado ?? "", entrada: m?.entrada?.slice(0, 5) ?? "", salida: m?.salida?.slice(0, 5) ?? "",
         horas_extra: m && Number(m.horas_extra) > 0 ? String(Number(m.horas_extra)) : "", nota: m?.nota ?? "",
+        minutos_tarde: m && Number(m.minutos_tarde) > 0 ? String(m.minutos_tarde) : "",
         aprobada: !!m?.extra_aprobada,
       };
     });

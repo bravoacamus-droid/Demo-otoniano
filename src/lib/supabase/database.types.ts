@@ -455,6 +455,7 @@ export type Database = {
           fecha: string
           horas_extra: number
           id: string
+          minutos_tarde: number
           nota: string | null
           registrado_por: string | null
           salida: string | null
@@ -471,6 +472,7 @@ export type Database = {
           fecha: string
           horas_extra?: number
           id?: string
+          minutos_tarde?: number
           nota?: string | null
           registrado_por?: string | null
           salida?: string | null
@@ -487,6 +489,7 @@ export type Database = {
           fecha?: string
           horas_extra?: number
           id?: string
+          minutos_tarde?: number
           nota?: string | null
           registrado_por?: string | null
           salida?: string | null
@@ -1745,9 +1748,11 @@ export type Database = {
         Row: {
           activo: boolean
           creado_en: string
+          descontar_faltas: boolean
           dias_seleccion: number
           direccion: string | null
           domingo_tasa: number
+          hora_entrada: string
           hx_tasa_primeras: number
           hx_tasa_siguientes: number
           id: string
@@ -1756,17 +1761,22 @@ export type Database = {
           merma_alerta_pct: number
           moneda: string
           monto_doc_obligatorio: number | null
+          permiso_con_goce: boolean
           razon_social: string
           roles_editan_precio: Database["public"]["Enums"]["rol_miembro"][]
           ruc: string | null
+          tardanza_min_def: number
           telefono: string | null
+          tolerancia_min: number
         }
         Insert: {
           activo?: boolean
           creado_en?: string
+          descontar_faltas?: boolean
           dias_seleccion?: number
           direccion?: string | null
           domingo_tasa?: number
+          hora_entrada?: string
           hx_tasa_primeras?: number
           hx_tasa_siguientes?: number
           id?: string
@@ -1775,17 +1785,22 @@ export type Database = {
           merma_alerta_pct?: number
           moneda?: string
           monto_doc_obligatorio?: number | null
+          permiso_con_goce?: boolean
           razon_social: string
           roles_editan_precio?: Database["public"]["Enums"]["rol_miembro"][]
           ruc?: string | null
+          tardanza_min_def?: number
           telefono?: string | null
+          tolerancia_min?: number
         }
         Update: {
           activo?: boolean
           creado_en?: string
+          descontar_faltas?: boolean
           dias_seleccion?: number
           direccion?: string | null
           domingo_tasa?: number
+          hora_entrada?: string
           hx_tasa_primeras?: number
           hx_tasa_siguientes?: number
           id?: string
@@ -1794,10 +1809,13 @@ export type Database = {
           merma_alerta_pct?: number
           moneda?: string
           monto_doc_obligatorio?: number | null
+          permiso_con_goce?: boolean
           razon_social?: string
           roles_editan_precio?: Database["public"]["Enums"]["rol_miembro"][]
           ruc?: string | null
+          tardanza_min_def?: number
           telefono?: string | null
+          tolerancia_min?: number
         }
         Relationships: []
       }
@@ -1814,6 +1832,7 @@ export type Database = {
           empresa_id: string
           estado: Database["public"]["Enums"]["estado_doc"]
           fecha: string
+          historial: Json
           id: string
           monto: number
           motivo_anulacion: string | null
@@ -1830,6 +1849,7 @@ export type Database = {
           empresa_id: string
           estado?: Database["public"]["Enums"]["estado_doc"]
           fecha?: string
+          historial?: Json
           id?: string
           monto: number
           motivo_anulacion?: string | null
@@ -1846,6 +1866,7 @@ export type Database = {
           empresa_id?: string
           estado?: Database["public"]["Enums"]["estado_doc"]
           fecha?: string
+          historial?: Json
           id?: string
           monto?: number
           motivo_anulacion?: string | null
@@ -1888,6 +1909,86 @@ export type Database = {
           },
           {
             foreignKeyName: "gastos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
+      gastos_sin_caja: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          categoria_id: string | null
+          comprobante_url: string | null
+          concepto: string
+          creado_en: string
+          creado_por: string | null
+          empresa_id: string
+          estado: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          historial: Json
+          id: string
+          monto: number
+          motivo_anulacion: string | null
+        }
+        Insert: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          categoria_id?: string | null
+          comprobante_url?: string | null
+          concepto: string
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          historial?: Json
+          id?: string
+          monto: number
+          motivo_anulacion?: string | null
+        }
+        Update: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          categoria_id?: string | null
+          comprobante_url?: string | null
+          concepto?: string
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id?: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          historial?: Json
+          id?: string
+          monto?: number
+          motivo_anulacion?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_sin_caja_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_gasto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_series_comprobante"
@@ -2307,6 +2408,13 @@ export type Database = {
             referencedRelation: "v_stock_metal"
             referencedColumns: ["empresa_id", "metal_id"]
           },
+          {
+            foreignKeyName: "metales_unidad_fk"
+            columns: ["empresa_id", "unidad"]
+            isOneToOne: false
+            referencedRelation: "unidades_medida"
+            referencedColumns: ["empresa_id", "codigo"]
+          },
         ]
       }
       miembros: {
@@ -2455,6 +2563,116 @@ export type Database = {
           },
         ]
       }
+      movimientos_manuales: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string
+          clase: string
+          creado_en: string
+          creado_por: string | null
+          empresa_id: string
+          estado: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          historial: Json
+          id: string
+          monto: number
+          motivo: string
+          motivo_anulacion: string | null
+          mov_id: string | null
+          persona: string | null
+          tipo: Database["public"]["Enums"]["tipo_mov_caja"]
+        }
+        Insert: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id: string
+          clase: string
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          historial?: Json
+          id?: string
+          monto: number
+          motivo: string
+          motivo_anulacion?: string | null
+          mov_id?: string | null
+          persona?: string | null
+          tipo: Database["public"]["Enums"]["tipo_mov_caja"]
+        }
+        Update: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id?: string
+          clase?: string
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id?: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          historial?: Json
+          id?: string
+          monto?: number
+          motivo?: string
+          motivo_anulacion?: string | null
+          mov_id?: string | null
+          persona?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_mov_caja"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_manuales_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "v_movimientos_caja"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       padron_documentos: {
         Row: {
           consultado_en: string
@@ -2513,6 +2731,159 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
+      pagos_personal: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string | null
+          creado_en: string
+          creado_por: string | null
+          destino: string | null
+          empresa_id: string
+          estado: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          gasto_id: string | null
+          gasto_sin_caja_id: string | null
+          historial: Json
+          id: string
+          medio: string
+          monto: number
+          motivo_anulacion: string | null
+          nota: string | null
+          operacion: string | null
+          periodo: string
+          tipo: string
+          trabajador_id: string
+          voucher_url: string | null
+        }
+        Insert: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          destino?: string | null
+          empresa_id: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          gasto_id?: string | null
+          gasto_sin_caja_id?: string | null
+          historial?: Json
+          id?: string
+          medio?: string
+          monto: number
+          motivo_anulacion?: string | null
+          nota?: string | null
+          operacion?: string | null
+          periodo: string
+          tipo: string
+          trabajador_id: string
+          voucher_url?: string | null
+        }
+        Update: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          destino?: string | null
+          empresa_id?: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          gasto_id?: string | null
+          gasto_sin_caja_id?: string | null
+          historial?: Json
+          id?: string
+          medio?: string
+          monto?: number
+          motivo_anulacion?: string | null
+          nota?: string | null
+          operacion?: string | null
+          periodo?: string
+          tipo?: string
+          trabajador_id?: string
+          voucher_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_personal_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_gasto_id_fkey"
+            columns: ["gasto_id"]
+            isOneToOne: false
+            referencedRelation: "gastos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_gasto_id_fkey"
+            columns: ["gasto_id"]
+            isOneToOne: false
+            referencedRelation: "v_gastos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_gasto_sin_caja_id_fkey"
+            columns: ["gasto_sin_caja_id"]
+            isOneToOne: false
+            referencedRelation: "gastos_sin_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_gasto_sin_caja_id_fkey"
+            columns: ["gasto_sin_caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_gastos_sin_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "trabajadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "v_trabajadores"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3081,7 +3452,6 @@ export type Database = {
       }
       trabajadores: {
         Row: {
-          user_id: string | null
           cargo: string | null
           creado_en: string
           creado_por: string | null
@@ -3093,11 +3463,16 @@ export type Database = {
           motivo_cese: string | null
           nombre: string
           notas: string | null
+          pago_banco: string | null
+          pago_cci: string | null
+          pago_celular: string | null
+          pago_cuenta: string | null
+          pago_medio: string | null
           sueldo_mensual: number | null
           telefono: string | null
+          user_id: string | null
         }
         Insert: {
-          user_id?: string | null
           cargo?: string | null
           creado_en?: string
           creado_por?: string | null
@@ -3109,11 +3484,16 @@ export type Database = {
           motivo_cese?: string | null
           nombre: string
           notas?: string | null
+          pago_banco?: string | null
+          pago_cci?: string | null
+          pago_celular?: string | null
+          pago_cuenta?: string | null
+          pago_medio?: string | null
           sueldo_mensual?: number | null
           telefono?: string | null
+          user_id?: string | null
         }
         Update: {
-          user_id?: string | null
           cargo?: string | null
           creado_en?: string
           creado_por?: string | null
@@ -3125,8 +3505,14 @@ export type Database = {
           motivo_cese?: string | null
           nombre?: string
           notas?: string | null
+          pago_banco?: string | null
+          pago_cci?: string | null
+          pago_celular?: string | null
+          pago_cuenta?: string | null
+          pago_medio?: string | null
           sueldo_mensual?: number | null
           telefono?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3255,6 +3641,8 @@ export type Database = {
           abierto_en: string
           abierto_por: string | null
           ajustado: boolean
+          anulado_en: string | null
+          anulado_por: string | null
           caja_id: string
           cerrado_en: string | null
           cerrado_por: string | null
@@ -3263,7 +3651,9 @@ export type Database = {
           diferencia_apertura: number | null
           diferencia_cierre: number | null
           empresa_id: string
+          historial: Json
           id: string
+          motivo_anulacion: string | null
           nota_apertura: string | null
           nota_cierre: string | null
           numero: number
@@ -3274,6 +3664,8 @@ export type Database = {
           abierto_en?: string
           abierto_por?: string | null
           ajustado?: boolean
+          anulado_en?: string | null
+          anulado_por?: string | null
           caja_id: string
           cerrado_en?: string | null
           cerrado_por?: string | null
@@ -3282,7 +3674,9 @@ export type Database = {
           diferencia_apertura?: number | null
           diferencia_cierre?: number | null
           empresa_id: string
+          historial?: Json
           id?: string
+          motivo_anulacion?: string | null
           nota_apertura?: string | null
           nota_cierre?: string | null
           numero: number
@@ -3293,6 +3687,8 @@ export type Database = {
           abierto_en?: string
           abierto_por?: string | null
           ajustado?: boolean
+          anulado_en?: string | null
+          anulado_por?: string | null
           caja_id?: string
           cerrado_en?: string | null
           cerrado_por?: string | null
@@ -3301,7 +3697,9 @@ export type Database = {
           diferencia_apertura?: number | null
           diferencia_cierre?: number | null
           empresa_id?: string
+          historial?: Json
           id?: string
+          motivo_anulacion?: string | null
           nota_apertura?: string | null
           nota_cierre?: string | null
           numero?: number
@@ -3339,6 +3737,61 @@ export type Database = {
           },
           {
             foreignKeyName: "turnos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
+      unidades_medida: {
+        Row: {
+          activo: boolean
+          codigo: string
+          creado_en: string
+          empresa_id: string
+          id: string
+          nombre: string
+          orden: number
+          plural: string | null
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          creado_en?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+          orden?: number
+          plural?: string | null
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          creado_en?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          orden?: number
+          plural?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unidades_medida_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unidades_medida_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "unidades_medida_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_series_comprobante"
@@ -3874,6 +4327,7 @@ export type Database = {
           metal_color: string | null
           metal_id: string | null
           metal_nombre: string | null
+          metal_unidad: string | null
           numero: number | null
           periodo: string | null
           peso_bruto_kg: number | null
@@ -4562,6 +5016,56 @@ export type Database = {
           },
         ]
       }
+      v_gastos_sin_caja: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          categoria_id: string | null
+          categoria_nombre: string | null
+          comprobante_url: string | null
+          concepto: string | null
+          creado_en: string | null
+          creado_por: string | null
+          empresa_id: string | null
+          estado: Database["public"]["Enums"]["estado_doc"] | null
+          fecha: string | null
+          historial: Json | null
+          id: string | null
+          monto: number | null
+          motivo_anulacion: string | null
+          periodo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_sin_caja_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_gasto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
       v_kardex: {
         Row: {
           anulado: boolean | null
@@ -4721,6 +5225,191 @@ export type Database = {
           },
         ]
       }
+      v_movimientos_manuales: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string | null
+          caja_nombre: string | null
+          clase: string | null
+          creado_en: string | null
+          creado_por: string | null
+          creado_por_nombre: string | null
+          empresa_id: string | null
+          estado: Database["public"]["Enums"]["estado_doc"] | null
+          fecha: string | null
+          historial: Json | null
+          id: string | null
+          monto: number | null
+          motivo: string | null
+          motivo_anulacion: string | null
+          mov_id: string | null
+          periodo: string | null
+          persona: string | null
+          tipo: Database["public"]["Enums"]["tipo_mov_caja"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_manuales_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "v_movimientos_caja"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_pagos_personal: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string | null
+          caja_nombre: string | null
+          cargo: string | null
+          creado_en: string | null
+          creado_por: string | null
+          creado_por_nombre: string | null
+          destino: string | null
+          empresa_id: string | null
+          estado: Database["public"]["Enums"]["estado_doc"] | null
+          fecha: string | null
+          gasto_id: string | null
+          gasto_sin_caja_id: string | null
+          historial: Json | null
+          id: string | null
+          medio: string | null
+          monto: number | null
+          motivo_anulacion: string | null
+          nota: string | null
+          operacion: string | null
+          periodo: string | null
+          tipo: string | null
+          trabajador_dni: string | null
+          trabajador_id: string | null
+          trabajador_nombre: string | null
+          voucher_url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_personal_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_gasto_id_fkey"
+            columns: ["gasto_id"]
+            isOneToOne: false
+            referencedRelation: "gastos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_gasto_id_fkey"
+            columns: ["gasto_id"]
+            isOneToOne: false
+            referencedRelation: "v_gastos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_gasto_sin_caja_id_fkey"
+            columns: ["gasto_sin_caja_id"]
+            isOneToOne: false
+            referencedRelation: "gastos_sin_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_gasto_sin_caja_id_fkey"
+            columns: ["gasto_sin_caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_gastos_sin_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "trabajadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_trabajador_id_fkey"
+            columns: ["trabajador_id"]
+            isOneToOne: false
+            referencedRelation: "v_trabajadores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_patrimonio: {
         Row: {
           activos: number | null
@@ -4740,6 +5429,37 @@ export type Database = {
           utilidad_entregada: number | null
         }
         Relationships: []
+      }
+      v_prestamos_pendientes: {
+        Row: {
+          empresa_id: string | null
+          pendiente: number | null
+          persona: string | null
+          ultimo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
       }
       v_productos: {
         Row: {
@@ -4811,6 +5531,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_stock_metal"
             referencedColumns: ["empresa_id", "metal_id"]
+          },
+          {
+            foreignKeyName: "metales_unidad_fk"
+            columns: ["empresa_id", "unidad"]
+            isOneToOne: false
+            referencedRelation: "unidades_medida"
+            referencedColumns: ["empresa_id", "codigo"]
           },
         ]
       }
@@ -5076,6 +5803,8 @@ export type Database = {
           retrasado: boolean | null
           ruta: string | null
           tiene_hijos: boolean | null
+          unidad: string | null
+          unidades_distintas: boolean | null
           valor_costo: number | null
           valor_venta: number | null
         }
@@ -5128,6 +5857,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_stock_metal"
             referencedColumns: ["empresa_id", "metal_id"]
+          },
+          {
+            foreignKeyName: "metales_unidad_fk"
+            columns: ["empresa_id", "unidad"]
+            isOneToOne: false
+            referencedRelation: "unidades_medida"
+            referencedColumns: ["empresa_id", "codigo"]
           },
         ]
       }
@@ -5205,6 +5941,13 @@ export type Database = {
             referencedRelation: "v_stock_metal"
             referencedColumns: ["empresa_id", "metal_id"]
           },
+          {
+            foreignKeyName: "metales_unidad_fk"
+            columns: ["empresa_id", "unidad"]
+            isOneToOne: false
+            referencedRelation: "unidades_medida"
+            referencedColumns: ["empresa_id", "codigo"]
+          },
         ]
       }
       v_trabajadores: {
@@ -5221,9 +5964,15 @@ export type Database = {
           motivo_cese: string | null
           nombre: string | null
           notas: string | null
+          pago_banco: string | null
+          pago_cci: string | null
+          pago_celular: string | null
+          pago_cuenta: string | null
+          pago_medio: string | null
           situacion: string | null
           sueldo_mensual: number | null
           telefono: string | null
+          user_id: string | null
         }
         Insert: {
           cargo?: string | null
@@ -5238,9 +5987,15 @@ export type Database = {
           motivo_cese?: string | null
           nombre?: string | null
           notas?: string | null
+          pago_banco?: string | null
+          pago_cci?: string | null
+          pago_celular?: string | null
+          pago_cuenta?: string | null
+          pago_medio?: string | null
           situacion?: never
           sueldo_mensual?: number | null
           telefono?: string | null
+          user_id?: string | null
         }
         Update: {
           cargo?: string | null
@@ -5255,9 +6010,15 @@ export type Database = {
           motivo_cese?: string | null
           nombre?: string | null
           notas?: string | null
+          pago_banco?: string | null
+          pago_cci?: string | null
+          pago_celular?: string | null
+          pago_cuenta?: string | null
+          pago_medio?: string | null
           situacion?: never
           sueldo_mensual?: number | null
           telefono?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -5289,6 +6050,8 @@ export type Database = {
           abierto_por: string | null
           abierto_por_nombre: string | null
           ajustado: boolean | null
+          anulado_en: string | null
+          anulado_por: string | null
           caja_id: string | null
           caja_nombre: string | null
           caja_tipo: Database["public"]["Enums"]["tipo_caja"] | null
@@ -5300,7 +6063,9 @@ export type Database = {
           diferencia_apertura: number | null
           diferencia_cierre: number | null
           empresa_id: string | null
+          historial: Json | null
           id: string | null
+          motivo_anulacion: string | null
           nota_apertura: string | null
           nota_cierre: string | null
           numero: number | null
@@ -5414,6 +6179,7 @@ export type Database = {
           metal_color: string | null
           metal_id: string | null
           metal_nombre: string | null
+          metal_unidad: string | null
           numero: number | null
           periodo: string | null
           peso_recibido_kg: number | null
@@ -5607,7 +6373,24 @@ export type Database = {
       }
     }
     Functions: {
+      _anular_gasto_de_pago: {
+        Args: {
+          p: Database["public"]["Tables"]["pagos_personal"]["Row"]
+          p_motivo: string
+        }
+        Returns: undefined
+      }
       _cargos_iniciales: { Args: { p_empresa: string }; Returns: undefined }
+      _categoria_personal: { Args: { p_empresa: string }; Returns: string }
+      _concepto_manual: {
+        Args: {
+          p_clase: string
+          p_motivo: string
+          p_persona: string
+          p_tipo: Database["public"]["Enums"]["tipo_mov_caja"]
+        }
+        Returns: string
+      }
       _crear_credito: {
         Args: {
           p_compra: string
@@ -5623,6 +6406,10 @@ export type Database = {
         }
         Returns: string
       }
+      _exigir_no_pago: {
+        Args: { p_gasto: string; p_sin_caja: string }
+        Returns: undefined
+      }
       _fecha_operacion: {
         Args: {
           p_fecha: string
@@ -5633,6 +6420,13 @@ export type Database = {
       _foto_mes: {
         Args: { p_empresa: string; p_periodo: string }
         Returns: Json
+      }
+      _gasto_de_pago: {
+        Args: {
+          p: Database["public"]["Tables"]["pagos_personal"]["Row"]
+          p_nombre: string
+        }
+        Returns: undefined
       }
       _inicial_credito: {
         Args: { p_plan: Json; p_total: number }
@@ -5679,8 +6473,13 @@ export type Database = {
         }
         Returns: number
       }
+      _prestamo_pendiente: {
+        Args: { p_empresa: string; p_excluir?: string; p_persona: string }
+        Returns: number
+      }
       _saldo_proveedor: { Args: { p_proveedor: string }; Returns: number }
       _sembrar_medios_pago: { Args: { p_empresa: string }; Returns: undefined }
+      _sembrar_unidades: { Args: { p_empresa: string }; Returns: undefined }
       _serie_por_defecto: {
         Args: { p_tipo: Database["public"]["Enums"]["tipo_comprobante"] }
         Returns: string
@@ -5796,6 +6595,22 @@ export type Database = {
         }
         Returns: string
       }
+      _validar_destino_pago: {
+        Args: { p_destino: string; p_medio: string }
+        Returns: undefined
+      }
+      _validar_manual: {
+        Args: {
+          p_clase: string
+          p_empresa: string
+          p_excluir?: string
+          p_monto: number
+          p_motivo: string
+          p_persona: string
+          p_tipo: Database["public"]["Enums"]["tipo_mov_caja"]
+        }
+        Returns: undefined
+      }
       abrir_caja: {
         Args: {
           p_caja: string
@@ -5883,8 +6698,20 @@ export type Database = {
         Args: { p_gasto: string; p_motivo: string }
         Returns: undefined
       }
+      anular_gasto_sin_caja: {
+        Args: { p_id: string; p_motivo: string }
+        Returns: undefined
+      }
+      anular_movimiento_manual: {
+        Args: { p_id: string; p_motivo: string }
+        Returns: undefined
+      }
       anular_pago_credito: {
         Args: { p_motivo: string; p_pago: string }
+        Returns: undefined
+      }
+      anular_pago_personal: {
+        Args: { p_id: string; p_motivo: string }
         Returns: undefined
       }
       anular_seleccion: {
@@ -5893,6 +6720,10 @@ export type Database = {
       }
       anular_traspaso: {
         Args: { p_motivo: string; p_traspaso: string }
+        Returns: undefined
+      }
+      anular_turno: {
+        Args: { p_motivo: string; p_turno: string }
         Returns: undefined
       }
       anular_venta: {
@@ -5961,6 +6792,24 @@ export type Database = {
         }
         Returns: Json
       }
+      corregir_apertura: {
+        Args: {
+          p_contado: number
+          p_nota: string
+          p_razon: string
+          p_turno: string
+        }
+        Returns: undefined
+      }
+      corregir_cierre: {
+        Args: {
+          p_contado: number
+          p_nota: string
+          p_razon: string
+          p_turno: string
+        }
+        Returns: undefined
+      }
       corregir_compra: {
         Args: { p_compra: string; p_items: Json; p_motivo: string }
         Returns: Json
@@ -5977,6 +6826,54 @@ export type Database = {
       dashboard_serie: {
         Args: { p_desde: string; p_empresa: string; p_hasta: string }
         Returns: Json
+      }
+      editar_gasto: {
+        Args: {
+          p_caja: string
+          p_categoria: string
+          p_concepto: string
+          p_gasto: string
+          p_monto: number
+          p_razon: string
+        }
+        Returns: undefined
+      }
+      editar_gasto_sin_caja: {
+        Args: {
+          p_categoria: string
+          p_concepto: string
+          p_id: string
+          p_monto: number
+          p_razon: string
+        }
+        Returns: undefined
+      }
+      editar_movimiento_manual: {
+        Args: {
+          p_caja: string
+          p_id: string
+          p_monto: number
+          p_motivo: string
+          p_persona: string
+          p_razon: string
+        }
+        Returns: undefined
+      }
+      editar_pago_personal: {
+        Args: {
+          p_caja: string
+          p_destino?: string
+          p_id: string
+          p_medio?: string
+          p_monto: number
+          p_nota: string
+          p_operacion?: string
+          p_periodo: string
+          p_razon: string
+          p_tipo: string
+          p_voucher_url?: string
+        }
+        Returns: undefined
       }
       es_miembro: { Args: { p_empresa: string }; Returns: boolean }
       es_miembro_ruta: { Args: { p_nombre: string }; Returns: boolean }
@@ -6019,6 +6916,38 @@ export type Database = {
         Returns: boolean
       }
       periodo_de: { Args: { p: string }; Returns: string }
+      planilla_mes: {
+        Args: { p_empresa: string; p_periodo: string }
+        Returns: {
+          a_pagar: number
+          adelantos: number
+          bonos: number
+          cargo: string
+          desc_faltas: number
+          desc_permisos: number
+          desc_tardanzas: number
+          descuentos: number
+          dias_mes: number
+          dias_por_marcar: number
+          domingos: number
+          faltas: number
+          horas_extra: number
+          minutos_tarde: number
+          monto_domingos: number
+          monto_extras: number
+          nombre: string
+          pagado: number
+          pagos: number
+          permisos: number
+          saldo: number
+          situacion: string
+          sueldo_mensual: number
+          sueldo_periodo: number
+          tardanzas: number
+          trabajador_id: string
+          ultimo_pago: string
+        }[]
+      }
       precios_promedio: {
         Args: { p_dias?: number; p_empresa: string }
         Returns: {
@@ -6182,6 +7111,16 @@ export type Database = {
         }
         Returns: string
       }
+      registrar_gasto_sin_caja: {
+        Args: {
+          p_categoria?: string
+          p_comprobante_url?: string
+          p_concepto: string
+          p_empresa: string
+          p_monto: number
+        }
+        Returns: string
+      }
       registrar_horas_extra: {
         Args: {
           p_empresa: string
@@ -6194,6 +7133,18 @@ export type Database = {
       }
       registrar_limpieza: {
         Args: { p_compra: string; p_lineas?: Json; p_motivo?: string }
+        Returns: Json
+      }
+      registrar_movimiento_manual: {
+        Args: {
+          p_caja: string
+          p_clase: string
+          p_empresa: string
+          p_monto: number
+          p_motivo: string
+          p_persona?: string
+          p_tipo: Database["public"]["Enums"]["tipo_mov_caja"]
+        }
         Returns: Json
       }
       registrar_movimiento_socio: {
@@ -6222,6 +7173,22 @@ export type Database = {
           p_nota?: string
         }
         Returns: Json
+      }
+      registrar_pago_personal: {
+        Args: {
+          p_caja?: string
+          p_destino?: string
+          p_empresa: string
+          p_medio?: string
+          p_monto: number
+          p_nota?: string
+          p_operacion?: string
+          p_periodo: string
+          p_tipo: string
+          p_trabajador: string
+          p_voucher_url?: string
+        }
+        Returns: string
       }
       registrar_seleccion: {
         Args: {
@@ -6278,6 +7245,9 @@ export type Database = {
         Returns: {
           asistencias: number
           cargo: string
+          desc_faltas: number
+          desc_permisos: number
+          desc_tardanzas: number
           descansos: number
           dias_por_marcar: number
           domingos_trabajados: number
@@ -6287,6 +7257,7 @@ export type Database = {
           horas_aprobadas: number
           horas_extra: number
           horas_pendientes: number
+          minutos_tarde: number
           monto_domingos: number
           monto_horas: number
           monto_total: number
@@ -6294,6 +7265,7 @@ export type Database = {
           permisos: number
           situacion: string
           sueldo_mensual: number
+          tardanzas: number
           trabajador_id: string
           vacaciones: number
         }[]
@@ -6469,6 +7441,7 @@ export type Database = {
     Enums: {
       estado_asistencia:
         | "asistio"
+        | "tardanza"
         | "falta"
         | "descanso"
         | "permiso"
@@ -6487,6 +7460,7 @@ export type Database = {
         | "ajuste"
         | "devolucion"
         | "adelanto"
+        | "prestamo"
       rol_miembro: "dueno" | "socio" | "cajero" | "balancero" | "administrador"
       tipo_ajuste: "conteo" | "merma" | "reclasificacion" | "otro"
       tipo_aporte: "aporte" | "retiro" | "retiro_utilidad" | "capitalizacion"
@@ -6625,6 +7599,7 @@ export const Constants = {
     Enums: {
       estado_asistencia: [
         "asistio",
+        "tardanza",
         "falta",
         "descanso",
         "permiso",
@@ -6644,6 +7619,7 @@ export const Constants = {
         "ajuste",
         "devolucion",
         "adelanto",
+        "prestamo",
       ],
       rol_miembro: ["dueno", "socio", "cajero", "balancero", "administrador"],
       tipo_ajuste: ["conteo", "merma", "reclasificacion", "otro"],

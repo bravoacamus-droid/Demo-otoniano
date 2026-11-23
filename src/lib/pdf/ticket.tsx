@@ -1,5 +1,5 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { fechaHora, kg, soles, ETIQUETA_MEDIO } from "@/lib/formato";
+import { cantidad, fechaHora, soles, ETIQUETA_MEDIO } from "@/lib/formato";
 
 // Ticket de 80 mm (226.77 pt de ancho) para la impresora térmica: en blanco y negro, con el logo arriba.
 // El alto crece con las líneas. El comprobante A4 con la marca a color está en comprobante.tsx.
@@ -30,7 +30,7 @@ export interface DatosTicket {
   documento: string | null;
   medio_pago: string | null;
   estado: string;
-  items: { metal: string; bruto?: string | null; descuento?: string | null; neto: string; precio: string | null; importe: string | null }[];
+  items: { metal: string; unidad?: string | null; bruto?: string | null; descuento?: string | null; neto: string; precio: string | null; importe: string | null }[];
   total: string;
   /** Líneas bajo el total (p. ej. descuento a favor y lo pagado) */
   extras?: [string, string][];
@@ -68,12 +68,12 @@ export function TicketPdf({ d }: { d: DatosTicket }) {
             <Text style={s.bold}>{it.metal}</Text>
             {it.bruto && (
               <View style={s.fila}>
-                <Text>Bruto {kg(it.bruto)}</Text>
-                <Text>{Number(it.descuento) > 0 ? `Merma ${kg(it.descuento)}` : ""}</Text>
+                <Text>Bruto {cantidad(it.bruto, it.unidad)}</Text>
+                <Text>{Number(it.descuento) > 0 ? `Merma ${cantidad(it.descuento, it.unidad)}` : ""}</Text>
               </View>
             )}
             <View style={s.fila}>
-              <Text>{kg(it.neto)} x {it.precio ? soles(it.precio) : "—"}</Text>
+              <Text>{cantidad(it.neto, it.unidad)} x {it.precio ? soles(it.precio) : "—"}</Text>
               <Text style={s.bold}>{it.importe ? soles(it.importe) : "—"}</Text>
             </View>
           </View>

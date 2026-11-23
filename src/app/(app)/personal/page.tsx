@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarCheck, FileSpreadsheet, FileText } from "lucide-react";
+import { Banknote, CalendarCheck, FileSpreadsheet, FileText } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { periodoPersonal } from "@/lib/personal";
 import { EnlaceDescarga } from "@/components/ui/enlace-descarga";
@@ -48,14 +48,17 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
   const { supabase, empresa, rol } = await exigir("personal");
   const aprueba = puede(rol, "aprobarExtras");
 
-  const [{ data: todos }, { data: resumen }, { data: hoyAsis }, { data: filasCargo }, { data: usuarios }, { data: miembros }] = await Promise.all([
+  const [{ data: todos }, { data: resumen }, { data: hoyAsis }, { data: filasCargo }, { data: usuarios }, { data: miembros }, { data: planilla }] = await Promise.all([
     supabase.from("v_trabajadores").select("*").eq("empresa_id", empresa.id).order("nombre"),
     supabase.rpc("resumen_personal", { p_empresa: empresa.id, p_desde: desde, p_hasta: hasta }),
     supabase.from("asistencias").select("trabajador_id, estado, entrada, salida, horas_extra, nota").eq("empresa_id", empresa.id).eq("fecha", hoy),
     supabase.from("cargos").select("id, nombre, rol, secciones, activo").eq("empresa_id", empresa.id).eq("activo", true).order("creado_en"),
     supabase.from("trabajadores").select("id, user_id").eq("empresa_id", empresa.id).not("user_id", "is", null),
     supabase.from("miembros").select("user_id, email, activo").eq("empresa_id", empresa.id),
+    supabase.rpc("planilla_mes", { p_empresa: empresa.id, p_periodo: hoy.slice(0, 7) }),
   ]);
+  // Para el botón de pagos: cuánto falta pagar este mes
+  const faltaPagar = ((planilla ?? []) as { saldo: number }[]).reduce((s, f) => s + Math.max(Number(f.saldo), 0), 0);
   const cargos = (filasCargo ?? []) as Cargo[];
   // Trabajadores que entran al sistema: su usuario (correo y si está activo)
   const accesos = new Map<string, AccesoTrabajador>((usuarios ?? []).map((u) => {
@@ -71,7 +74,7 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
   const grupoHoy = (estados: string[] | null) => enEmpresaHoy
     .map((t) => ({ t, m: marcaHoy.get(t.id!) }))
     .filter(({ m }) => (estados ? !!m && estados.includes(m.estado) : !m));
-  const hoyAsistieron = grupoHoy(["asistio"]);
+  const hoyAsistieron = grupoHoy(["asistio", "tardanza"]);
   const hoyFaltaron = grupoHoy(["falta"]);
   const hoyOtros = grupoHoy(["descanso", "permiso", "vacaciones"]);
   const hoySinMarcar = grupoHoy(null);
@@ -94,7 +97,14 @@ export default async function PersonalPage({ searchParams }: { searchParams: Pro
       <Encabezado
         titulo="Personal"
         descripcion="Ingreso y cese de cada trabajador, asistencia, domingos trabajados y horas extras"
-        acciones={<><BotonLink href="/personal/asistencia" variante="secundario"><CalendarCheck className="size-4" /> Marcar asistencia</BotonLink><BotonTrabajador cargos={cargos} /></>}
+        acciones={<><BotonLink href="/personal/asistencia" variante="secundario"><CalendarCheck className="size-4" /> Marcar asistencia</BotonLink><Link href="/personal/pagos"
+          className="flex items-center gap-3 rounded-xl bg-marca-600 px-4 py-2 text-white shadow-sm transition hover:bg-marca-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-300">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15"><Banknote className="size-5" /></span>
+          <span className="min-w-0 text-left">
+            <span className="block text-sm font-semibold leading-tight">Pagar al personal</span>
+            <span className="cifra block text-xs leading-tight text-white/80">{faltaPagar > 0 ? `Falta pagar ${soles(faltaPagar)} este mes` : "Sueldos, adelantos y bonos"}</span>
+          </span>
+        </Link><BotonTrabajador cargos={cargos} /></>}
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

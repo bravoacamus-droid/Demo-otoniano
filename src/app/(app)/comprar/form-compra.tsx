@@ -12,7 +12,7 @@ import { Aviso, Insignia, Tarjeta } from "@/components/ui/basicos";
 import { Boton } from "@/components/ui/boton";
 import { cx } from "@/components/ui/clases";
 import { aCentimos, aGramos, centimosASoles, gramosAKg, importeCentimos, normalizar } from "@/lib/montos";
-import { soles } from "@/lib/formato";
+import { soles, unidadCorta } from "@/lib/formato";
 import { subirArchivo } from "@/lib/archivos";
 import type { Caja, MedioPagoConf, Producto, Proveedor } from "@/lib/tipos";
 import { registrarCompra, saldoAFavor, type CompraRegistrada } from "../compras/acciones";
@@ -213,7 +213,7 @@ export function FormCompra({
       <Tarjeta className="p-4">
         <p className="mb-2 text-sm font-medium text-stone-700">¿Qué productos trae?</p>
         <SelectorProducto productos={productos} onElegir={agregar} agregados={agregados}
-          precio={(p) => `${soles(precioSugerido(p, clase))}/kg`} />
+          precio={(p) => `${soles(precioSugerido(p, clase))}/${unidadCorta(p.unidad)}`} />
         {sinPeso.length > 0 && (
           <button type="button" onClick={() => irAPeso(sinPeso[0].uid)}
             className="mt-3 flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-marca-200 bg-marca-50 px-3 text-sm text-marca-800 hover:bg-marca-100">
@@ -232,6 +232,8 @@ export function FormCompra({
         const ref = referencias[l.metal_id];
         const sugerido = precioSugerido(m, clase);
         const ruta = partesRuta(m.ruta);
+        const u = unidadCorta(m.unidad);
+        const esPeso = u === "kg" || u === "t";
         return (
           <Tarjeta key={l.uid} id={`linea-${l.uid}`}
             className={cx("scroll-mt-4 border-l-4 p-4 transition-shadow", resaltada === l.uid && "ring-2 ring-marca-400")}
@@ -257,13 +259,13 @@ export function FormCompra({
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Campo etiqueta="Peso bruto (kg)">
+              <Campo etiqueta={esPeso ? `Peso bruto (${u})` : `Cantidad (${u})`}>
                 <InputNumero id={`bruto-${l.uid}`} value={l.bruto} onChange={(e) => cambiar(l.uid, "bruto", e.target.value)} placeholder="0.00" />
               </Campo>
-              <Campo etiqueta="Merma kg (opcional)">
+              <Campo etiqueta={`Merma ${u} (opcional)`}>
                 <InputNumero value={l.merma} onChange={(e) => cambiar(l.uid, "merma", e.target.value)} placeholder="0.00" />
               </Campo>
-              <Campo etiqueta="Precio S/ por kg">
+              <Campo etiqueta={`Precio S/ por ${u}`}>
                 <InputNumero
                   value={l.precio}
                   onChange={(e) => cambiar(l.uid, "precio", e.target.value)}
@@ -272,13 +274,13 @@ export function FormCompra({
                 />
               </Campo>
               <div className="rounded-lg bg-stone-50 px-3 py-2 text-right">
-                <p className="text-xs text-stone-500">{gramosAKg(c.neto)} kg neto</p>
+                <p className="text-xs text-stone-500">{gramosAKg(c.neto)} {u} neto</p>
                 <p className="cifra text-lg font-semibold">S/ {centimosASoles(c.importe)}</p>
               </div>
             </div>
             <p className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-stone-500">
               <span>
-                Precio del día ({clase}): <b className="cifra font-medium text-stone-700">{soles(sugerido)}/kg</b>
+                Precio del día ({clase}): <b className="cifra font-medium text-stone-700">{soles(sugerido)}/{u}</b>
                 {l.precioManual && aCentimos(l.precio) !== aCentimos(sugerido) && (
                   <button type="button" className="ml-1 font-medium text-marca-700 hover:underline"
                     onClick={() => setLineas((ls) => ls.map((x) => x.uid === l.uid ? { ...x, precio: sugerido, precioManual: false } : x))}>
@@ -286,9 +288,9 @@ export function FormCompra({
                   </button>
                 )}
               </span>
-              {c.merma > 0 && <span className="text-amber-700">Se descuentan {gramosAKg(c.merma)} kg de merma</span>}
-              {verCostos && ref?.costo_promedio != null && <span>Costo promedio en stock: <b className="cifra font-medium text-stone-700">{soles(ref.costo_promedio)}/kg</b></span>}
-              {ref?.compra_promedio != null && <span>Compra promedio (90 días): <b className="cifra font-medium text-stone-700">{soles(ref.compra_promedio)}/kg</b></span>}
+              {c.merma > 0 && <span className="text-amber-700">Se descuentan {gramosAKg(c.merma)} {u} de merma</span>}
+              {verCostos && ref?.costo_promedio != null && <span>Costo promedio en stock: <b className="cifra font-medium text-stone-700">{soles(ref.costo_promedio)}/{u}</b></span>}
+              {ref?.compra_promedio != null && <span>Compra promedio (90 días): <b className="cifra font-medium text-stone-700">{soles(ref.compra_promedio)}/{u}</b></span>}
             </p>
           </Tarjeta>
         );

@@ -10,7 +10,7 @@ import { SelectorCliente } from "@/components/selector-cliente";
 import { SelectorProducto, partesRuta } from "@/components/selector-producto";
 import { Boton } from "@/components/ui/boton";
 import { aCentimos, aGramos, centimosASoles, gramosAKg, importeCentimos, normalizar } from "@/lib/montos";
-import { kg, soles } from "@/lib/formato";
+import { cantidad, soles, unidadCorta } from "@/lib/formato";
 import { subirArchivo } from "@/lib/archivos";
 import type { Caja, Comprador, MedioPagoConf, Producto } from "@/lib/tipos";
 import { COMPROBANTES, TIPOS_COMPROBANTE, comprobanteSugerido, type TipoComprobante } from "@/lib/comprobantes";
@@ -24,6 +24,8 @@ export interface MetalConStock {
   ruta: string;
   nivel: number;
   color: string | null;
+  /** Unidad de medida (kg, und, caja…): la cantidad «kg» va en esta unidad */
+  unidad: string;
   kg: string;
   costo_promedio: string | null;
   precio_venta: string;
@@ -107,7 +109,8 @@ export function FormVenta({
       return false;
     }
     if (desdeTeclado) enfocar.current = p.id;
-    setLineas((ls) => [...ls, { uid: crypto.randomUUID(), metal_id: p.id, salida: "", recibido: "", precio: m.precio_venta }]);
+    // Lo último que se agrega va arriba, junto al buscador: no hay que bajar a llenarlo
+    setLineas((ls) => [{ uid: crypto.randomUUID(), metal_id: p.id, salida: "", recibido: "", precio: m.precio_venta }, ...ls]);
   }
   function elegirMedio(id: string) {
     setMedioId(id);
@@ -118,10 +121,13 @@ export function FormVenta({
     setLineas((ls) => ls.map((l) => (l.uid === uid ? { ...l, [campo]: v } : l)));
   }
 
-  const totalSalida = lineas.reduce((s, l) => s + aGramos(l.salida), 0);
   const totalImporte = lineas.reduce((s, l) => s + importeCentimos(aGramos(l.recibido), aCentimos(l.precio)), 0);
-  const totalRecibido = lineas.reduce((s, l) => s + aGramos(l.recibido), 0);
-  const ventaPromCent = totalRecibido > 0 ? Math.round((totalImporte * 1000) / totalRecibido) : 0;
+  // Kilos y venta promedio por kg: solo de los productos que se pesan (no de los que van por unidad)
+  const enKg = lineas.filter((l) => metal(l.metal_id).unidad === "kg");
+  const totalSalida = enKg.reduce((s, l) => s + aGramos(l.salida), 0);
+  const totalRecibido = enKg.reduce((s, l) => s + aGramos(l.recibido), 0);
+  const importeKg = enKg.reduce((s, l) => s + importeCentimos(aGramos(l.recibido), aCentimos(l.precio)), 0);
+  const ventaPromCent = totalRecibido > 0 ? Math.round((importeKg * 1000) / totalRecibido) : 0;
 
   async function guardar() {
     setError(null);
@@ -133,7 +139,7 @@ export function FormVenta({
     for (const l of lineas) {
       const m = metal(l.metal_id);
       if (aGramos(l.salida) <= 0) return setError(`Ingrese el peso de salida de ${m.nombre}.`);
-      if (aGramos(l.salida) > aGramos(m.kg)) return setError(`No hay suficiente ${m.nombre}: disponible ${kg(m.kg)}.`);
+      if (aGramos(l.salida) > aGramos(m.kg)) return setError(`No hay suficiente ${m.nombre}: disponible ${cantidad(m.kg, m.unidad)}.`);
       if (confirmarYa && (!normalizar(l.recibido) || !normalizar(l.precio))) {
         return setError(`Ingrese el peso recibido y el precio de ${m.nombre}.`);
       }
@@ -247,8 +253,8 @@ export function FormVenta({
         <div className="mb-4">
           <SelectorProducto productos={productos} onElegir={agregar} agregados={agregados}
             bloqueado={bloqueado}
-            precio={(p) => `${soles(p.precio_venta)}/kg`}
-            extra={(p) => conStock.has(p.id) ? <span className="text-stone-500">Disponible {kg(conStock.get(p.id)!.kg)}</span> : null} />
+            precio={(p) => `${soles(p.precio_venta)}/${unidadCorta(p.unidad)}`}
+            extra={(p) => conStock.has(p.id) ? <span className="text-stone-500">Disponible {cantidad(conStock.get(p.id)!.kg, conStock.get(p.id)!.unidad)}</span> : null} />
         </div>
 
         <label className="mb-3 flex items-center gap-2 text-sm">
@@ -260,6 +266,7 @@ export function FormVenta({
         <div className="space-y-3">
           {lineas.map((l, i) => {
             const m = metal(l.metal_id);
+            const u = unidadCorta(m.unidad);
             const merma = aGramos(l.salida) - aGramos(l.recibido);
             const costo = m.costo_promedio ? aCentimos(String(m.costo_promedio)) : 0;
             const margen = importeCentimos(aGramos(l.recibido), aCentimos(l.precio)) - importeCentimos(aGramos(l.recibido), costo);
@@ -269,42 +276,42 @@ export function FormVenta({
                 style={{ borderLeftColor: m.color ?? "var(--color-stone-300)" }}>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <span className="cifra flex size-7 shrink-0 items-center justify-center rounded-md bg-marca-50 text-xs font-semibold text-marca-700">{i + 1}</span>
+                    <span className="cifra flex size-7 shrink-0 items-center justify-center rounded-md bg-marca-50 text-xs font-semibold text-marca-700">{lineas.length - i}</span>
                     <span className="min-w-0">
                       {partesRuta(m.ruta).familia && <span className="block truncate text-[11px] font-medium uppercase tracking-wide text-stone-500">{partesRuta(m.ruta).familia}</span>}
                       <span className="block truncate font-semibold text-stone-900">{partesRuta(m.ruta).nombre}</span>
                     </span>
                   </span>
                   <span className={`flex shrink-0 items-center gap-2 text-xs ${aGramos(l.salida) > aGramos(m.kg) ? "font-semibold text-red-700" : "text-stone-500"}`}>
-                    Disponible {kg(m.kg)}
+                    Disponible {cantidad(m.kg, m.unidad)}
                     <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.uid !== l.uid))} className="rounded p-1 hover:bg-red-50 hover:text-red-600" aria-label="Quitar">
                       <Trash2 className="size-4" />
                     </button>
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <Campo etiqueta="Salida (kg)">
+                  <Campo etiqueta={`Salida (${u})`}>
                     <InputNumero id={`salida-${l.metal_id}`} value={l.salida} onChange={(e) => cambiar(l.uid, "salida", e.target.value)} placeholder="0.00" />
                   </Campo>
                   {confirmarYa && (
                     <>
-                      <Campo etiqueta="Recibido (kg)">
+                      <Campo etiqueta={`Recibido (${u})`}>
                         <InputNumero value={l.recibido} onChange={(e) => cambiar(l.uid, "recibido", e.target.value)} placeholder="0.00" />
                       </Campo>
-                      <Campo etiqueta="Precio S/ por kg">
+                      <Campo etiqueta={`Precio S/ por ${u}`}>
                         <InputNumero value={l.precio} onChange={(e) => cambiar(l.uid, "precio", e.target.value)} />
                       </Campo>
                       <div className="rounded-lg bg-stone-50 px-3 py-2 text-right">
-                        <p className="text-xs text-stone-500">Merma {gramosAKg(Math.max(merma, 0))} kg</p>
+                        <p className="text-xs text-stone-500">Merma {gramosAKg(Math.max(merma, 0))} {u}</p>
                         <p className="cifra font-semibold">S/ {centimosASoles(importeCentimos(aGramos(l.recibido), aCentimos(l.precio)))}</p>
                       </div>
                     </>
                   )}
                 </div>
                 <p className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-stone-500">
-                  {verCostos && m.costo_promedio && <span>Costo promedio: <b className="cifra font-medium text-stone-700">{soles(m.costo_promedio)}/kg</b></span>}
-                  {m.venta_promedio != null && <span>Venta promedio (90 días): <b className="cifra font-medium text-stone-700">{soles(m.venta_promedio)}/kg</b></span>}
-                  <span>Precio del día: <b className="cifra font-medium text-stone-700">{soles(m.precio_venta)}/kg</b></span>
+                  {verCostos && m.costo_promedio && <span>Costo promedio: <b className="cifra font-medium text-stone-700">{soles(m.costo_promedio)}/{u}</b></span>}
+                  {m.venta_promedio != null && <span>Venta promedio (90 días): <b className="cifra font-medium text-stone-700">{soles(m.venta_promedio)}/{u}</b></span>}
+                  <span>Precio del día: <b className="cifra font-medium text-stone-700">{soles(m.precio_venta)}/{u}</b></span>
                   {verCostos && confirmarYa && aGramos(l.recibido) > 0 && costo > 0 && (
                     <span className={margen < 0 ? "font-medium text-red-700" : "font-medium text-emerald-700"}>Margen estimado S/ {centimosASoles(margen)}</span>
                   )}
@@ -348,7 +355,7 @@ export function FormVenta({
       <div className="sticky bottom-20 z-10 md:bottom-4">
         <div className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-superficie p-3 shadow-lg">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs text-stone-500">Salida {gramosAKg(totalSalida)} kg{confirmarYa && ventaPromCent > 0 && <> · venta prom. S/ {centimosASoles(ventaPromCent)}/kg</>}</p>
+            <p className="truncate text-xs text-stone-500">{enKg.length === lineas.length ? `Salida ${gramosAKg(totalSalida)} kg` : `${lineas.length} producto(s)${enKg.length ? ` · ${gramosAKg(totalSalida)} kg` : ""}`}{confirmarYa && ventaPromCent > 0 && <> · venta prom. S/ {centimosASoles(ventaPromCent)}/kg</>}</p>
             <p className="cifra truncate text-[clamp(1.125rem,5.5vw,1.25rem)] font-bold">{confirmarYa ? `S/ ${centimosASoles(totalImporte)}` : "Pendiente de pesaje"}</p>
             {confirmarYa && plan && <p className="line-clamp-2 text-xs font-medium text-marca-700">A crédito · {plan.cuotas === 1 ? "pago único" : `${plan.cuotas} cuotas`}</p>}
           </div>

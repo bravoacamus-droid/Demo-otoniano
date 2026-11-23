@@ -36,12 +36,12 @@ export default async function LimpiezaPage({ searchParams }: { searchParams: Pro
 
   const idsPend = (pendientes ?? []).map((p) => p.id);
   const { data: lineas } = idsPend.length
-    ? await supabase.from("v_compra_items").select("id, compra_id, metal_id, metal_nombre, metal_color, peso_neto_kg, precio_kg").in("compra_id", idsPend)
-    : { data: [] as { id: string; compra_id: string; metal_id: string; metal_nombre: string; metal_color: string | null; peso_neto_kg: number; precio_kg: number }[] };
+    ? await supabase.from("v_compra_items").select("id, compra_id, metal_id, metal_nombre, metal_color, metal_unidad, peso_neto_kg, precio_kg").in("compra_id", idsPend)
+    : { data: [] as { id: string; compra_id: string; metal_id: string; metal_nombre: string; metal_color: string | null; metal_unidad: string | null; peso_neto_kg: number; precio_kg: number }[] };
   const ruta = new Map(productos.map((p) => [p.id, p.ruta]));
   const lineasDe = (compra: string): LineaPorLimpiar[] => (lineas ?? []).filter((l) => l.compra_id === compra)
     .map((l) => ({
-      id: l.id, metal_id: l.metal_id, producto: ruta.get(l.metal_id) ?? l.metal_nombre, metal_color: l.metal_color,
+      id: l.id, metal_id: l.metal_id, producto: ruta.get(l.metal_id) ?? l.metal_nombre, metal_color: l.metal_color, unidad: l.metal_unidad,
       peso_neto_kg: Number(l.peso_neto_kg), precio_kg: verMontos ? Number(l.precio_kg) : 0,
     }));
   // Desde Inventario (menú de tres puntos): solo las compras con ese producto o sus variantes, y la primera ya abierta

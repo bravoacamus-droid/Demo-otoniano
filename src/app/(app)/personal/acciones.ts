@@ -25,9 +25,18 @@ export async function guardarTrabajador(_: unknown, fd: FormData): Promise<Resul
     motivo_cese: texto(fd, "motivo_cese"),
     sueldo_mensual: sueldo ? Number(sueldo) : null,
     notas: texto(fd, "notas"),
+    pago_medio: texto(fd, "pago_medio") ?? "efectivo",
+    pago_celular: texto(fd, "pago_celular")?.replace(/\D/g, "") || null,
+    pago_banco: texto(fd, "pago_banco"),
+    pago_cuenta: texto(fd, "pago_cuenta")?.replace(/[^\d-]/g, "") || null,
+    pago_cci: texto(fd, "pago_cci")?.replace(/\D/g, "") || null,
   };
   if (!datos.nombre) return fallo("Ingrese el nombre del trabajador.");
   if (datos.dni && !/^\d{8}$/.test(datos.dni)) return fallo("El DNI debe tener 8 dígitos.");
+  if (datos.pago_celular && !/^9\d{8}$/.test(datos.pago_celular)) return fallo("El celular de Yape/Plin debe tener 9 dígitos y empezar con 9.");
+  if (datos.pago_cci && !/^\d{20}$/.test(datos.pago_cci)) return fallo("El CCI debe tener 20 dígitos.");
+  if ((datos.pago_medio === "yape" || datos.pago_medio === "plin") && !datos.pago_celular) return fallo("Ingrese el celular al que cobra por Yape/Plin.");
+  if (datos.pago_medio === "transferencia" && (!datos.pago_banco || !datos.pago_cuenta)) return fallo("Ingrese el banco y el número de cuenta para la transferencia.");
   if (!datos.fecha_ingreso) return fallo("Ingrese la fecha de ingreso.");
   if (datos.fecha_ingreso > hoyLima()) return fallo("La fecha de ingreso no puede ser futura.");
   if (datos.fecha_cese && datos.fecha_cese < datos.fecha_ingreso) return fallo("La fecha de cese no puede ser anterior al ingreso.");
@@ -67,6 +76,8 @@ export interface FilaAsistencia {
   entrada: string;
   salida: string;
   horas_extra: string;
+  /** Minutos de tardanza («» = según hora de entrada o los minutos por defecto) */
+  minutos_tarde?: string;
   nota: string;
 }
 

@@ -7,7 +7,7 @@ import { Campo, InputNumero, Select } from "@/components/ui/campos";
 import { Aviso, PuntoMetal, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
 import { Boton } from "@/components/ui/boton";
 import { aCentimos, aGramos, centimosASoles, gramosAKg, importeCentimos, normalizar } from "@/lib/montos";
-import { kg } from "@/lib/formato";
+import { cantidad, unidadCorta } from "@/lib/formato";
 import { subirArchivo } from "@/lib/archivos";
 import type { Caja, MedioPagoConf } from "@/lib/tipos";
 import { confirmarVenta } from "../acciones";
@@ -18,7 +18,7 @@ export function ConfirmarVenta({
 }: {
   ventaId: string;
   empresaId: string;
-  items: { id: string; metal: string; color: string | null; salida: string }[];
+  items: { id: string; metal: string; color: string | null; salida: string; unidad?: string | null }[];
   cajas: Caja[];
   medios: MedioPagoConf[];
 }) {
@@ -83,20 +83,21 @@ export function ConfirmarVenta({
         {items.map((i) => {
           const d = datos[i.id];
           const merma = aGramos(i.salida) - aGramos(d.recibido);
+          const u = unidadCorta(i.unidad);
           return (
             <div key={i.id} className="grid grid-cols-2 items-end gap-2 rounded-lg bg-stone-50 p-3 sm:grid-cols-4">
               <div className="col-span-2 sm:col-span-1">
                 <p className="flex items-center gap-2 font-semibold"><PuntoMetal color={i.color} />{i.metal}</p>
-                <p className="text-xs text-stone-500">Salió {kg(i.salida)}</p>
+                <p className="text-xs text-stone-500">Salió {cantidad(i.salida, i.unidad)}</p>
               </div>
-              <Campo etiqueta="Recibido (kg)">
+              <Campo etiqueta={`Recibido (${u})`}>
                 <InputNumero value={d.recibido} onChange={(e) => setDatos({ ...datos, [i.id]: { ...d, recibido: e.target.value } })} />
               </Campo>
-              <Campo etiqueta="Precio S/ por kg">
+              <Campo etiqueta={`Precio S/ por ${u}`}>
                 <InputNumero value={d.precio} onChange={(e) => setDatos({ ...datos, [i.id]: { ...d, precio: e.target.value } })} />
               </Campo>
               <div className="text-right text-sm">
-                <p className="text-xs text-stone-500">Merma {d.recibido ? gramosAKg(merma) : "—"} kg</p>
+                <p className="text-xs text-stone-500">Merma {d.recibido ? gramosAKg(merma) : "—"} {u}</p>
                 <p className="cifra font-semibold">S/ {centimosASoles(importeCentimos(aGramos(d.recibido), aCentimos(d.precio)))}</p>
               </div>
             </div>

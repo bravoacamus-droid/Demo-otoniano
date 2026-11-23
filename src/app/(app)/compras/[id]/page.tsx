@@ -6,7 +6,7 @@ import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
 import { obtenerContexto } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
 import { urlArchivo } from "@/lib/archivos-servidor";
-import { ETIQUETA_CLASE, fechaHora, kg, porcentaje, soles } from "@/lib/formato";
+import { ETIQUETA_CLASE, cantidad, fechaHora, kg, porcentaje, soles, unidadCorta } from "@/lib/formato";
 import { Aviso, Dato, Encabezado, Insignia, PuntoMetal, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
 import { TablaDatos } from "@/components/ui/tabla";
 import { BotonAnular } from "@/components/boton-anular";
@@ -39,6 +39,8 @@ export default async function CompraDetalle({
   ]);
   const rutaDe = (metal: string, nombre: string) => rutas?.find((r) => r.id === metal)?.ruta ?? nombre;
   const conMerma = (items ?? []).some((i) => Number(i.descuento_kg) > 0);
+  const unidades = new Set((items ?? []).map((i) => i.metal_unidad ?? "kg"));
+  const todoKg = unidades.size === 1 && unidades.has("kg");
   const verHistorial = puede(rol, "verTodo") || puede(rol, "vender");
   const vigente = (sel ?? []).find((s) => s.estado === "registrada");
   const conLimpieza = !!vigente && (Number(vigente.kg) > 0 || Number(vigente.kg_traslado) > 0);
@@ -66,7 +68,7 @@ export default async function CompraDetalle({
                 abrirAlInicio={sp.corregir === "1"}
                 lineas={(items ?? []).map((i) => ({
                   id: i.id, producto: rutaDe(i.metal_id, i.metal_nombre),
-                  peso_bruto_kg: i.peso_bruto_kg, descuento_kg: i.descuento_kg, precio_kg: i.precio_kg,
+                  peso_bruto_kg: i.peso_bruto_kg, descuento_kg: i.descuento_kg, precio_kg: i.precio_kg, unidad: i.metal_unidad,
                 }))}
               />
             )}
@@ -109,18 +111,18 @@ export default async function CompraDetalle({
                     ? <Link href={`/inventario/${i.metal_id}`} className="flex items-center gap-2 hover:underline"><PuntoMetal color={i.metal_color} />{rutaDe(i.metal_id, i.metal_nombre)}</Link>
                     : <span className="flex items-center gap-2"><PuntoMetal color={i.metal_color} />{rutaDe(i.metal_id, i.metal_nombre)}</span>,
                 },
-                { titulo: "Peso bruto", alinear: "der", celda: (i) => <span className="cifra">{kg(i.peso_bruto_kg)}</span> },
+                { titulo: todoKg ? "Peso bruto" : "Cantidad", alinear: "der", celda: (i) => <span className="cifra">{cantidad(i.peso_bruto_kg, i.metal_unidad)}</span> },
                 ...(conMerma ? [
-                  { titulo: "Merma", alinear: "der" as const, celda: (i: NonNullable<typeof items>[number]) => <span className="cifra text-amber-700">{Number(i.descuento_kg) ? kg(i.descuento_kg) : "—"}</span> },
-                  { titulo: "Neto", alinear: "der" as const, celda: (i: NonNullable<typeof items>[number]) => <span className="cifra font-medium">{kg(i.peso_neto_kg)}</span> },
+                  { titulo: "Merma", alinear: "der" as const, celda: (i: NonNullable<typeof items>[number]) => <span className="cifra text-amber-700">{Number(i.descuento_kg) ? cantidad(i.descuento_kg, i.metal_unidad) : "—"}</span> },
+                  { titulo: "Neto", alinear: "der" as const, celda: (i: NonNullable<typeof items>[number]) => <span className="cifra font-medium">{cantidad(i.peso_neto_kg, i.metal_unidad)}</span> },
                 ] : []),
-                { titulo: "Precio/kg", alinear: "der", celda: (i) => <span className="cifra">{soles(i.precio_kg)}</span> },
+                { titulo: todoKg ? "Precio/kg" : "Precio", alinear: "der", celda: (i) => <span className="cifra">{soles(i.precio_kg)}{!todoKg && `/${unidadCorta(i.metal_unidad)}`}</span> },
                 { titulo: "Importe", alinear: "der", principal: true, celda: (i) => <span className="cifra font-semibold">{soles(i.importe)}</span> },
               ]}
               pie={
                 <tr>
                   <td className="px-4 py-2.5" colSpan={conMerma ? 3 : 1}>Total</td>
-                  <td className="cifra px-4 py-2.5 text-right">{kg(c.kg_total)}</td>
+                  <td className="cifra px-4 py-2.5 text-right">{unidades.size > 1 ? "—" : cantidad(c.kg_total, [...unidades][0])}</td>
                   <td />
                   <td className="cifra px-4 py-2.5 text-right">{soles(c.total)}</td>
                 </tr>
@@ -148,10 +150,11 @@ export default async function CompraDetalle({
                     <ul className="space-y-0.5 text-xs text-stone-500">
                       {((k.despues as LineaJson[] | null) ?? []).map((d, n) => {
                         const a = ((k.antes as LineaJson[] | null) ?? [])[n];
-                        if (!a) return <li key={n} className="cifra">{d.producto}: {kg(d.peso_bruto_kg)} − {kg(d.descuento_kg)} × {soles(d.precio_kg)}</li>;
+                        const u = (items ?? []).find((i) => i.metal_nombre === d.producto || rutaDe(i.metal_id, i.metal_nombre) === d.producto)?.metal_unidad;
+                        if (!a) return <li key={n} className="cifra">{d.producto}: {cantidad(d.peso_bruto_kg, u)} − {cantidad(d.descuento_kg, u)} × {soles(d.precio_kg)}</li>;
                         return (
                           <li key={n} className="cifra">
-                            {d.producto}: {kg(a.peso_bruto_kg)} − {kg(a.descuento_kg)} × {soles(a.precio_kg)} → {kg(d.peso_bruto_kg)} − {kg(d.descuento_kg)} × {soles(d.precio_kg)}
+                            {d.producto}: {cantidad(a.peso_bruto_kg, u)} − {cantidad(a.descuento_kg, u)} × {soles(a.precio_kg)} → {cantidad(d.peso_bruto_kg, u)} − {cantidad(d.descuento_kg, u)} × {soles(d.precio_kg)}
                           </li>
                         );
                       })}

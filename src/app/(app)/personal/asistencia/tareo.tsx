@@ -21,12 +21,13 @@ export interface FilaTareo {
 export interface DiaTareo { fecha: string; dia: number; semana: string; domingo: boolean }
 
 // Orden en que cambia una casilla al tocarla
-const ORDEN = ["asistio", "falta", "permiso", "descanso", "vacaciones"] as const;
+const ORDEN = ["asistio", "tardanza", "falta", "permiso", "descanso", "vacaciones"] as const;
 const CASILLA: Record<string, { clase: string; letra?: string; texto: string }> = {
   asistio: { clase: "bg-emerald-600 text-white", texto: "Asistió" },
+  tardanza: { clase: "bg-amber-500 text-white", letra: "T", texto: "Tardanza" },
   falta: { clase: "bg-red-600 text-white", texto: "Faltó" },
   permiso: { clase: "bg-marca-600 text-white", letra: "P", texto: "Permiso" },
-  descanso: { clase: "bg-amber-500 text-white", letra: "D", texto: "Descanso" },
+  descanso: { clase: "bg-stone-400 text-white", letra: "D", texto: "Descanso" },
   vacaciones: { clase: "bg-cyan-700 text-white", letra: "V", texto: "Vacaciones" },
 };
 
@@ -85,7 +86,7 @@ export function Tareo({ titulo, dias, filas, hoy }: { titulo: string; dias: DiaT
     for (const d of dias) {
       if (!habil(f, d.fecha)) continue;
       const e = cambios[clave(f.trabajador_id, d.fecha)] ?? f.marcas[d.fecha] ?? "";
-      if (e === "asistio") t.asis++;
+      if (e === "asistio" || e === "tardanza") t.asis++;   // la tardanza es día trabajado
       if (e === "falta") t.faltas++;
       if (e === "permiso") t.perm++;
       if (!d.domingo) t.laborables++;

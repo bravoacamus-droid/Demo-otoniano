@@ -24,6 +24,12 @@ export interface Empresa {
   hx_tasa_primeras: string;
   hx_tasa_siguientes: string;
   domingo_tasa: string;
+  /** Descuentos de la planilla: hora oficial de entrada, tolerancia, minutos por tardanza sin hora, faltas y permisos */
+  hora_entrada: string;
+  tolerancia_min: number;
+  tardanza_min_def: number;
+  descontar_faltas: boolean;
+  permiso_con_goce: boolean;
 }
 
 /** Producto (la tabla se llama metales): un nodo de la jerarquía familia → producto → variante… */

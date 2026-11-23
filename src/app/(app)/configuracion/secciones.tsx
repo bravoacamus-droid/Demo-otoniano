@@ -9,7 +9,8 @@ import { Campo, Input, Select } from "@/components/ui/campos";
 import { FormularioAccion } from "@/components/ui/formulario";
 import { Modal } from "@/components/ui/modal";
 import type { MedioPagoConf } from "@/lib/tipos";
-import { cambiarEstado, guardarCaja, guardarCategoria, guardarMedioPago } from "./acciones";
+import type { UnidadMedida } from "@/lib/productos";
+import { cambiarEstado, guardarCaja, guardarCategoria, guardarMedioPago, guardarUnidad } from "./acciones";
 
 type CajaFila = { id: string; nombre: string; tipo: string; orden: number; activo: boolean };
 
@@ -71,10 +72,13 @@ export function Categorias({ categorias }: { categorias: { id: string; nombre: s
             {c.nombre}
           </button>
         ))}
+        <p className="w-full text-xs text-stone-500">Toque una categoría para activarla o desactivarla (las tachadas están desactivadas).</p>
       </div>
       <div className="border-t border-stone-100 p-4">
-        <FormularioAccion accion={guardarCategoria} textoBoton="Agregar" mensajeExito="Categoría agregada." className="flex items-end gap-2">
-          <Campo etiqueta="Nueva categoría" className="flex-1"><Input name="nombre" required /></Campo>
+        {/* El aviso de error ocupa su propia fila debajo (no aplasta el campo) */}
+        <FormularioAccion accion={guardarCategoria} textoBoton="Agregar" mensajeExito="Categoría lista. Si estaba desactivada, se volvió a activar."
+          className="grid grid-cols-[1fr_auto] items-end gap-2 [&>.animar-sacudir]:order-last [&>.animar-sacudir]:col-span-2">
+          <Campo etiqueta="Nueva categoría"><Input name="nombre" required placeholder="Ej.: Herramientas" /></Campo>
         </FormularioAccion>
       </div>
     </Tarjeta>
@@ -129,6 +133,58 @@ export function MediosPago({ medios, cajas }: { medios: MedioPagoConf[]; cajas: 
               {cajas.filter((c) => c.activo).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </Select>
           </Campo>
+        </FormularioAccion>
+      </Modal>
+    </Tarjeta>
+  );
+}
+
+/** Unidades de medida de los productos: se editan nombre y plural; se agregan nuevas (saco, rollo…) */
+export function UnidadesMedida({ unidades }: { unidades: UnidadMedida[] }) {
+  const router = useRouter();
+  const [editando, setEditando] = useState<UnidadMedida | "nueva" | null>(null);
+  const actual = editando === "nueva" ? null : editando;
+  return (
+    <Tarjeta>
+      <TituloTarjeta accion={<Boton tamano="sm" variante="secundario" onClick={() => setEditando("nueva")}><Plus className="size-4" /> Unidad</Boton>}>
+        Unidades de medida
+      </TituloTarjeta>
+      <ul className="divide-y divide-stone-100">
+        {unidades.map((u) => (
+          <li key={u.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <span className="flex min-w-0 items-center gap-3">
+              <span className={`cifra flex h-8 min-w-12 shrink-0 items-center justify-center rounded-lg px-2 text-sm font-bold ${u.activo ? "bg-marca-50 text-marca-700" : "bg-stone-100 text-stone-400"}`}>{u.codigo}</span>
+              <span className="min-w-0">
+                <span className={`block truncate font-medium ${u.activo ? "" : "text-stone-400 line-through"}`}>{u.nombre}</span>
+                {u.plural && u.plural !== u.codigo && <span className="block truncate text-xs text-stone-500">Ej.: 3 {u.plural}</span>}
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-3">
+              <button type="button" onClick={() => setEditando(u)} className="text-xs font-medium text-marca-700 hover:underline">Editar</button>
+              {u.codigo !== "kg" && (
+                <button type="button" onClick={async () => { await cambiarEstado("unidades_medida", u.id, !u.activo); router.refresh(); }}
+                  className="text-xs font-medium text-stone-600 hover:text-stone-900">
+                  {u.activo ? "Desactivar" : "Activar"}
+                </button>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="border-t border-stone-100 px-4 py-2 text-xs text-stone-500">Se eligen al crear o editar un producto. Desactivar una unidad solo la oculta de esa lista.</p>
+      <Modal abierto={editando !== null} onCerrar={() => setEditando(null)} titulo={actual ? `Editar unidad · ${actual.codigo}` : "Nueva unidad de medida"}>
+        <FormularioAccion accion={guardarUnidad} onExito={() => setEditando(null)} textoBoton="Guardar" mensajeExito="Unidad guardada.">
+          {actual && <input type="hidden" name="id" value={actual.id} />}
+          <div className="grid grid-cols-2 gap-3">
+            <Campo etiqueta="Nombre" ayuda="Ej.: Sacos"><Input name="nombre" defaultValue={actual?.nombre ?? ""} required /></Campo>
+            {actual
+              ? <Campo etiqueta="Abreviatura" ayuda="No se cambia: la usan los productos."><Input value={actual.codigo} disabled /></Campo>
+              : <Campo etiqueta="Abreviatura" ayuda="Va junto a la cantidad: «12 saco»."><Input name="codigo" required maxLength={8} placeholder="saco" className="lowercase" /></Campo>}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Campo etiqueta="Plural (opcional)" ayuda="Ej.: sacos"><Input name="plural" defaultValue={actual?.plural ?? ""} /></Campo>
+            <Campo etiqueta="Orden"><Input name="orden" type="number" defaultValue={actual?.orden ?? unidades.length + 1} /></Campo>
+          </div>
         </FormularioAccion>
       </Modal>
     </Tarjeta>

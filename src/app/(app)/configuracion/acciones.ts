@@ -30,6 +30,13 @@ export async function guardarEmpresa(_: unknown, fd: FormData): Promise<Resultad
   const dom = num("domingo_tasa", 100);
   if (!(jornada > 0 && jornada <= 24)) return fallo("La jornada debe ser mayor a 0 y de hasta 24 horas.");
   if ([hx1, hx2, dom].some((t) => !(t >= 0 && t <= 300))) return fallo("Las sobretasas deben estar entre 0 y 300 %.");
+  // Descuentos automáticos de la planilla
+  const horaEntrada = texto(fd, "hora_entrada") ?? "08:00";
+  if (!/^d{2}:d{2}$/.test(horaEntrada)) return fallo("Indique la hora de entrada (HH:MM).");
+  const tolerancia = num("tolerancia_min", 10);
+  const tardDef = num("tardanza_min_def", 15);
+  if (!(Number.isInteger(tolerancia) && tolerancia >= 0 && tolerancia <= 120)) return fallo("La tolerancia debe estar entre 0 y 120 minutos.");
+  if (!(Number.isInteger(tardDef) && tardDef >= 0 && tardDef <= 480)) return fallo("Los minutos por tardanza deben estar entre 0 y 480.");
   const { error } = await supabase.from("empresas").update({
     razon_social: texto(fd, "razon_social"),
     ruc,
@@ -43,6 +50,11 @@ export async function guardarEmpresa(_: unknown, fd: FormData): Promise<Resultad
     hx_tasa_primeras: hx1,
     hx_tasa_siguientes: hx2,
     domingo_tasa: dom,
+    hora_entrada: horaEntrada,
+    tolerancia_min: tolerancia,
+    tardanza_min_def: tardDef,
+    descontar_faltas: fd.get("descontar_faltas") === "on",
+    permiso_con_goce: fd.get("permiso_con_goce") === "on",
   }).eq("id", empresa.id);
   if (error) return fallo(error);
   olvidarMembresias();
@@ -108,7 +120,7 @@ export async function guardarCaja(_: unknown, fd: FormData): Promise<Resultado> 
   return ok(null);
 }
 
-export async function cambiarEstado(tabla: "cajas" | "categorias_gasto" | "medios_pago", id: string, activo: boolean): Promise<Resultado> {
+export async function cambiarEstado(tabla: "cajas" | "categorias_gasto" | "medios_pago" | "unidades_medida", id: string, activo: boolean): Promise<Resultado> {
   const { supabase } = await exigir("configurar");
   const { error } = await supabase.from(tabla).update({ activo }).eq("id", id);
   if (error) return fallo(error);
@@ -119,6 +131,14 @@ export async function guardarCategoria(_: unknown, fd: FormData): Promise<Result
   const { supabase, empresa } = await exigir("configurar");
   const nombre = texto(fd, "nombre");
   if (!nombre) return fallo("Ingrese el nombre.");
+  // Si ya existe (sin importar mayúsculas): desactivada se vuelve a activar; activa, se avisa
+  const { data: hay } = await supabase.from("categorias_gasto").select("id, nombre, activo").eq("empresa_id", empresa.id).ilike("nombre", nombre).maybeSingle();
+  if (hay) {
+    if (hay.activo) return fallo(`La categoría «${hay.nombre}» ya existe.`);
+    const { error } = await supabase.from("categorias_gasto").update({ activo: true }).eq("id", hay.id);
+    if (error) return fallo(error);
+    return ok(null);
+  }
   const { error } = await supabase.from("categorias_gasto").insert({ nombre, empresa_id: empresa.id });
   if (error) return fallo(error);
   return ok(null);
@@ -190,5 +210,29 @@ export async function editarUsuario(_: unknown, fd: FormData): Promise<Resultado
     if (c) await supabase.from("trabajadores").update({ cargo: c.nombre }).eq("empresa_id", empresa.id).eq("user_id", userId);
   }
   olvidarMembresias();
+  return ok(null);
+}
+
+/** Unidad de medida nueva o editada (la abreviatura no cambia después de creada) */
+export async function guardarUnidad(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase, empresa } = await exigir("configurar");
+  const id = texto(fd, "id");
+  const nombre = texto(fd, "nombre");
+  const plural = texto(fd, "plural");
+  const orden = Number(texto(fd, "orden") ?? 0) || 0;
+  if (!nombre) return fallo("Ingrese el nombre (p. ej. Sacos).");
+  let error;
+  if (id) {
+    ({ error } = await supabase.from("unidades_medida").update({ nombre, plural, orden }).eq("id", id));
+  } else {
+    const codigo = (texto(fd, "codigo") ?? "").toLowerCase().replace(/s+/g, "");
+    if (!/^[a-z0-9áéíóúñ]{1,8}$/.test(codigo)) return fallo("La abreviatura va en minúsculas, sin espacios y de hasta 8 letras (p. ej. saco).");
+    ({ error } = await supabase.from("unidades_medida").insert({ empresa_id: empresa.id, codigo, nombre, plural, orden }));
+  }
+  if (error) {
+    if (/unidades_medida_empresa_id_codigo_key/.test(error.message)) return fallo("Ya existe una unidad con esa abreviatura.");
+    if (/unidades_medida_empresa_id_nombre_key/.test(error.message)) return fallo("Ya existe una unidad con ese nombre.");
+    return fallo(error);
+  }
   return ok(null);
 }

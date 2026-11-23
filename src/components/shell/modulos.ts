@@ -1,6 +1,6 @@
 import {
   ArrowDownToLine, ArrowUpFromLine, BarChart3, Boxes, Building2, ClipboardList, Contact, Handshake, Home, Landmark,
-  CalendarCheck, HandCoins, IdCard, PackageCheck, PiggyBank, PlusCircle, Search, Settings, Tag, Users, Wallet,
+  Banknote, CalendarCheck, HandCoins, IdCard, PackageCheck, PiggyBank, PlusCircle, Search, Settings, Tag, Users, Wallet,
 } from "lucide-react";
 import { puede, type Accion } from "@/lib/permisos";
 import type { Rol } from "@/lib/tipos";
@@ -101,6 +101,7 @@ export const MODULOS: Modulo[] = [
       { href: "/socios", texto: "Socios", icono: Handshake, permiso: ["verTodo"] },
       { href: "/personal", texto: "Personal", icono: IdCard, permiso: ["personal"] },
       { href: "/personal/asistencia", texto: "Asistencia", icono: CalendarCheck, permiso: ["personal"] },
+      { href: "/personal/pagos", texto: "Pagos al personal", icono: Banknote, permiso: ["personal"] },
       { href: "/configuracion", texto: "Configuración", icono: Settings, permiso: ["configurar"] },
     ],
   },

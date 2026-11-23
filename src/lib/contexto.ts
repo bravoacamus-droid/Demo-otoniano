@@ -50,7 +50,7 @@ export const obtenerContexto = cache(async (): Promise<Contexto> => {
   if (!lista || lista.vence < Date.now()) {
     const { data: filas, error } = await supabase
       .from("miembros")
-      .select("rol, nombre, cargo:cargos(nombre, secciones), empresa:empresas(id, razon_social, ruc, direccion, telefono, logo_url, monto_doc_obligatorio, roles_editan_precio, dias_seleccion, merma_alerta_pct, jornada_horas, hx_tasa_primeras, hx_tasa_siguientes, domingo_tasa)")
+      .select("rol, nombre, cargo:cargos(nombre, secciones), empresa:empresas(id, razon_social, ruc, direccion, telefono, logo_url, monto_doc_obligatorio, roles_editan_precio, dias_seleccion, merma_alerta_pct, jornada_horas, hx_tasa_primeras, hx_tasa_siguientes, domingo_tasa, hora_entrada, tolerancia_min, tardanza_min_def, descontar_faltas, permiso_con_goce)")
       .eq("user_id", user.id)
       .eq("activo", true);
     // Un error (p. ej. columna nueva sin su migración) no es «sin empresa»: que se vea

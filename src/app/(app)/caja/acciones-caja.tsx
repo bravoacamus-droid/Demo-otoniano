@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeftRight, Calculator, Lock, LockOpen, Receipt } from "lucide-react";
+import { ArrowDownUp, ArrowLeftRight, Calculator, Lock, LockOpen, Receipt } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Boton } from "@/components/ui/boton";
 import { Aviso } from "@/components/ui/basicos";
@@ -10,24 +10,32 @@ import { FormularioAccion } from "@/components/ui/formulario";
 import { claseBoton, cx } from "@/components/ui/clases";
 import { useNotificar } from "@/components/ui/notificaciones";
 import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
-import { subirArchivo } from "@/lib/archivos";
 import { fechaHora, soles } from "@/lib/formato";
 import type { ResumenTurno } from "@/lib/tipos";
-import { abrirCaja, cerrarCaja, registrarArqueo, registrarGasto, registrarTraspaso } from "./acciones";
+import { abrirCaja, cerrarCaja, registrarArqueo, registrarMovimientoManual, registrarTraspaso } from "./acciones";
+import { ModalGasto } from "./modal-gasto";
 
-type Caja = { id: string; nombre: string; saldo: string };
+type Caja = { id: string; nombre: string; saldo: string; tipo?: string | null };
 export type TurnoAbierto = { id: string; numero: number; caja_id: string; caja_nombre: string; abierto_en: string };
 
+export type PrestamoPendiente = { persona: string; pendiente: string };
+
 export function AccionesCaja({
-  empresaId, cajas, categorias, puedeAjustar, turnos,
-}: { empresaId: string; cajas: Caja[]; categorias: { id: string; nombre: string }[]; puedeAjustar: boolean; turnos: TurnoAbierto[] }) {
-  const [abierto, setAbierto] = useState<"gasto" | "traspaso" | "arqueo" | "abrir" | "cierre" | null>(null);
+  empresaId, cajas, categorias, puedeAjustar, turnos, personas, prestamos,
+}: {
+  empresaId: string; cajas: Caja[]; categorias: { id: string; nombre: string }[]; puedeAjustar: boolean; turnos: TurnoAbierto[];
+  /** Nombres sugeridos para un préstamo (socios y trabajadores) */
+  personas: string[];
+  prestamos: PrestamoPendiente[];
+}) {
+  const [abierto, setAbierto] = useState<"gasto" | "traspaso" | "arqueo" | "abrir" | "cierre" | "dinero" | null>(null);
+  const [tipoDinero, setTipoDinero] = useState<"ingreso" | "egreso">("ingreso");
+  const [clase, setClase] = useState<"ajuste" | "prestamo">("ajuste");
   const [resultadoArqueo, setResultadoArqueo] = useState<{ diferencia: number; saldo_sistema: number } | null>(null);
   const [resultadoCierre, setResultadoCierre] = useState<ResumenTurno | null>(null);
-  const [comprobante, setComprobante] = useState<string>("");
-  const [subiendo, setSubiendo] = useState(false);
   const notificar = useNotificar();
-  const cerrar = () => { setAbierto(null); setComprobante(""); };
+  const cerrar = () => setAbierto(null);
+  const abrirDinero = (t: "ingreso" | "egreso") => { setTipoDinero(t); setClase("ajuste"); setAbierto("dinero"); };
   const opcionesCaja = cajas.map((c) => <option key={c.id} value={c.id}>{c.nombre} · {soles(c.saldo)}</option>);
   const sinTurno = cajas.filter((c) => !turnos.some((t) => t.caja_id === c.id));
   const difCierre = Number(resultadoCierre?.diferencia_cierre ?? 0);
@@ -55,6 +63,7 @@ export function AccionesCaja({
           }}
         >
           <p className="text-sm text-stone-600">Cuente el efectivo con que empieza el día. Al cerrar, el sistema le dará el resumen de todo lo que entró y salió.</p>
+          <Aviso>La apertura solo anota lo que contó: <b>no suma dinero a la caja</b>. Para meter dinero use <b>Ingreso / salida</b>.</Aviso>
           <Campo etiqueta="Caja">
             <Select name="caja_id" required>{sinTurno.map((c) => <option key={c.id} value={c.id}>{c.nombre} · {soles(c.saldo)}</option>)}</Select>
           </Campo>
@@ -117,37 +126,62 @@ export function AccionesCaja({
         )}
       </Modal>
 
-      <Boton onClick={() => setAbierto("gasto")}><Receipt className="size-4" /> Gasto</Boton>
+      <Boton variante="secundario" onClick={() => abrirDinero("ingreso")}><ArrowDownUp className="size-4" /> Ingreso / salida</Boton>
       <Boton variante="secundario" onClick={() => setAbierto("traspaso")}><ArrowLeftRight className="size-4" /> Traspaso</Boton>
       <Boton variante="secundario" onClick={() => { setResultadoArqueo(null); setAbierto("arqueo"); }}><Calculator className="size-4" /> Arqueo</Boton>
 
-      <Modal abierto={abierto === "gasto"} onCerrar={cerrar} titulo="Registrar gasto">
-        <FormularioAccion accion={registrarGasto} textoBoton="Registrar gasto" mensajeExito="Gasto registrado." onExito={cerrar}>
+      {/* Gastos aparte, a la derecha: aquí entran los que salen de una caja y los pagados por fuera */}
+      <button type="button" onClick={() => setAbierto("gasto")}
+        className="flex w-full items-center gap-3 rounded-xl bg-marca-600 px-4 py-2 text-left text-white shadow-sm transition hover:bg-marca-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-300 sm:ml-auto sm:w-auto">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15"><Receipt className="size-5" /></span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold leading-tight">Registrar gasto</span>
+          <span className="block text-xs leading-tight text-white/80">De una caja o pagado por fuera</span>
+        </span>
+      </button>
+
+      <ModalGasto abierto={abierto === "gasto"} onCerrar={cerrar} empresaId={empresaId} cajas={cajas}
+        categorias={categorias} puedeCrearCategoria={puedeAjustar} />
+
+      <Modal abierto={abierto === "dinero"} onCerrar={cerrar} titulo={tipoDinero === "ingreso" ? "Ingreso de dinero" : "Salida de dinero"}>
+        <FormularioAccion accion={registrarMovimientoManual} textoBoton={tipoDinero === "ingreso" ? "Registrar ingreso" : "Registrar salida"}
+          mensajeExito={tipoDinero === "ingreso" ? "Ingreso registrado." : "Salida registrada."} onExito={cerrar}>
+          <div role="radiogroup" aria-label="Tipo" className="grid grid-cols-2 gap-1 rounded-xl bg-stone-200/70 p-1">
+            {(["ingreso", "egreso"] as const).map((t) => (
+              <button key={t} type="button" role="radio" aria-checked={tipoDinero === t} onClick={() => setTipoDinero(t)}
+                className={cx("rounded-lg px-3 py-1.5 text-sm font-medium", tipoDinero === t ? "bg-superficie shadow-sm" : "text-stone-600 hover:text-stone-900")}>
+                {t === "ingreso" ? "Entra dinero" : "Sale dinero"}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="tipo" value={tipoDinero} />
+          <Campo etiqueta="¿Qué es?">
+            <Select name="clase" value={clase} onChange={(e) => setClase(e.target.value as "ajuste" | "prestamo")}>
+              <option value="ajuste">{tipoDinero === "ingreso" ? "Ingreso de dinero (sobrante, caja no cuadró, otro)" : "Salida de dinero (faltante, otro)"}</option>
+              <option value="prestamo">{tipoDinero === "ingreso" ? "Devolución de un préstamo" : "Préstamo a un socio u otra persona"}</option>
+            </Select>
+          </Campo>
+          {clase === "prestamo" && (
+            <Campo etiqueta={tipoDinero === "ingreso" ? "¿Quién devuelve?" : "¿A quién se le presta?"}
+              ayuda={tipoDinero === "egreso" ? "No baja la ganancia: queda como dinero por cobrar hasta que lo devuelva." : undefined}>
+              <Input name="persona" required list="personas-prestamo" autoComplete="off" placeholder="Nombre" />
+              <datalist id="personas-prestamo">
+                {(tipoDinero === "ingreso" ? prestamos.map((p) => p.persona) : personas).map((p) => <option key={p} value={p} />)}
+              </datalist>
+            </Campo>
+          )}
+          {clase === "prestamo" && tipoDinero === "ingreso" && prestamos.length > 0 && (
+            <ul className="-mt-1 space-y-0.5 rounded-lg bg-stone-50 px-3 py-2 text-xs text-stone-600">
+              {prestamos.map((p) => <li key={p.persona} className="flex justify-between gap-2"><span>{p.persona}</span><span className="cifra">debe {soles(p.pendiente)}</span></li>)}
+            </ul>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Campo etiqueta="Monto S/"><InputNumero name="monto" required /></Campo>
-            <Campo etiqueta="Categoría">
-              <Select name="categoria_id">
-                <option value="">—</option>
-                {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </Select>
-            </Campo>
+            <Campo etiqueta={tipoDinero === "ingreso" ? "Entra a la caja" : "Sale de la caja"}><Select name="caja_id" required>{opcionesCaja}</Select></Campo>
           </div>
-          <Campo etiqueta="Concepto"><Input name="concepto" required placeholder="Ej.: recibo de luz de octubre" /></Campo>
-          <Campo etiqueta="Sale de la caja"><Select name="caja_id" required>{opcionesCaja}</Select></Campo>
-          <Campo etiqueta="Comprobante (opcional)" ayuda={subiendo ? "Subiendo…" : comprobante ? "Archivo adjunto ✓" : undefined}>
-            <input
-              type="file"
-              accept="image/*,application/pdf"
-              className="block w-full text-sm"
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setSubiendo(true);
-                try { setComprobante(await subirArchivo(empresaId, "gastos", f)); } finally { setSubiendo(false); }
-              }}
-            />
+          <Campo etiqueta="Motivo" ayuda="Queda en el historial de la caja.">
+            <Input name="motivo" required minLength={3} placeholder={clase === "prestamo" ? "Ej.: adelanto para su viaje" : tipoDinero === "ingreso" ? "Ej.: la caja no cuadró, sobraron S/ 20" : "Ej.: faltó vuelto"} />
           </Campo>
-          <input type="hidden" name="comprobante_url" value={comprobante} />
         </FormularioAccion>
       </Modal>
 

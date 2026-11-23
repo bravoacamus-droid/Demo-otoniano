@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Clock, FileSpreadsheet, FileText } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
-import { fecha, fechaHora, kg, soles } from "@/lib/formato";
+import { cantidad, fecha, fechaHora, soles, unidadCorta } from "@/lib/formato";
 import { Encabezado, Insignia, PuntoMetal, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
 import { EnlaceDescarga } from "@/components/ui/enlace-descarga";
 import { TablaDatos } from "@/components/ui/tabla";
@@ -33,6 +33,9 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
   ]);
   // Cada nivel de la jerarquía suma lo propio y lo de sus variantes (v_stock_arbol)
   const filas = (stock ?? []).filter((s) => s.activo || Number(s.kg) !== 0);
+  const unidadDe = new Map((stock ?? []).map((s) => [s.metal_id, s.unidad]));
+  // Precio o costo «por unidad»: en kg queda como antes (la columna ya dice /kg)
+  const porU = (u: string | null | undefined) => (unidadCorta(u) === "kg" ? "" : `/${unidadCorta(u)}`);
   const dias = (f: string | null) => (f ? Math.floor((Date.now() - new Date(f).getTime()) / 86400_000) : null);
   const retrasados = (lotes ?? []).filter((l) => l.retrasado).length;
 
@@ -50,7 +53,7 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
               </>
             )}
             {puede(rol, "ajustarInventario") && (
-              <AccionesInventario metales={filas.map((f) => ({ id: f.metal_id, nombre: f.ruta, kg: f.kg_propio }))} />
+              <AccionesInventario metales={filas.map((f) => ({ id: f.metal_id, nombre: f.ruta, kg: f.kg_propio, unidad: f.unidad }))} />
             )}
           </>
         }
@@ -92,8 +95,8 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
                 titulo: "Stock", alinear: "der", principal: true,
                 celda: (s) => (
                   <span className="cifra">
-                    <b className="font-semibold">{kg(s.kg)}</b>
-                    {s.tiene_hijos && Number(s.kg_propio) !== Number(s.kg) && <span className="block text-xs text-stone-500">propio {kg(s.kg_propio)}</span>}
+                    <b className="font-semibold">{s.unidades_distintas ? "Varias unidades" : cantidad(s.kg, s.unidad)}</b>
+                    {s.tiene_hijos && Number(s.kg_propio) !== Number(s.kg) && <span className="block text-xs text-stone-500">propio {cantidad(s.kg_propio, s.unidad)}</span>}
                   </span>
                 ),
               },
@@ -103,15 +106,15 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
               },
               {
                 titulo: "Por limpiar", alinear: "der",
-                celda: (s) => Number(s.kg_por_limpiar) > 0
-                  ? <span className={`cifra ${s.retrasado ? "font-medium text-red-700" : "text-amber-700"}`}>{kg(s.kg_por_limpiar)}{s.retrasado && " ⚠"}</span>
+                celda: (s) => Number(s.kg_por_limpiar) > 0 && !s.unidades_distintas
+                  ? <span className={`cifra ${s.retrasado ? "font-medium text-red-700" : "text-amber-700"}`}>{cantidad(s.kg_por_limpiar, s.unidad)}{s.retrasado && " ⚠"}</span>
                   : <span className="text-stone-400">—</span>,
               },
               ...(verCostos ? [
-                { titulo: "Costo prom./kg", alinear: "der" as const, celda: (s: (typeof filas)[number]) => <span className="cifra">{s.costo_promedio ? soles(s.costo_promedio) : "—"}</span> },
+                { titulo: "Costo prom./kg", alinear: "der" as const, celda: (s: (typeof filas)[number]) => <span className="cifra">{s.costo_promedio && !s.unidades_distintas ? `${soles(s.costo_promedio)}${porU(s.unidad)}` : "—"}</span> },
                 { titulo: "Valor a costo", alinear: "der" as const, celda: (s: (typeof filas)[number]) => <span className="cifra">{soles(s.valor_costo)}</span> },
               ] : []),
-              { titulo: "Precio venta", alinear: "der", celda: (s) => <span className="cifra">{soles(s.precio_venta)}</span> },
+              { titulo: "Precio venta", alinear: "der", celda: (s) => <span className="cifra">{soles(s.precio_venta)}{porU(s.unidad)}</span> },
               { titulo: "Valor a venta", alinear: "der", celda: (s) => <span className="cifra">{soles(s.valor_venta)}</span> },
               {
                 titulo: "", alinear: "der",
@@ -153,9 +156,9 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
               { titulo: "Producto", celda: (l) => <span className="flex items-center gap-2"><PuntoMetal color={l.metal_color} />{l.metal_nombre}{l.es_traslado && <Insignia tono="azul">Separado</Insignia>}</span> },
               { titulo: "Compra", celda: (l) => `N° ${l.numero}` },
               { titulo: "Proveedor", ocultarMovil: true, celda: (l) => l.proveedor_nombre ?? "Sin documento" },
-              { titulo: "Ingresó", alinear: "der", className: "cifra", celda: (l) => kg(l.kg_ingresado) },
-              { titulo: "Merma", alinear: "der", ocultarMovil: true, celda: (l) => Number(l.kg_descuento) ? <span className="cifra text-amber-700">{kg(l.kg_descuento)}</span> : "—" },
-              { titulo: "En stock (est.)", alinear: "der", principal: true, celda: (l) => <span className="cifra font-semibold">{kg(l.kg_en_stock)}</span> },
+              { titulo: "Ingresó", alinear: "der", className: "cifra", celda: (l) => cantidad(l.kg_ingresado, unidadDe.get(l.metal_id)) },
+              { titulo: "Merma", alinear: "der", ocultarMovil: true, celda: (l) => Number(l.kg_descuento) ? <span className="cifra text-amber-700">{cantidad(l.kg_descuento, unidadDe.get(l.metal_id))}</span> : "—" },
+              { titulo: "En stock (est.)", alinear: "der", principal: true, celda: (l) => <span className="cifra font-semibold">{cantidad(l.kg_en_stock, unidadDe.get(l.metal_id))}</span> },
               {
                 titulo: "Limpieza",
                 celda: (l) => l.retrasado ? <Insignia tono="rojo"><Clock className="mr-1 size-3" />Retrasada</Insignia>
@@ -188,7 +191,7 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
                 // Conteo: lo que decía el sistema y lo que se contó (evidencia del faltante o sobrante)
                 titulo: "Sistema → contado", alinear: "der", ocultarMovil: true,
                 celda: (a) => a.kg_sistema !== null && a.kg_contado !== null
-                  ? <span className="cifra text-stone-600">{kg(a.kg_sistema)} → {kg(a.kg_contado)}</span>
+                  ? <span className="cifra text-stone-600">{cantidad(a.kg_sistema, unidadDe.get(a.metal_id))} → {cantidad(a.kg_contado, unidadDe.get(a.metal_id))}</span>
                   : <span className="text-stone-400">—</span>,
               },
               {
@@ -199,7 +202,7 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
                     <span className="block text-[11px] font-medium uppercase tracking-wide">
                       {a.tipo === "reclasificacion" ? (Number(a.kg) < 0 ? "Salió" : "Entró") : Number(a.kg) < 0 ? "Faltante" : "Sobrante"}
                     </span>
-                    {Number(a.kg) > 0 ? "+" : ""}{kg(a.kg)}
+                    {Number(a.kg) > 0 ? "+" : ""}{cantidad(a.kg, unidadDe.get(a.metal_id))}
                   </span>
                 ),
               },

@@ -12,20 +12,34 @@ import { cx } from "@/components/ui/clases";
 import { PanelModulo, TituloSeccion } from "@/components/panel-modulo";
 import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
 import { AccionesCaja } from "./acciones-caja";
-import { anularGasto, anularTraspaso } from "./acciones";
+import { anularTraspaso } from "./acciones";
+import { EditarTurno, MenuGasto, MenuManual, type GastoFila, type Manual, type TurnoFila } from "./menus-caja";
 
 export const metadata: Metadata = { title: "Caja" };
 
-type Params = { vista?: string; caja?: string; desde?: string; hasta?: string; origen?: string };
+type Params = { vista?: string; caja?: string; desde?: string; hasta?: string; ver?: string; categoria?: string; de?: string };
 
 const ENLACE_ORIGEN: Record<string, string> = { compra: "/compras/", venta: "/ventas/" };
 const TITULO_VISTA: Record<string, string> = { movimientos: "Movimientos de caja", gastos: "Gastos", traspasos: "Traspasos entre cajas", arqueos: "Arqueos", cierres: "Aperturas y cierres de caja" };
+
+/** Filtro «Ver» de movimientos: lo del sistema (compras y ventas) aparte de los demás gastos y movimientos */
+const GRUPOS = {
+  sistema: { texto: "Compras y ventas", origenes: ["compra", "venta", "devolucion", "adelanto"] },
+  gastos: { texto: "Otros gastos", origenes: ["gasto"] },
+  dinero: { texto: "Ingresos y salidas de dinero", origenes: ["ajuste", "prestamo"] },
+  socios: { texto: "Aportes y retiros de socios", origenes: ["aporte", "retiro"] },
+  traspasos: { texto: "Traspasos", origenes: ["traspaso"] },
+  aperturas: { texto: "Aperturas y cierres", origenes: [] },
+} as const;
+type Grupo = keyof typeof GRUPOS;
 
 export default async function CajaPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const vista = sp.vista ?? "movimientos";
   const { supabase, empresa, rol } = await exigir("caja", "verTodo");
   const { desde, hasta } = rangoLima(sp.desde, sp.hasta);
+  const grupo = sp.ver && sp.ver in GRUPOS ? (sp.ver as Grupo) : null;
+  const puedeCorregir = puede(rol, "corregir");
 
   const rango = <T extends { gte: (c: string, v: string) => T; lt: (c: string, v: string) => T }>(q: T) => {
     let r = q;
@@ -42,28 +56,88 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
 
   // Solo la lista de la pestaña activa; todo en paralelo con los saldos
   const esArqueos = !["movimientos", "gastos", "traspasos", "cierres"].includes(vista);
+  const conMovs = vista === "movimientos" && grupo !== "aperturas";
+  // Aperturas y cierres van en el historial de movimientos (no mueven dinero: se muestran aparte del saldo)
+  const conTurnos = vista === "cierres" || (vista === "movimientos" && (!grupo || grupo === "aperturas"));
   let qMov = supabase.from("v_movimientos_caja").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).order("creado_en", { ascending: false }).limit(300);
   if (sp.caja) qMov = qMov.eq("caja_id", sp.caja);
-  if (sp.origen) qMov = qMov.eq("origen", sp.origen);
+  if (grupo) qMov = qMov.in("origen", [...GRUPOS[grupo].origenes]);
+  let qTur = supabase.from("v_turnos_caja").select("*").eq("empresa_id", empresa.id).order("abierto_en", { ascending: false }).limit(200);
+  if (sp.caja && vista === "movimientos") qTur = qTur.eq("caja_id", sp.caja);
+  let qGas = supabase.from("v_gastos").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(300);
+  let qGasSin = supabase.from("v_gastos_sin_caja").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(300);
+  // «sin» = Otros gastos (escritos a mano, sin categoría)
+  if (sp.categoria === "sin") { qGas = qGas.is("categoria_id", null); qGasSin = qGasSin.is("categoria_id", null); }
+  else if (sp.categoria) { qGas = qGas.eq("categoria_id", sp.categoria); qGasSin = qGasSin.eq("categoria_id", sp.categoria); }
+  const de = sp.de === "caja" || sp.de === "ninguna" ? sp.de : null;
 
-  const [{ data: saldos }, { data: categorias }, { data: abiertos }, rMov, rGas, rTra, rArq, rTur] = await Promise.all([
+  const [{ data: saldos }, { data: categorias }, { data: abiertos }, { data: socios }, { data: trabajadores }, { data: prestamos }, rMov, rGas, rGasSin, rTra, rArq, rTur] = await Promise.all([
     supabase.from("v_saldo_caja").select("*").eq("empresa_id", empresa.id).order("orden"),
     supabase.from("categorias_gasto").select("id, nombre").eq("empresa_id", empresa.id).eq("activo", true).order("nombre"),
-    supabase.from("v_turnos_caja").select("id, numero, caja_id, caja_nombre, abierto_en, abierto_por_nombre").eq("empresa_id", empresa.id).is("cerrado_en", null).order("abierto_en"),
-    vista === "movimientos" ? rango(qMov) : null,
-    vista === "gastos" ? rango(supabase.from("v_gastos").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(300)) : null,
+    supabase.from("v_turnos_caja").select("*").eq("empresa_id", empresa.id).is("cerrado_en", null).is("anulado_en", null).order("abierto_en"),
+    supabase.from("socios").select("nombre").eq("empresa_id", empresa.id).eq("activo", true).order("nombre"),
+    supabase.from("trabajadores").select("nombre").eq("empresa_id", empresa.id).is("fecha_cese", null).order("nombre"),
+    supabase.from("v_prestamos_pendientes").select("persona, pendiente").eq("empresa_id", empresa.id).order("persona"),
+    conMovs ? rango(qMov) : null,
+    vista === "gastos" && de !== "ninguna" ? rango(qGas) : null,
+    vista === "gastos" && de !== "caja" ? rango(qGasSin) : null,
     vista === "traspasos" ? rango(supabase.from("traspasos").select("*, origen:cajas!caja_origen_id(nombre), destino:cajas!caja_destino_id(nombre)").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(200)) : null,
     esArqueos ? rango(supabase.from("v_arqueos").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(200)) : null,
-    vista === "cierres" ? rangoTurnos(supabase.from("v_turnos_caja").select("*").eq("empresa_id", empresa.id).order("abierto_en", { ascending: false }).limit(200)) : null,
+    conTurnos ? rangoTurnos(qTur) : null,
   ]);
   const total = (saldos ?? []).reduce((s, c) => s + Number(c.saldo), 0);
   const cajasVisibles = (saldos ?? []).filter((c) => c.activo || Number(c.saldo) !== 0);
+  const cajasActivas = (saldos ?? []).filter((c) => c.activo).map((c) => ({ id: c.caja_id!, nombre: c.nombre! }));
   const movimientos = rMov ? rMov.data ?? [] : null;
-  const gastos = rGas ? rGas.data ?? [] : null;
   const traspasos = rTra ? rTra.data ?? [] : null;
   const arqueos = rArq ? rArq.data ?? [] : null;
   const turnos = rTur ? rTur.data ?? [] : null;
   const turnosAbiertos = abiertos ?? [];
+
+  // Gastos con caja y de solo registro, juntos y por fecha
+  const gastos = vista === "gastos" ? [
+    ...(rGas?.data ?? []).map((g) => ({ ...g, sin_caja: false })),
+    ...(rGasSin?.data ?? []).map((g) => ({ ...g, caja_id: null, caja_nombre: null, sin_caja: true })),
+  ].sort((a, b) => (a.fecha! < b.fecha! ? 1 : -1)) : null;
+
+  // Registros detrás de los movimientos que se pueden corregir (ingresos/salidas a mano y gastos)
+  const idsDe = (origenes: string[]) => [...new Set((movimientos ?? []).filter((m) => origenes.includes(m.origen!) && !m.anulado && m.origen_id).map((m) => m.origen_id!))];
+  const idsManual = puedeCorregir ? idsDe(["ajuste", "prestamo"]) : [];
+  const idsGasto = puedeCorregir ? idsDe(["gasto"]) : [];
+  const [{ data: manuales }, { data: gastosMov }, { data: pagosPers }] = await Promise.all([
+    idsManual.length ? supabase.from("movimientos_manuales").select("id, tipo, clase, caja_id, monto, motivo, persona, historial, mov_id, estado").in("id", idsManual) : { data: [] },
+    idsGasto.length ? supabase.from("gastos").select("id, monto, concepto, categoria_id, caja_id, historial, estado").in("id", idsGasto) : { data: [] },
+    // Gastos que son pagos al personal: se corrigen desde Personal → Pagos
+    puedeCorregir && (idsGasto.length || vista === "gastos")
+      ? supabase.from("pagos_personal").select("trabajador_id, gasto_id, gasto_sin_caja_id").eq("empresa_id", empresa.id).eq("estado", "registrada")
+      : { data: [] },
+  ]);
+  const pagoDeGasto = new Map((pagosPers ?? []).flatMap((p) => [p.gasto_id, p.gasto_sin_caja_id].filter(Boolean).map((gid) => [gid!, p.trabajador_id])));
+  const verPago = (trabajador: string) => (
+    <Link href={`/personal/pagos?vista=historial&trabajador=${trabajador}`} className="whitespace-nowrap text-xs font-medium text-marca-700 hover:underline">Ver pago</Link>
+  );
+  const manualPorMov = new Map((manuales ?? []).filter((m) => m.estado === "registrada").map((m) => [m.mov_id, m as unknown as Manual]));
+  const gastoPorId = new Map((gastosMov ?? []).filter((g) => g.estado === "registrada").map((g) => [g.id, g as unknown as GastoFila]));
+
+  type Mov = NonNullable<typeof movimientos>[number];
+  type Turno = NonNullable<typeof turnos>[number];
+  type Fila =
+    | { clave: string; fecha: string; tipo: "mov"; m: Mov }
+    | { clave: string; fecha: string; tipo: "apertura" | "cierre"; t: Turno };
+  const filas: Fila[] | null = vista === "movimientos" ? [
+    ...(movimientos ?? []).map((m): Fila => ({ clave: m.id!, fecha: m.fecha!, tipo: "mov", m })),
+    ...(conTurnos ? turnos ?? [] : []).flatMap((t): Fila[] => [
+      { clave: `a-${t.id}`, fecha: t.abierto_en!, tipo: "apertura", t },
+      ...(t.cerrado_en ? [{ clave: `c-${t.id}`, fecha: t.cerrado_en, tipo: "cierre" as const, t }] : []),
+    ]),
+  ].sort((a, b) => (a.fecha < b.fecha ? 1 : -1)) : null;
+  const turnoFila = (t: Turno): TurnoFila => ({
+    id: t.id!, numero: t.numero!, caja_nombre: t.caja_nombre!,
+    contado_apertura: String(t.contado_apertura), nota_apertura: t.nota_apertura, saldo_apertura: String(t.saldo_apertura),
+    cerrado_en: t.cerrado_en, contado_cierre: t.contado_cierre != null ? String(t.contado_cierre) : null, nota_cierre: t.nota_cierre,
+    saldo_cierre: t.saldo_cierre != null ? String(t.saldo_cierre) : null, ajustado: !!t.ajustado,
+    historial: (t.historial ?? []) as TurnoFila["historial"],
+  });
 
   const pestana = (v: string, t: string) => (
     <Link
@@ -80,16 +154,21 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
       <Encabezado
         titulo="Caja"
         descripcion="Entradas y salidas de dinero, gastos, traspasos y arqueos de cada caja"
-        acciones={puede(rol, "caja") && (
+      />
+      {/* Acciones a todo el ancho: «Registrar gasto» queda sola a la derecha */}
+      {puede(rol, "caja") && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <AccionesCaja
             empresaId={empresa.id}
-            cajas={(saldos ?? []).filter((c) => c.activo).map((c) => ({ id: c.caja_id, nombre: c.nombre, saldo: c.saldo }))}
+            cajas={(saldos ?? []).filter((c) => c.activo).map((c) => ({ id: c.caja_id, nombre: c.nombre, saldo: c.saldo, tipo: c.tipo }))}
             categorias={categorias ?? []}
             puedeAjustar={rol === "dueno"}
             turnos={turnosAbiertos.map((t) => ({ id: t.id!, numero: t.numero!, caja_id: t.caja_id!, caja_nombre: t.caja_nombre!, abierto_en: t.abierto_en! }))}
+            personas={[...new Set([...(socios ?? []), ...(trabajadores ?? [])].map((p) => p.nombre))]}
+            prestamos={(prestamos ?? []).filter((p) => Number(p.pendiente) > 0).map((p) => ({ persona: p.persona!, pendiente: String(p.pendiente) }))}
           />
-        )}
-      />
+        </div>
+      )}
 
       {/* Cada caja filtra los movimientos; el total quita el filtro */}
       <PanelModulo
@@ -118,7 +197,11 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
               <LockOpen className="size-4 shrink-0" />
               <span><b>{t.caja_nombre}</b> abierta desde {fechaHora(t.abierto_en)}{t.abierto_por_nombre ? ` por ${t.abierto_por_nombre}` : ""} · turno N° {t.numero}</span>
             </span>
-            <BotonImprimir80 href={`/imprimir/cierre/${t.id}`} texto="Corte parcial" className="inline-flex items-center gap-1.5 font-medium hover:underline" />
+            <span className="inline-flex items-center gap-3">
+              <span className="cifra">Abrió con <b>{soles(t.contado_apertura)}</b></span>
+              {puedeCorregir && <EditarTurno t={turnoFila(t)} />}
+              <BotonImprimir80 href={`/imprimir/cierre/${t.id}`} texto="Corte parcial" className="inline-flex items-center gap-1.5 font-medium hover:underline" />
+            </span>
           </div>
         ))}
       </div>
@@ -132,58 +215,128 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
         {pestana("cierres", "Cierres")}
       </div>
 
+      {vista === "gastos" && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {([[null, "Todos los gastos"], ["caja", "Salieron de una caja"], ["ninguna", "No salieron de ninguna caja"]] as const).map(([v, t]) => {
+            const q = new URLSearchParams({ vista: "gastos", ...(v ? { de: v } : {}), ...(sp.categoria ? { categoria: sp.categoria } : {}), ...(sp.desde ? { desde: sp.desde } : {}), ...(sp.hasta ? { hasta: sp.hasta } : {}) });
+            return (
+              <Link key={t} href={`/caja?${q}`}
+                className={cx("rounded-full border px-3.5 py-1.5 text-sm font-medium transition", de === v ? "border-marca-600 bg-marca-600 text-white shadow-sm" : "border-stone-200 bg-superficie text-stone-700 hover:border-marca-300 hover:bg-marca-50")}>
+                {t}
+              </Link>
+            );
+          })}
+          {gastos && <span className="text-sm text-stone-500">{gastos.length} registro(s)</span>}
+        </div>
+      )}
       <Filtros
         valores={sp}
-        ocultos={{ vista }}
+        ocultos={vista === "gastos" && de ? { vista, de } : { vista }}
         selects={vista === "movimientos" ? [
+          { nombre: "ver", etiqueta: "Ver", opciones: Object.entries(GRUPOS).map(([v, g]) => ({ valor: v, texto: g.texto })) },
           { nombre: "caja", etiqueta: "Caja", opciones: (saldos ?? []).map((c) => ({ valor: c.caja_id, texto: c.nombre })) },
-          { nombre: "origen", etiqueta: "Origen", opciones: ["compra", "venta", "gasto", "aporte", "retiro", "traspaso", "ajuste"].map((o) => ({ valor: o, texto: ETIQUETA_ORIGEN[o] })) },
+        ] : vista === "gastos" ? [
+          { nombre: "categoria", etiqueta: "Categoría", opciones: [...(categorias ?? []).map((c) => ({ valor: c.id, texto: c.nombre })), { valor: "sin", texto: "Otros gastos (escritos a mano)" }] },
         ] : []}
       />
 
       <Tarjeta>
-        {movimientos && (
+        {filas && (
           <TablaDatos
-            filas={movimientos}
-            clave={(m) => m.id}
+            filas={filas}
+            clave={(f) => f.clave}
             vacio="Sin movimientos."
             columnas={[
-              { titulo: "Fecha", celda: (m) => fechaHora(m.fecha) },
-              { titulo: "Caja", celda: (m) => m.caja_nombre },
-              { titulo: "Origen", celda: (m) => <Insignia tono={m.tipo === "ingreso" ? "verde" : "gris"}>{ETIQUETA_ORIGEN[m.origen]}</Insignia> },
+              { titulo: "Fecha", celda: (f) => fechaHora(f.fecha) },
+              { titulo: "Caja", celda: (f) => (f.tipo === "mov" ? f.m.caja_nombre : f.t.caja_nombre) },
+              {
+                titulo: "Origen",
+                celda: (f) => f.tipo === "mov"
+                  ? <Insignia tono={f.m.tipo === "ingreso" ? "verde" : "gris"}>{ETIQUETA_ORIGEN[f.m.origen!]}</Insignia>
+                  : <Insignia tono={f.t.anulado_en ? "rojo" : "gris"}>{f.t.anulado_en ? "Anulada" : f.tipo === "apertura" ? "Apertura" : "Cierre"}</Insignia>,
+              },
               {
                 titulo: "Concepto", principal: true,
-                celda: (m) => ENLACE_ORIGEN[m.origen] && m.origen_id
-                  ? <Link className="text-marca-700 hover:underline" href={`${ENLACE_ORIGEN[m.origen]}${m.origen_id}`}>{m.concepto}</Link>
-                  : m.concepto,
+                celda: (f) => {
+                  if (f.tipo === "mov") {
+                    const m = f.m;
+                    return ENLACE_ORIGEN[m.origen!] && m.origen_id
+                      ? <Link className="text-marca-700 hover:underline" href={`${ENLACE_ORIGEN[m.origen!]}${m.origen_id}`}>{m.concepto}</Link>
+                      : <span className={m.anulado ? "text-stone-500 line-through" : ""}>{m.concepto}</span>;
+                  }
+                  const t = f.t;
+                  const nota = f.tipo === "apertura" ? t.nota_apertura : t.nota_cierre;
+                  return (
+                    <>
+                    <span className={t.anulado_en ? "text-stone-500 line-through" : ""}>
+                      {f.tipo === "apertura" ? "Apertura" : "Cierre"} de caja N° {t.numero}
+                      {f.tipo === "apertura"
+                        ? <> · según el sistema {soles(t.saldo_apertura)}</>
+                        : <> · sistema {soles(t.saldo_cierre)}, diferencia {soles(t.diferencia_cierre)}</>}
+                      {(f.tipo === "apertura" ? t.abierto_por_nombre : t.cerrado_por_nombre) && <span className="text-stone-500"> · {f.tipo === "apertura" ? t.abierto_por_nombre : t.cerrado_por_nombre}</span>}
+                    </span>
+                    {nota && <span className="block text-xs text-stone-500">{nota}</span>}
+                    {t.anulado_en && <span className="block text-xs text-red-700">Anulada: {t.motivo_anulacion}</span>}
+                    </>
+                  );
+                },
               },
               {
                 titulo: "Monto", alinear: "der", principal: true,
-                celda: (m) => (
-                  <span className={cx("cifra font-medium", m.anulado ? "text-stone-500 line-through" : m.tipo === "ingreso" ? "text-emerald-700" : "text-red-700")}>
-                    {m.tipo === "ingreso" ? "+" : "−"}{soles(m.monto)}
+                celda: (f) => f.tipo === "mov" ? (
+                  <span className={cx("cifra font-medium", f.m.anulado ? "text-stone-500 line-through" : f.m.tipo === "ingreso" ? "text-emerald-700" : "text-red-700")}>
+                    {f.m.tipo === "ingreso" ? "+" : "−"}{soles(f.m.monto)}
+                  </span>
+                ) : (
+                  // Lo contado: no suma ni resta al saldo
+                  <span className={cx("cifra text-stone-600", f.t.anulado_en && "line-through")} title="Efectivo contado (no mueve el saldo)">
+                    {soles(f.tipo === "apertura" ? f.t.contado_apertura : f.t.contado_cierre)}
+                    <span className="block text-[11px] font-normal text-stone-500">contado</span>
                   </span>
                 ),
               },
-              { titulo: "Saldo caja", alinear: "der", celda: (m) => <span className="cifra">{soles(m.saldo_acumulado)}</span> },
+              {
+                titulo: "Saldo caja", alinear: "der",
+                celda: (f) => f.tipo === "mov" ? <span className="cifra">{soles(f.m.saldo_acumulado)}</span> : "—",
+              },
+              {
+                titulo: "",
+                celda: (f) => {
+                  if (!puedeCorregir) return null;
+                  if (f.tipo !== "mov") return f.t.anulado_en ? null : <EditarTurno t={turnoFila(f.t)} parte={f.tipo} compacto />;
+                  if (f.tipo !== "mov" || f.m.anulado) return null;
+                  const manual = manualPorMov.get(f.m.id!);
+                  if (manual) return <MenuManual m={manual} cajas={cajasActivas} />;
+                  const gasto = f.m.origen === "gasto" ? gastoPorId.get(f.m.origen_id!) : undefined;
+                  if (gasto && pagoDeGasto.has(gasto.id)) return verPago(pagoDeGasto.get(gasto.id)!);
+                  if (gasto) return <MenuGasto g={gasto} cajas={cajasActivas} categorias={categorias ?? []} />;
+                  return null;
+                },
+              },
             ]}
           />
         )}
         {gastos && (
           <TablaDatos
             filas={gastos}
-            clave={(g) => g.id}
+            clave={(g) => g.id!}
             vacio="Sin gastos."
             columnas={[
               { titulo: "Fecha", celda: (g) => fechaHora(g.fecha) },
               { titulo: "Concepto", principal: true, celda: (g) => <span className={g.estado === "anulada" ? "text-stone-500 line-through" : ""}>{g.concepto}</span> },
-              { titulo: "Categoría", celda: (g) => g.categoria_nombre ?? "—" },
-              { titulo: "Caja", celda: (g) => g.caja_nombre },
-              { titulo: "Monto", alinear: "der", principal: true, celda: (g) => <span className="cifra">{soles(g.monto)}</span> },
+              { titulo: "Categoría", celda: (g) => g.categoria_nombre ?? <span className="text-stone-500">Otro gasto</span> },
+              { titulo: "Caja", celda: (g) => g.sin_caja ? <Insignia tono="gris">No salió de caja</Insignia> : g.caja_nombre },
+              { titulo: "Monto", alinear: "der", principal: true, celda: (g) => <span className={cx("cifra", g.estado === "anulada" && "text-stone-500 line-through")}>{soles(g.monto)}</span> },
               {
                 titulo: "", celda: (g) => g.estado === "anulada"
                   ? <Insignia tono="rojo">Anulado</Insignia>
-                  : puede(rol, "anular") && <BotonAnular id={g.id} accion={anularGasto} titulo="Anular gasto" />,
+                  : pagoDeGasto.has(g.id!) ? verPago(pagoDeGasto.get(g.id!)!)
+                  : puedeCorregir && (
+                    <MenuGasto
+                      g={{ id: g.id!, monto: String(g.monto), concepto: g.concepto!, categoria_id: g.categoria_id, caja_id: g.caja_id, historial: (g.historial ?? []) as GastoFila["historial"] }}
+                      cajas={cajasActivas} categorias={categorias ?? []}
+                    />
+                  ),
               },
             ]}
           />
@@ -221,19 +374,21 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             ]}
           />
         )}
-        {turnos && (
+        {turnos && vista === "cierres" && (
           <TablaDatos
             filas={turnos}
             clave={(t) => t.id!}
             vacio="Sin aperturas ni cierres en el rango."
             columnas={[
-              { titulo: "Turno", principal: true, celda: (t) => <span className="font-medium">N° {t.numero} · {t.caja_nombre}</span> },
+              { titulo: "Turno", principal: true, celda: (t) => <span className={cx("font-medium", t.anulado_en && "text-stone-500 line-through")}>N° {t.numero} · {t.caja_nombre}</span> },
               { titulo: "Apertura", celda: (t) => <>{fechaHora(t.abierto_en)}{t.abierto_por_nombre && <span className="block text-xs text-stone-500">{t.abierto_por_nombre}</span>}</> },
               {
                 titulo: "Cierre",
-                celda: (t) => t.cerrado_en
-                  ? <>{fechaHora(t.cerrado_en)}{t.cerrado_por_nombre && <span className="block text-xs text-stone-500">{t.cerrado_por_nombre}</span>}</>
-                  : <Insignia tono="verde">Abierta</Insignia>,
+                celda: (t) => t.anulado_en
+                  ? <Insignia tono="rojo">Anulada</Insignia>
+                  : t.cerrado_en
+                    ? <>{fechaHora(t.cerrado_en)}{t.cerrado_por_nombre && <span className="block text-xs text-stone-500">{t.cerrado_por_nombre}</span>}</>
+                    : <Insignia tono="verde">Abierta</Insignia>,
               },
               { titulo: "Inicio", alinear: "der", celda: (t) => <span className="cifra">{soles(t.contado_apertura)}</span> },
               { titulo: "Sistema", alinear: "der", celda: (t) => t.cerrado_en ? <span className="cifra">{soles(t.saldo_cierre)}</span> : "—" },
@@ -246,7 +401,12 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
               },
               {
                 titulo: "",
-                celda: (t) => <BotonImprimir80 href={`/imprimir/cierre/${t.id}`} texto={t.cerrado_en ? "Imprimir" : "Corte"} className="inline-flex items-center gap-1.5 text-sm font-medium text-marca-700 hover:underline" />,
+                celda: (t) => (
+                  <span className="inline-flex items-center gap-1">
+                    {!t.anulado_en && <BotonImprimir80 href={`/imprimir/cierre/${t.id}`} texto={t.cerrado_en ? "Imprimir" : "Corte"} className="inline-flex items-center gap-1.5 text-sm font-medium text-marca-700 hover:underline" />}
+                    {puedeCorregir && !t.anulado_en && <EditarTurno t={turnoFila(t)} compacto />}
+                  </span>
+                ),
               },
             ]}
           />

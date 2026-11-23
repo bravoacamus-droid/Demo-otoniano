@@ -11,7 +11,7 @@ import { FormularioAccion } from "@/components/ui/formulario";
 import { useNotificar } from "@/components/ui/notificaciones";
 import { OpcionesProducto } from "@/components/selector-producto";
 import { aCentimos, aGramos, centimosASoles, gramosAKg, importeCentimos } from "@/lib/montos";
-import { kg, porcentaje, soles } from "@/lib/formato";
+import { cantidad, kg, porcentaje, soles, unidadCorta } from "@/lib/formato";
 import type { Caja, Producto } from "@/lib/tipos";
 import { registrarDevolucion, registrarLimpieza } from "./acciones";
 
@@ -20,6 +20,7 @@ export interface LineaPorLimpiar {
   metal_id: string;
   producto: string;
   metal_color: string | null;
+  unidad?: string | null;
   peso_neto_kg: number;
   precio_kg: number;
 }
@@ -76,7 +77,7 @@ export function LimpiarCompra({ compra, lineas, productos, verMontos, alertaPct,
     setError(null);
     for (const [i, l] of lineas.entries()) {
       const c = calculo[i];
-      if (c.merma < 0 || c.tras > c.neto) return setError(`En ${l.producto} lo limpio más lo separado supera lo comprado (${kg(l.peso_neto_kg)}).`);
+      if (c.merma < 0 || c.tras > c.neto) return setError(`En ${l.producto} lo limpio más lo separado supera lo comprado (${cantidad(l.peso_neto_kg, l.unidad)}).`);
       if ((traslados[l.id] ?? []).some((t) => aGramos(t.kg) > 0 && !t.metal_id)) return setError(`Elija a qué producto pasa lo separado de ${l.producto}.`);
     }
     setGuardando(true);
@@ -113,14 +114,15 @@ export function LimpiarCompra({ compra, lineas, productos, verMontos, alertaPct,
             {lineas.map((l, i) => {
               const c = calculo[i];
               const lineaPct = c.neto > 0 ? (Math.max(c.merma, 0) * 100) / c.neto : 0;
+              const u = unidadCorta(l.unidad);
               return (
                 <div key={l.id} className="rounded-lg border border-stone-200 p-3">
                   <div className="grid grid-cols-[1fr_8.5rem] items-end gap-3">
                     <div className="min-w-0">
                       <p className="flex items-center gap-2 font-medium"><PuntoMetal color={l.metal_color} /><span className="truncate">{l.producto}</span></p>
-                      <p className="text-xs text-stone-500">Comprado {kg(l.peso_neto_kg)}{verMontos && <> a {soles(l.precio_kg)}/kg</>}</p>
+                      <p className="text-xs text-stone-500">Comprado {cantidad(l.peso_neto_kg, l.unidad)}{verMontos && <> a {soles(l.precio_kg)}/{u}</>}</p>
                     </div>
-                    <Campo etiqueta="Peso limpio kg">
+                    <Campo etiqueta={u === "kg" || u === "t" ? `Peso limpio ${u}` : `Cantidad limpia ${u}`}>
                       <InputNumero value={limpio[l.id] ?? ""} placeholder={gramosAKg(Math.round(l.peso_neto_kg * 1000))}
                         onChange={(e) => setLimpio((x) => ({ ...x, [l.id]: e.target.value }))} />
                     </Campo>
@@ -133,7 +135,7 @@ export function LimpiarCompra({ compra, lineas, productos, verMontos, alertaPct,
                         <option value="">Pasa a…</option>
                         <OpcionesProducto productos={productos} excluir={l.metal_id} />
                       </Select>
-                      <InputNumero aria-label="Kilos separados" value={t.kg} placeholder="kg" className="py-1.5"
+                      <InputNumero aria-label={u === "kg" ? "Kilos separados" : `Cantidad separada (${u})`} value={t.kg} placeholder={u} className="py-1.5"
                         onChange={(e) => cambiarTraslado(l.id, t.uid, "kg", e.target.value)} />
                       <button type="button" aria-label="Quitar" onClick={() => setTraslados((x) => ({ ...x, [l.id]: (x[l.id] ?? []).filter((y) => y.uid !== t.uid) }))}
                         className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="size-4" /></button>
@@ -147,8 +149,8 @@ export function LimpiarCompra({ compra, lineas, productos, verMontos, alertaPct,
                     {(c.pesado || c.tras > 0) && (
                       <p className={`cifra text-xs font-medium ${c.merma < 0 ? "text-red-700" : lineaPct > alertaPct ? "text-red-700" : "text-amber-700"}`}>
                         {c.merma < 0 ? "Lo limpio + separado supera lo comprado"
-                          : <>Merma {gramosAKg(Math.max(c.merma, 0))} kg ({lineaPct.toFixed(1)} %){verMontos && <> · S/ {centimosASoles(c.importe)}</>}
-                            {c.tras > 0 && <> · separado {gramosAKg(c.tras)} kg</>}</>}
+                          : <>Merma {gramosAKg(Math.max(c.merma, 0))} {u} ({lineaPct.toFixed(1)} %){verMontos && <> · S/ {centimosASoles(c.importe)}</>}
+                            {c.tras > 0 && <> · separado {gramosAKg(c.tras)} {u}</>}</>}
                       </p>
                     )}
                   </div>

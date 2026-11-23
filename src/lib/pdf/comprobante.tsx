@@ -1,5 +1,5 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { ETIQUETA_MEDIO, kg, soles } from "@/lib/formato";
+import { ETIQUETA_MEDIO, cantidad, kg, soles, unidadCorta } from "@/lib/formato";
 import { textoComprobante, type TipoComprobante } from "@/lib/comprobantes";
 import { BandaMarca, CEBRA, MARCA, MARCA_OSCURO, fechaHoraLima, PieMarca, TINTE, type EmpresaPdf } from "./marca";
 
@@ -142,14 +142,15 @@ export function ComprobantePdf({ d }: { d: DatosComprobante }) {
 
 type EmpresaLogo = { empresa: EmpresaPdf; logo?: string | Buffer | null };
 type Num = number | string | null | undefined;
-const precioKg = (v: Num) => (v === null || v === undefined ? "-" : `${soles(v)}/kg`);
+const precioPor = (u?: string | null) => (v: Num) => (v === null || v === undefined ? "-" : `${soles(v)}/${unidadCorta(u)}`);
+const cant = (u?: string | null) => (v: Num) => cantidad(v, u);
 const medio = (m: string | null | undefined) => (m ? ETIQUETA_MEDIO[m] ?? m : "-");
 
 export function datosCompra(base: EmpresaLogo, c: {
   numero: number; fecha: string; estado: string; total: Num; kg_total: Num; saldo_aplicado: Num; medio_pago: string | null;
   caja_nombre: string | null; proveedor_nombre: string | null; proveedor_tipo_doc: string | null; proveedor_nro_doc: string | null; notas: string | null;
   medio_nombre?: string | null; corregido_en?: string | null;
-}, items: { metal_nombre: string; metal_color: string | null; peso_bruto_kg: Num; descuento_kg: Num; peso_neto_kg: Num; precio_kg: Num; importe: Num }[]): DatosComprobante {
+}, items: { metal_nombre: string; metal_color: string | null; metal_unidad?: string | null; peso_bruto_kg: Num; descuento_kg: Num; peso_neto_kg: Num; precio_kg: Num; importe: Num }[]): DatosComprobante {
   const aFavor = Number(c.saldo_aplicado ?? 0);
   return {
     ...base,
@@ -170,7 +171,7 @@ export function datosCompra(base: EmpresaLogo, c: {
     ],
     filas: items.map((i) => ({
       color: i.metal_color,
-      celdas: [i.metal_nombre, kg(i.peso_bruto_kg), kg(i.descuento_kg), kg(i.peso_neto_kg), precioKg(i.precio_kg), soles(i.importe)],
+      celdas: [i.metal_nombre, cantidad(i.peso_bruto_kg, i.metal_unidad), cantidad(i.descuento_kg, i.metal_unidad), cantidad(i.peso_neto_kg, i.metal_unidad), precioPor(i.metal_unidad)(i.precio_kg), soles(i.importe)],
     })),
     subtotales: [
       ["Kilos netos", kg(c.kg_total)],
@@ -190,7 +191,7 @@ export function datosVenta(base: EmpresaLogo, v: {
   medio_pago: string | null; caja_nombre: string | null; comprador_nombre: string | null; comprador_ruc: string | null; guia_numero: string | null; notas: string | null;
   medio_nombre?: string | null;
   comprobante_tipo?: TipoComprobante | null; comprobante_numero?: string | null;
-}, items: { metal_nombre: string; metal_color: string | null; peso_salida_kg: Num; peso_recibido_kg: Num; merma_kg: Num; precio_kg: Num; importe: Num }[]): DatosComprobante {
+}, items: { metal_nombre: string; metal_color: string | null; metal_unidad?: string | null; peso_salida_kg: Num; peso_recibido_kg: Num; merma_kg: Num; precio_kg: Num; importe: Num }[]): DatosComprobante {
   const pendiente = v.estado === "pendiente";
   const guion = (x: Num, f: (y: Num) => string) => (x === null || x === undefined ? "-" : f(x));
   return {
@@ -215,7 +216,7 @@ export function datosVenta(base: EmpresaLogo, v: {
     ],
     filas: items.map((i) => ({
       color: i.metal_color,
-      celdas: [i.metal_nombre, kg(i.peso_salida_kg), guion(i.peso_recibido_kg, kg), guion(i.merma_kg, kg), guion(i.precio_kg, precioKg), guion(i.importe, soles)],
+      celdas: [i.metal_nombre, cantidad(i.peso_salida_kg, i.metal_unidad), guion(i.peso_recibido_kg, cant(i.metal_unidad)), guion(i.merma_kg, cant(i.metal_unidad)), guion(i.precio_kg, precioPor(i.metal_unidad)), guion(i.importe, soles)],
     })),
     subtotales: [
       ["Kilos de salida", kg(v.kg_salida)],

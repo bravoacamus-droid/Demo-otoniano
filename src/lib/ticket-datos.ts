@@ -38,6 +38,7 @@ export async function ticketCompra(ctx: Contexto, id: string): Promise<DatosTick
     notas: c.notas,
     items: (items ?? []).map((i) => ({
       metal: i.metal_nombre,
+      unidad: i.metal_unidad,
       bruto: i.peso_bruto_kg,
       descuento: i.descuento_kg,
       neto: i.peso_neto_kg,
@@ -74,6 +75,7 @@ export async function ticketVenta(ctx: Contexto, id: string): Promise<DatosTicke
     pie: "Pesos de salida según nuestra balanza",
     items: (items ?? []).map((i) => ({
       metal: i.metal_nombre,
+      unidad: i.metal_unidad,
       neto: i.peso_recibido_kg ?? i.peso_salida_kg,
       precio: i.precio_kg,
       importe: i.importe,

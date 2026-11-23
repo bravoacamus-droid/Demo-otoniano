@@ -7,33 +7,39 @@ import { Boton } from "@/components/ui/boton";
 import { Campo, InputNumero, Select, Textarea } from "@/components/ui/campos";
 import { FormularioAccion } from "@/components/ui/formulario";
 import { useNotificar } from "@/components/ui/notificaciones";
-import { kg } from "@/lib/formato";
+import { cantidad, unidadCorta } from "@/lib/formato";
 import { aGramos, gramosAKg } from "@/lib/montos";
 import { reclasificar, registrarAjuste, registrarConteo } from "./acciones";
 
-type M = { id: string; nombre: string; kg: string };
+type M = { id: string; nombre: string; kg: string; unidad?: string | null };
+
+/** «Kilos» para productos en kg; si no, «Cantidad (und)», «Cantidad (t)»… */
+const etiquetaCantidad = (u: string | null | undefined, kilos = "Kilos", otra = "Cantidad") =>
+  unidadCorta(u) === "kg" ? kilos : `${otra} (${unidadCorta(u)})`;
 
 /** Conteo físico: muestra lo que dice el sistema, lo contado y el faltante/sobrante antes de guardar */
 function CamposConteo({ metales }: { metales: M[] }) {
   const [metal, setMetal] = useState(metales[0]?.id ?? "");
   const [contado, setContado] = useState("");
-  const sistema = aGramos(String(metales.find((m) => m.id === metal)?.kg ?? "0"));
+  const elegido = metales.find((m) => m.id === metal);
+  const u = elegido?.unidad;
+  const sistema = aGramos(String(elegido?.kg ?? "0"));
   const dif = contado.trim() === "" ? null : aGramos(contado) - sistema;
   return (
     <>
       <Campo etiqueta="Producto">
         <Select name="metal_id" required value={metal} onChange={(e) => setMetal(e.target.value)}>
-          {metales.map((m) => <option key={m.id} value={m.id}>{m.nombre} · {kg(m.kg)}</option>)}
+          {metales.map((m) => <option key={m.id} value={m.id}>{m.nombre} · {cantidad(m.kg, m.unidad)}</option>)}
         </Select>
       </Campo>
-      <Campo etiqueta="Kilos contados"><InputNumero name="kg" required value={contado} onChange={(e) => setContado(e.target.value)} /></Campo>
+      <Campo etiqueta={etiquetaCantidad(u, "Kilos contados", "Cantidad contada")}><InputNumero name="kg" required value={contado} onChange={(e) => setContado(e.target.value)} /></Campo>
       <dl aria-live="polite" className="grid grid-cols-3 gap-2 rounded-lg bg-stone-50 px-3 py-2 text-sm">
-        <div><dt className="text-xs text-stone-500">Sistema</dt><dd className="cifra font-medium">{kg(gramosAKg(sistema))}</dd></div>
-        <div><dt className="text-xs text-stone-500">Contado</dt><dd className="cifra font-medium">{dif === null ? "—" : kg(gramosAKg(aGramos(contado)))}</dd></div>
+        <div><dt className="text-xs text-stone-500">Sistema</dt><dd className="cifra font-medium">{cantidad(gramosAKg(sistema), u)}</dd></div>
+        <div><dt className="text-xs text-stone-500">Contado</dt><dd className="cifra font-medium">{dif === null ? "—" : cantidad(gramosAKg(aGramos(contado)), u)}</dd></div>
         <div>
           <dt className="text-xs text-stone-500">{dif === null || dif === 0 ? "Diferencia" : dif < 0 ? "Faltante" : "Sobrante"}</dt>
           <dd className={`cifra font-semibold ${dif === null || dif === 0 ? "" : dif < 0 ? "text-red-700" : "text-emerald-700"}`}>
-            {dif === null ? "—" : dif === 0 ? "Cuadra" : kg(gramosAKg(Math.abs(dif)))}
+            {dif === null ? "—" : dif === 0 ? "Cuadra" : cantidad(gramosAKg(Math.abs(dif)), u)}
           </dd>
         </div>
       </dl>
@@ -48,7 +54,10 @@ export function AccionesInventario({ metales }: { metales: M[] }) {
   const [abierto, setAbierto] = useState<"conteo" | "ajuste" | "reclasificar" | null>(null);
   const notificar = useNotificar();
   const cerrar = () => setAbierto(null);
-  const opciones = metales.map((m) => <option key={m.id} value={m.id}>{m.nombre} · {kg(m.kg)}</option>);
+  const [ajusteId, setAjusteId] = useState(metales[0]?.id ?? "");
+  const [origenId, setOrigenId] = useState(metales[0]?.id ?? "");
+  const unidadDe = (id: string) => metales.find((m) => m.id === id)?.unidad;
+  const opciones = metales.map((m) => <option key={m.id} value={m.id}>{m.nombre} · {cantidad(m.kg, m.unidad)}</option>);
 
   return (
     <>
@@ -65,7 +74,7 @@ export function AccionesInventario({ metales }: { metales: M[] }) {
 
       <Modal abierto={abierto === "ajuste"} onCerrar={cerrar} titulo="Ajuste de inventario">
         <FormularioAccion accion={registrarAjuste} textoBoton="Registrar ajuste" mensajeExito="Ajuste registrado." onExito={cerrar}>
-          <Campo etiqueta="Producto"><Select name="metal_id" required>{opciones}</Select></Campo>
+          <Campo etiqueta="Producto"><Select name="metal_id" required value={ajusteId} onChange={(e) => setAjusteId(e.target.value)}>{opciones}</Select></Campo>
           <div className="grid grid-cols-2 gap-3">
             <Campo etiqueta="Sentido">
               <Select name="sentido" defaultValue="restar">
@@ -73,7 +82,7 @@ export function AccionesInventario({ metales }: { metales: M[] }) {
                 <option value="sumar">Sumar (sobrante)</option>
               </Select>
             </Campo>
-            <Campo etiqueta="Kilos"><InputNumero name="kg" required /></Campo>
+            <Campo etiqueta={etiquetaCantidad(unidadDe(ajusteId))}><InputNumero name="kg" required /></Campo>
           </div>
           <Campo etiqueta="Tipo">
             <Select name="tipo" defaultValue="merma">
@@ -88,11 +97,11 @@ export function AccionesInventario({ metales }: { metales: M[] }) {
       <Modal abierto={abierto === "reclasificar"} onCerrar={cerrar} titulo="Reclasificar producto">
         <FormularioAccion accion={reclasificar} textoBoton="Reclasificar" mensajeExito="Reclasificación registrada." onExito={cerrar}>
           <p className="text-sm text-stone-600">Mueve kilos de un producto a otro llevando su costo (ej.: cobre quemado → cobre brillante).</p>
-          <Campo etiqueta="Desde"><Select name="origen" required>{opciones}</Select></Campo>
+          <Campo etiqueta="Desde"><Select name="origen" required value={origenId} onChange={(e) => setOrigenId(e.target.value)}>{opciones}</Select></Campo>
           <Campo etiqueta="Hacia"><Select name="destino" required defaultValue="">
             <option value="" disabled>Elija el producto…</option>{opciones}
           </Select></Campo>
-          <Campo etiqueta="Kilos"><InputNumero name="kg" required /></Campo>
+          <Campo etiqueta={etiquetaCantidad(unidadDe(origenId))}><InputNumero name="kg" required /></Campo>
           <Campo etiqueta="Motivo"><Textarea name="motivo" required /></Campo>
         </FormularioAccion>
       </Modal>

@@ -8,15 +8,16 @@ import { Boton } from "@/components/ui/boton";
 import { InputNumero } from "@/components/ui/campos";
 import { Modal } from "@/components/ui/modal";
 import { useNotificar } from "@/components/ui/notificaciones";
-import { soles } from "@/lib/formato";
+import { soles, unidadCorta } from "@/lib/formato";
 import type { Producto } from "@/lib/tipos";
 import { guardarPrecios } from "./acciones";
 import { FormMetal } from "./form-metal";
+import type { UnidadMedida } from "@/lib/productos";
 import { MenuProducto } from "./menu-producto";
 
 type Valores = { c: string; m: string; v: string };
 
-export function TablaPrecios({ productos, editable }: { productos: Producto[]; editable: boolean }) {
+export function TablaPrecios({ productos, editable, unidades }: { productos: Producto[]; editable: boolean; unidades: UnidadMedida[] }) {
   const router = useRouter();
   const [valores, setValores] = useState<Record<string, Valores>>(() =>
     // Los numeric de Postgres pueden llegar como número: los inputs trabajan con texto
@@ -59,12 +60,13 @@ export function TablaPrecios({ productos, editable }: { productos: Producto[]; e
           <li key={p.id} className="grid grid-cols-3 items-center gap-2 px-4 py-2 sm:grid-cols-[1fr_6.5rem_6.5rem_6.5rem]">
             <div className="col-span-3 flex min-w-0 items-center gap-1.5 sm:col-span-1" style={{ paddingLeft: `${(p.nivel - 1) * 1.1}rem` }}>
               {p.nivel > 1 && <span className="text-stone-300">└</span>}
-              <button type="button" disabled={!editable} onClick={() => setModal({ producto: p, padre: p.padre_id })}
-                className="flex min-w-0 items-center gap-2 text-left">
+              {/* El nombre no abre nada: editar y demás opciones van en los tres puntos */}
+              <span className="flex min-w-0 items-center gap-2">
                 <PuntoMetal color={p.color} />
                 <span className={`truncate ${p.nivel === 1 ? "font-semibold" : "font-medium"} ${p.activo ? "" : "text-stone-400"}`}>{p.nombre}</span>
-              </button>
+              </span>
               {p.codigo && <span className="shrink-0 font-mono text-xs text-stone-500">{p.codigo}</span>}
+              {unidadCorta(p.unidad) !== "kg" && <span className="shrink-0 text-xs text-stone-500">S/ por {unidadCorta(p.unidad)}</span>}
               {!p.activo && <Insignia>Inactivo</Insignia>}
               {editable && (
                 <MenuProducto nombre={p.nombre} id={p.id} activo={p.activo}
@@ -74,9 +76,9 @@ export function TablaPrecios({ productos, editable }: { productos: Producto[]; e
             </div>
             {editable && p.activo ? (
               <>
-                <InputNumero aria-label={`Compra ${p.nombre}`} value={valores[p.id].c} onChange={(e) => fijar(p.id, "c", e.target.value)} />
-                <InputNumero aria-label={`Mayorista ${p.nombre}`} value={valores[p.id].m} placeholder={valores[p.id].c} onChange={(e) => fijar(p.id, "m", e.target.value)} />
-                <InputNumero aria-label={`Venta ${p.nombre}`} value={valores[p.id].v} onChange={(e) => fijar(p.id, "v", e.target.value)} />
+                <InputNumero aria-label={`Compra ${p.nombre} (S/ por ${unidadCorta(p.unidad)})`} value={valores[p.id].c} onChange={(e) => fijar(p.id, "c", e.target.value)} />
+                <InputNumero aria-label={`Mayorista ${p.nombre} (S/ por ${unidadCorta(p.unidad)})`} value={valores[p.id].m} placeholder={valores[p.id].c} onChange={(e) => fijar(p.id, "m", e.target.value)} />
+                <InputNumero aria-label={`Venta ${p.nombre} (S/ por ${unidadCorta(p.unidad)})`} value={valores[p.id].v} onChange={(e) => fijar(p.id, "v", e.target.value)} />
               </>
             ) : (
               <>
@@ -99,7 +101,7 @@ export function TablaPrecios({ productos, editable }: { productos: Producto[]; e
       )}
       <Modal abierto={modal !== null} onCerrar={() => setModal(null)}
         titulo={modal?.producto ? "Editar producto" : modal?.padre ? "Nueva variante" : "Nueva familia"}>
-        {modal && <FormMetal producto={modal.producto} padreId={modal.padre} productos={productos} onListo={() => setModal(null)} />}
+        {modal && <FormMetal producto={modal.producto} padreId={modal.padre} productos={productos} unidades={unidades} onListo={() => setModal(null)} />}
       </Modal>
     </Tarjeta>
   );

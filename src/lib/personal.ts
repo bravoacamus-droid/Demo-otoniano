@@ -35,4 +35,4 @@ export async function marcasAsistencia(supabase: Contexto["supabase"], empresaId
   }
 }
 
-export const LETRA_ESTADO: Record<string, string> = { asistio: "A", falta: "F", descanso: "D", permiso: "P", vacaciones: "V" };
+export const LETRA_ESTADO: Record<string, string> = { asistio: "A", tardanza: "T", falta: "F", descanso: "D", permiso: "P", vacaciones: "V" };

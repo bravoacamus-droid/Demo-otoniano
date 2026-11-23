@@ -9,7 +9,7 @@ import { Campo, InputNumero, Textarea } from "@/components/ui/campos";
 import { Aviso } from "@/components/ui/basicos";
 import { useNotificar } from "@/components/ui/notificaciones";
 import { aCentimos, aGramos, importeCentimos } from "@/lib/montos";
-import { kg, soles } from "@/lib/formato";
+import { cantidad, soles, unidadCorta } from "@/lib/formato";
 import { corregirVenta } from "../acciones";
 
 export interface LineaVentaCorregible {
@@ -18,6 +18,7 @@ export interface LineaVentaCorregible {
   peso_salida_kg: string;
   peso_recibido_kg: string;
   precio_kg: string;
+  unidad?: string | null;
 }
 
 /** Gerencia o Administración corrigen el peso recibido o el precio de una venta confirmada; queda registrado */
@@ -86,11 +87,11 @@ export function CorregirVenta({ venta, lineas, total, abrirAlInicio = false, esC
                 <div key={l.id} className="space-y-2 p-3">
                   <p className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-medium">{l.producto}</span>
-                    <span className="cifra text-xs text-stone-500">Salió {kg(l.peso_salida_kg)}</span>
+                    <span className="cifra text-xs text-stone-500">Salió {cantidad(l.peso_salida_kg, l.unidad)}</span>
                   </p>
                   <div className="grid grid-cols-2 gap-2">
-                    <Campo etiqueta="Recibido kg"><InputNumero value={v.recibido} onChange={(e) => cambia("recibido", e.target.value)} /></Campo>
-                    <Campo etiqueta="Precio S/ kg"><InputNumero value={v.precio} onChange={(e) => cambia("precio", e.target.value)} /></Campo>
+                    <Campo etiqueta={`Recibido ${unidadCorta(l.unidad)}`}><InputNumero value={v.recibido} onChange={(e) => cambia("recibido", e.target.value)} /></Campo>
+                    <Campo etiqueta={`Precio S/ ${unidadCorta(l.unidad)}`}><InputNumero value={v.precio} onChange={(e) => cambia("precio", e.target.value)} /></Campo>
                   </div>
                   <p className="cifra text-right text-xs text-stone-500">{soles(importeCentimos(aGramos(v.recibido), aCentimos(v.precio)) / 100)}</p>
                 </div>

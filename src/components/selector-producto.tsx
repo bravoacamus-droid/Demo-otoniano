@@ -5,7 +5,7 @@ import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { PuntoMetal } from "@/components/ui/basicos";
 import { cx } from "@/components/ui/clases";
 import { Combobox } from "@/components/ui/combobox";
-import { soles } from "@/lib/formato";
+import { soles, unidadCorta } from "@/lib/formato";
 import { normal } from "@/lib/buscar";
 import type { ClaseProveedor, Producto } from "@/lib/tipos";
 
@@ -65,7 +65,7 @@ export function SelectorProducto({
     (hijos.get(id) ?? []).reduce((s, h) => s + (agregados?.get(h.id) ?? 0) + agregadosBajo(h.id), 0);
 
   const lista = hijos.get(nivel) ?? [];
-  const etiquetaPrecio = precio ?? ((p: Producto) => `${soles(p.precio_compra)}/kg`);
+  const etiquetaPrecio = precio ?? ((p: Producto) => `${soles(p.precio_compra)}/${unidadCorta(p.unidad)}`);
 
   /** Familia de primer nivel (encabezado de grupo en la lista desplegable) */
   const familiaDe = (p: Producto) => p.ruta.split(" › ")[0];

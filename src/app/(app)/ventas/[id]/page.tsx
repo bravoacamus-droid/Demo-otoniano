@@ -6,7 +6,7 @@ import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
 import { urlArchivo } from "@/lib/archivos-servidor";
-import { fechaHora, kg, soles } from "@/lib/formato";
+import { cantidad, fechaHora, soles, unidadCorta } from "@/lib/formato";
 import { cargarMediosPago } from "@/lib/productos";
 import { Aviso, Dato, Encabezado, Insignia, PuntoMetal, Tarjeta, TituloTarjeta } from "@/components/ui/basicos";
 import { TablaDatos } from "@/components/ui/tabla";
@@ -40,6 +40,7 @@ export default async function VentaDetalle({
   if (!v) notFound();
   const [guia, comprobante] = await Promise.all([urlArchivo(supabase, v.guia_url), urlArchivo(supabase, v.comprobante_url)]);
   const pendiente = v.estado === "pendiente";
+  const todoKg = (items ?? []).every((i) => (i.metal_unidad ?? "kg") === "kg");
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -63,7 +64,7 @@ export default async function VentaDetalle({
                 esCredito={!!credito}
                 lineas={(items ?? []).map((i) => ({
                   id: i.id, producto: i.metal_nombre, peso_salida_kg: i.peso_salida_kg,
-                  peso_recibido_kg: i.peso_recibido_kg ?? i.peso_salida_kg, precio_kg: i.precio_kg ?? "0",
+                  peso_recibido_kg: i.peso_recibido_kg ?? i.peso_salida_kg, precio_kg: i.precio_kg ?? "0", unidad: i.metal_unidad,
                 }))}
               />
             )}
@@ -82,7 +83,7 @@ export default async function VentaDetalle({
           <ConfirmarVenta
             ventaId={v.id}
             empresaId={empresa.id}
-            items={(items ?? []).map((i) => ({ id: i.id, metal: i.metal_nombre, color: i.metal_color, salida: i.peso_salida_kg }))}
+            items={(items ?? []).map((i) => ({ id: i.id, metal: i.metal_nombre, color: i.metal_color, salida: i.peso_salida_kg, unidad: i.metal_unidad }))}
             cajas={(cajas ?? []) as Caja[]}
             medios={medios}
           />
@@ -98,10 +99,10 @@ export default async function VentaDetalle({
             clave={(i) => i.id}
             columnas={[
               { titulo: "Producto", principal: true, celda: (i) => <Link href={`/inventario/${i.metal_id}`} className="flex items-center gap-2 hover:underline"><PuntoMetal color={i.metal_color} />{i.metal_nombre}</Link> },
-              { titulo: "Salida", alinear: "der", celda: (i) => <span className="cifra">{kg(i.peso_salida_kg)}</span> },
-              { titulo: "Recibido", alinear: "der", celda: (i) => i.peso_recibido_kg === null ? "—" : <span className="cifra">{kg(i.peso_recibido_kg)}</span> },
-              { titulo: "Merma", alinear: "der", celda: (i) => i.merma_kg === null ? "—" : <span className="cifra text-amber-700">{kg(i.merma_kg)}</span> },
-              { titulo: "Precio/kg", alinear: "der", celda: (i) => i.precio_kg === null ? "—" : <span className="cifra">{soles(i.precio_kg)}</span> },
+              { titulo: "Salida", alinear: "der", celda: (i) => <span className="cifra">{cantidad(i.peso_salida_kg, i.metal_unidad)}</span> },
+              { titulo: "Recibido", alinear: "der", celda: (i) => i.peso_recibido_kg === null ? "—" : <span className="cifra">{cantidad(i.peso_recibido_kg, i.metal_unidad)}</span> },
+              { titulo: "Merma", alinear: "der", celda: (i) => i.merma_kg === null ? "—" : <span className="cifra text-amber-700">{cantidad(i.merma_kg, i.metal_unidad)}</span> },
+              { titulo: todoKg ? "Precio/kg" : "Precio", alinear: "der", celda: (i) => i.precio_kg === null ? "—" : <span className="cifra">{soles(i.precio_kg)}{!todoKg && `/${unidadCorta(i.metal_unidad)}`}</span> },
               { titulo: "Importe", alinear: "der", principal: true, celda: (i) => i.importe === null ? "—" : <span className="cifra font-semibold">{soles(i.importe)}</span> },
             ]}
           />
@@ -121,10 +122,11 @@ export default async function VentaDetalle({
                   <ul className="space-y-0.5 text-xs text-stone-500">
                     {((k.despues as LineaJson[] | null) ?? []).map((d, n) => {
                       const a = ((k.antes as LineaJson[] | null) ?? [])[n];
-                      if (!a) return <li key={n} className="cifra">{d.producto}: {kg(d.peso_recibido_kg)} × {soles(d.precio_kg)}</li>;
+                      const u = (items ?? []).find((i) => i.metal_nombre === d.producto)?.metal_unidad;
+                      if (!a) return <li key={n} className="cifra">{d.producto}: {cantidad(d.peso_recibido_kg, u)} × {soles(d.precio_kg)}</li>;
                       return (
                         <li key={n} className="cifra">
-                          {d.producto}: {kg(a.peso_recibido_kg)} × {soles(a.precio_kg)} → {kg(d.peso_recibido_kg)} × {soles(d.precio_kg)}
+                          {d.producto}: {cantidad(a.peso_recibido_kg, u)} × {soles(a.precio_kg)} → {cantidad(d.peso_recibido_kg, u)} × {soles(d.precio_kg)}
                         </li>
                       );
                     })}

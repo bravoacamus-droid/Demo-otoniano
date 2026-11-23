@@ -31,13 +31,14 @@ export async function GET(request: Request) {
     supabase.from("v_stock_metal").select("*").eq("empresa_id", empresa.id).order("clave_orden"),
     supabase.rpc("resumen_inventario", { p_empresa: empresa.id }),
     supabase.from("v_patrimonio").select("en_transito, por_cobrar").eq("empresa_id", empresa.id).maybeSingle(),
-    supabase.from("v_lotes").select("fecha, numero, proveedor_nombre, metal_nombre, metal_color, kg_en_stock, dias, por_seleccionar, retrasado")
+    supabase.from("v_lotes").select("fecha, numero, proveedor_nombre, metal_id, metal_nombre, metal_color, kg_en_stock, dias, por_seleccionar, retrasado")
       .eq("empresa_id", empresa.id).gt("kg_en_stock", 0).order("fecha").order("numero"),
     cargarLogo(supabase, empresa.logo_url),
   ]);
   for (const r of [stock, resumen, patrimonio, lotes]) if (r.error) return new Response(r.error.message, { status: 500 });
 
   const r = (resumen.data ?? {}) as Record<string, unknown>;
+  const unidadDe = new Map((stock.data ?? []).map((m) => [m.metal_id, m.unidad]));
   const d: DatosValorizado = {
     empresa: { razon_social: empresa.razon_social, ruc: empresa.ruc, direccion: empresa.direccion, telefono: empresa.telefono },
     logo: logo?.buffer ?? null,
@@ -48,11 +49,11 @@ export async function GET(request: Request) {
       en_transito: n(patrimonio.data?.en_transito), por_cobrar: n(patrimonio.data?.por_cobrar),
     },
     metales: (stock.data ?? []).filter((m) => m.activo || n(m.kg) !== 0).map((m) => ({
-      nombre: m.ruta ?? m.nombre ?? "", color: m.color, kg: n(m.kg), costo_promedio: m.costo_promedio === null ? null : n(m.costo_promedio),
+      nombre: m.ruta ?? m.nombre ?? "", color: m.color, unidad: m.unidad, kg: n(m.kg), costo_promedio: m.costo_promedio === null ? null : n(m.costo_promedio),
       valor_costo: n(m.valor_costo), precio_venta: n(m.precio_venta), valor_venta: n(m.valor_venta),
     })),
     lotes: (lotes.data ?? []).map((l) => ({
-      fecha: l.fecha ?? "", numero: n(l.numero), proveedor: l.proveedor_nombre, metal: l.metal_nombre ?? "", color: l.metal_color,
+      fecha: l.fecha ?? "", numero: n(l.numero), proveedor: l.proveedor_nombre, metal: l.metal_nombre ?? "", color: l.metal_color, unidad: unidadDe.get(l.metal_id),
       kg_en_stock: n(l.kg_en_stock), dias: n(l.dias), por_seleccionar: !!l.por_seleccionar, retrasado: !!l.retrasado,
     })),
   };
