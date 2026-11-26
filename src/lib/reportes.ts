@@ -11,6 +11,8 @@ export interface Col {
   tipo: TipoCol;
   /** Sumar en la fila de totales */
   sumar?: boolean;
+  /** Ancho relativo en PDF/Excel (por defecto, según el tipo) */
+  ancho?: number;
 }
 export interface Filtros {
   desde: string;
@@ -32,6 +34,8 @@ export interface DefReporte {
   agrupaciones?: { valor: string; texto: string }[];
   usaMetal?: boolean;
   usaCaja?: boolean;
+  /** Totales que van destacados arriba del PDF (por defecto, las primeras columnas que se suman) */
+  destacar?: string[];
   obtener: (ctx: Pick<Contexto, "supabase" | "empresa">, f: Filtros) => Promise<DatosReporte>;
   /** Operaciones de cada grupo (misma clave que la fila del resumen): se despliegan al tocar la fila */
   detalle?: (ctx: Pick<Contexto, "supabase" | "empresa">, f: Filtros) => Promise<DetalleReporte>;
@@ -134,6 +138,7 @@ export const REPORTES: DefReporte[] = [
     id: "margen",
     titulo: "Margen por producto",
     descripcion: "Precio promedio de venta − costo promedio, en S/ por kg y %",
+    destacar: ["kg_vendidos", "ventas", "costo_vendido", "margen_total"],
     async obtener({ supabase, empresa }, f) {
       const filas = chequear(await supabase.rpc("rpt_margen_metal", { p_empresa: empresa.id, p_desde: f.desde, p_hasta: f.hasta }));
       return {
@@ -156,6 +161,7 @@ export const REPORTES: DefReporte[] = [
     id: "merma",
     titulo: "Merma total",
     descripcion: "Diferencia de pesos en ventas + limpieza y ajustes, valorizada a costo",
+    destacar: ["merma_venta_costo", "merma_ajuste_costo", "total_kg", "total_costo"],
     async obtener({ supabase, empresa }, f) {
       const filas = chequear(await supabase.rpc("rpt_merma", { p_empresa: empresa.id, p_desde: f.desde, p_hasta: f.hasta }));
       return {
@@ -232,9 +238,9 @@ export const REPORTES: DefReporte[] = [
       return {
         columnas: [
           { clave: "fecha", titulo: "Fecha", tipo: "fecha" },
-          { clave: "caja", titulo: "Caja", tipo: "texto" },
-          { clave: "origen", titulo: "Origen", tipo: "texto" },
-          { clave: "concepto", titulo: "Concepto", tipo: "texto" },
+          { clave: "caja", titulo: "Caja", tipo: "texto", ancho: 20 },
+          { clave: "origen", titulo: "Origen", tipo: "texto", ancho: 13 },
+          { clave: "concepto", titulo: "Concepto", tipo: "texto", ancho: 44 },
           { clave: "ingreso", titulo: "Ingreso", tipo: "soles", sumar: true },
           { clave: "egreso", titulo: "Egreso", tipo: "soles", sumar: true },
           { clave: "saldo", titulo: "Saldo", tipo: "soles" },
@@ -248,6 +254,7 @@ export const REPORTES: DefReporte[] = [
     id: "resultados",
     titulo: "Estado de resultados",
     descripcion: "Mensual, con comparación entre meses",
+    destacar: ["ventas", "margen_bruto", "gastos", "utilidad"],
     async obtener({ supabase, empresa }, f) {
       const filas = chequear(await supabase.from("v_resultado_mes").select("*").eq("empresa_id", empresa.id)
         .gte("periodo", f.desde.slice(0, 7)).lte("periodo", f.hasta.slice(0, 7)).order("periodo"));
@@ -342,9 +349,9 @@ export function filtrosDesde(sp: Record<string, string | undefined>): Filtros {
 }
 
 /** Suma exacta en céntimos/gramos para la fila de totales (evita errores de float al presentar) */
-export function totales(d: DatosReporte): Record<string, number> | null {
+export function totales(d: DatosReporte, minimo = 2): Record<string, number> | null {
   const sumables = d.columnas.filter((c) => c.sumar);
-  if (!sumables.length || d.filas.length < 2) return null;
+  if (!sumables.length || d.filas.length < minimo) return null;
   const t: Record<string, number> = {};
   for (const c of sumables) {
     const f = c.tipo === "kg" ? 1000 : c.tipo === "soles" ? 100 : 1;

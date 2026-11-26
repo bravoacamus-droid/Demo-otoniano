@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { obtenerContexto } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
-import { cargarLogo } from "@/lib/archivos-servidor";
+import { logoReporte } from "@/lib/archivos-servidor";
 import { hoyLima } from "@/lib/formato";
 import { ValorizadoPdf, type DatosValorizado } from "@/lib/pdf/valorizado";
 
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     supabase.from("v_patrimonio").select("en_transito, por_cobrar").eq("empresa_id", empresa.id).maybeSingle(),
     supabase.from("v_lotes").select("fecha, numero, proveedor_nombre, metal_id, metal_nombre, metal_color, kg_en_stock, dias, por_seleccionar, retrasado")
       .eq("empresa_id", empresa.id).gt("kg_en_stock", 0).order("fecha").order("numero"),
-    cargarLogo(supabase, empresa.logo_url),
+    logoReporte(supabase, empresa.logo_url),
   ]);
   for (const r of [stock, resumen, patrimonio, lotes]) if (r.error) return new Response(r.error.message, { status: 500 });
 

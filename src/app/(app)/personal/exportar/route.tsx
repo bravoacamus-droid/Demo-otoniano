@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { obtenerContexto } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
-import { cargarLogo } from "@/lib/archivos-servidor";
+import { logoReporte } from "@/lib/archivos-servidor";
 import { fechaDia, hoyLima, numero, soles } from "@/lib/formato";
 import { LETRA_ESTADO, diasEntre, marcasAsistencia, periodoPersonal } from "@/lib/personal";
 import { AsistenciaPdf, type DatosAsistenciaPdf } from "@/lib/pdf/asistencia";
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     supabase.from("trabajadores").select("id, nombre, fecha_ingreso, fecha_cese").eq("empresa_id", empresa.id)
       .lte("fecha_ingreso", hasta).or(`fecha_cese.is.null,fecha_cese.gte.${desde}`).order("nombre"),
     marcasAsistencia(supabase, empresa.id, desde, hasta),
-    formato === "pdf" ? cargarLogo(supabase, empresa.logo_url) : Promise.resolve(null),
+    formato === "pdf" ? logoReporte(supabase, empresa.logo_url) : Promise.resolve(null),
   ]);
   for (const r of [resumen, trabajadores]) if (r.error) return new Response(r.error.message, { status: 500 });
   const filas = (resumen.data ?? []) as Resumen[];

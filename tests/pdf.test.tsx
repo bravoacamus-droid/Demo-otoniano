@@ -66,11 +66,27 @@ describe("PDF", () => {
     expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
   });
 
-  it("reporte A4", async () => {
+  it("reporte con marca y el detalle de cada grupo (compras del día)", async () => {
+    const col = (titulo: string, derecha = false, ancho = 13) => ({ titulo, derecha, ancho });
     const pdf = await renderToBuffer(
-      <ReportePdf empresa="Metales" titulo="Compras" subtitulo="Del 01/10 al 16/10"
-        columnas={[{ titulo: "Grupo", derecha: false, ancho: 30 }, { titulo: "Kg", derecha: true, ancho: 13 }]}
-        filas={[{ celdas: ["Cobre", "5,000 kg"] }]} total={["Total", "5,000 kg"]} nota="Nota" />,
+      <ReportePdf empresa={{ razon_social: "Sistema Otiniano", ruc: null, direccion: null, telefono: null }} logo={null}
+        titulo="Compras" descripcion="Kilos, soles y precio promedio comprado" subtitulo="Del 01/11/26 al 26/11/26  ·  Por día" generado="26/11/2026 12:00 · Gerencia"
+        kpis={[{ titulo: "Total compras", valor: "5" }, { titulo: "Total kg", valor: "11,372.011 kg" }]}
+        columnas={[col("Grupo", false, 30), col("Compras", true), col("Kg", true), col("Importe", true)]}
+        columnasDetalle={[col("Fecha", false, 16), col("N°", false, 6), col("Proveedor", false, 30), col("Producto", false, 30), col("Kg", true), col("Importe", true)]}
+        filas={[
+          { celdas: ["22/11/2026", "1", "405.00 kg", "S/ 995.40"], detalle: Array.from({ length: 40 }, (_, i) => ["22/11/26 10:34", "#5", "Antonio Otiniano Oruna", `Aluminio › Perfil ${i}`, "39.00 kg", "S/ 234.00"]) },
+          { celdas: ["19/11/2026", "4", "10,967.011 kg", "S/ 24,267.64"], detalle: [["19/11/26 11:30", "#1", "Antonio Otiniano Oruna", "Fierro › Chatarra pesada", "9,739.00 kg", "S/ 3,895.60"]] },
+        ]}
+        total={["Total", "5", "11,372.011 kg", "S/ 25,263.04"]} nota="Nota" />,
+    );
+    expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("reporte sin datos", async () => {
+    const pdf = await renderToBuffer(
+      <ReportePdf empresa={{ razon_social: "Metales", ruc: null, direccion: null, telefono: null }} titulo="Kardex" subtitulo="Del 01/10 al 16/10"
+        generado="hoy" columnas={[]} filas={[]} nota="Elija un producto." />,
     );
     expect(pdf.length).toBeGreaterThan(1000);
   });

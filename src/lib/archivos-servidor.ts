@@ -22,3 +22,16 @@ export async function cargarLogo(supabase: Contexto["supabase"], ruta: string | 
     return null;
   }
 }
+
+/** Logo para los reportes: el de la empresa o, si no tiene, el isotipo de Grupo Otiniano (public/marca) */
+export async function logoReporte(supabase: Contexto["supabase"], ruta: string | null | undefined) {
+  const propio = await cargarLogo(supabase, ruta);
+  if (propio) return propio;
+  try {
+    const { readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    return { buffer: await readFile(join(process.cwd(), "public", "marca", "isotipo.png")), ext: "png" as const };
+  } catch {
+    return null;
+  }
+}
