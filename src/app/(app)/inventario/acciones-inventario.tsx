@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeftRight, ClipboardCheck, MinusCircle } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Boton } from "@/components/ui/boton";
@@ -17,8 +18,9 @@ type M = { id: string; nombre: string; kg: string; unidad?: string | null };
 const etiquetaCantidad = (u: string | null | undefined, kilos = "Kilos", otra = "Cantidad") =>
   unidadCorta(u) === "kg" ? kilos : `${otra} (${unidadCorta(u)})`;
 
-/** Conteo físico: muestra lo que dice el sistema, lo contado y el faltante/sobrante antes de guardar */
-function CamposConteo({ metales }: { metales: M[] }) {
+/** Conteo físico: muestra lo que dice el sistema, lo contado y el faltante/sobrante antes de guardar.
+ *  Con un solo producto (Editar stock desde el ⋮) no hay lista: el producto va fijo. */
+function CamposConteo({ metales, nuevo = false }: { metales: M[]; nuevo?: boolean }) {
   const [metal, setMetal] = useState(metales[0]?.id ?? "");
   const [contado, setContado] = useState("");
   const elegido = metales.find((m) => m.id === metal);
@@ -27,15 +29,19 @@ function CamposConteo({ metales }: { metales: M[] }) {
   const dif = contado.trim() === "" ? null : aGramos(contado) - sistema;
   return (
     <>
-      <Campo etiqueta="Producto">
-        <Select name="metal_id" required value={metal} onChange={(e) => setMetal(e.target.value)}>
-          {metales.map((m) => <option key={m.id} value={m.id}>{m.nombre} · {cantidad(m.kg, m.unidad)}</option>)}
-        </Select>
-      </Campo>
-      <Campo etiqueta={etiquetaCantidad(u, "Kilos contados", "Cantidad contada")}><InputNumero name="kg" required value={contado} onChange={(e) => setContado(e.target.value)} /></Campo>
+      {metales.length === 1 ? (
+        <input type="hidden" name="metal_id" value={metal} />
+      ) : (
+        <Campo etiqueta="Producto">
+          <Select name="metal_id" required value={metal} onChange={(e) => setMetal(e.target.value)}>
+            {metales.map((m) => <option key={m.id} value={m.id}>{m.nombre} · {cantidad(m.kg, m.unidad)}</option>)}
+          </Select>
+        </Campo>
+      )}
+      <Campo etiqueta={nuevo ? etiquetaCantidad(u, "Stock correcto (kg)", "Stock correcto") : etiquetaCantidad(u, "Kilos contados", "Cantidad contada")}><InputNumero name="kg" required value={contado} onChange={(e) => setContado(e.target.value)} /></Campo>
       <dl aria-live="polite" className="grid grid-cols-3 gap-2 rounded-lg bg-stone-50 px-3 py-2 text-sm">
         <div><dt className="text-xs text-stone-500">Sistema</dt><dd className="cifra font-medium">{cantidad(gramosAKg(sistema), u)}</dd></div>
-        <div><dt className="text-xs text-stone-500">Contado</dt><dd className="cifra font-medium">{dif === null ? "—" : cantidad(gramosAKg(aGramos(contado)), u)}</dd></div>
+        <div><dt className="text-xs text-stone-500">{nuevo ? "Nuevo" : "Contado"}</dt><dd className="cifra font-medium">{dif === null ? "—" : cantidad(gramosAKg(aGramos(contado)), u)}</dd></div>
         <div>
           <dt className="text-xs text-stone-500">{dif === null || dif === 0 ? "Diferencia" : dif < 0 ? "Faltante" : "Sobrante"}</dt>
           <dd className={`cifra font-semibold ${dif === null || dif === 0 ? "" : dif < 0 ? "text-red-700" : "text-emerald-700"}`}>
@@ -47,6 +53,28 @@ function CamposConteo({ metales }: { metales: M[] }) {
         <Textarea name="motivo" required={!!dif} placeholder="Ej.: venta que no se registró, error de balanza, material mojado" />
       </Campo>
     </>
+  );
+}
+
+/** «Editar stock» del menú ⋮: deja el stock del producto en la cantidad indicada (mismo registro que el conteo físico) */
+export function EditarStock({ metal, abierto, onCerrar }: { metal: M; abierto: boolean; onCerrar: () => void }) {
+  const notificar = useNotificar();
+  if (typeof document === "undefined") return null;
+  // Portal + stopPropagation: en celular la fila del stock es un enlace y el clic no debe abrir el historial
+  return createPortal(
+    <div onClick={(e) => e.stopPropagation()}>
+      <Modal abierto={abierto} onCerrar={onCerrar} titulo={`Editar stock · ${metal.nombre}`}>
+        <FormularioAccion accion={registrarConteo} textoBoton="Guardar stock" mensajeExito={false}
+          onExito={(m) => { notificar({ titulo: "Stock actualizado", mensaje: String(m) }); onCerrar(); }}>
+          <p className="text-sm text-stone-600">
+            Escriba cuánto hay realmente. La diferencia queda registrada con su motivo, quién la hizo y cuándo, en
+            «Ajustes y conteos» y en el historial del producto.
+          </p>
+          {abierto && <CamposConteo metales={[metal]} nuevo />}
+        </FormularioAccion>
+      </Modal>
+    </div>,
+    document.body,
   );
 }
 

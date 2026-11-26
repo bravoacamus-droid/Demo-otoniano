@@ -120,7 +120,8 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
                 titulo: "", alinear: "der",
                 celda: (s) => (
                   <MenuStock id={s.metal_id} nombre={s.ruta ?? s.nombre} porLimpiar={Number(s.kg_por_limpiar) > 0}
-                    puedeLimpiar={puede(rol, "limpiar")} puedeEditar={puede(rol, "editarPrecios")} />
+                    puedeLimpiar={puede(rol, "limpiar")} puedeEditar={puede(rol, "editarPrecios")}
+                    stock={puede(rol, "ajustarInventario") ? { kg: String(s.kg_propio ?? 0), unidad: s.unidad, enVariantes: !!s.tiene_hijos && Number(s.kg_propio) === 0 } : undefined} />
                 ),
               },
             ]}
