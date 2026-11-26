@@ -1,6 +1,6 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { obtenerContexto } from "@/lib/contexto";
-import { cargarLogo } from "@/lib/archivos-servidor";
+import { logoReporte } from "@/lib/archivos-servidor";
 import { TicketPdf } from "@/lib/pdf/ticket";
 import { ComprobantePdf, datosCompra } from "@/lib/pdf/comprobante";
 import { ticketCompra } from "@/lib/ticket-datos";
@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const [{ data: c }, { data: items }, logo] = await Promise.all([
     supabase.from("v_compras").select("*").eq("id", id).single(),
     supabase.from("v_compra_items").select("*").eq("compra_id", id).order("id"),
-    cargarLogo(supabase, empresa.logo_url),
+    logoReporte(supabase, empresa.logo_url),
   ]);
   if (!c) return new Response("No encontrada", { status: 404 });
   const pdf = await renderToBuffer(<ComprobantePdf d={datosCompra({ empresa, logo: logo?.buffer ?? null }, c, items ?? [])} />);

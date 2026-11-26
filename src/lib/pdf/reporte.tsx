@@ -1,5 +1,5 @@
 import { Document, Page, StyleSheet, Text, View, type Styles } from "@react-pdf/renderer";
-import { BandaMarca, CEBRA, MARCA, MARCA_OSCURO, PieMarca, TINTE, type EmpresaPdf } from "./marca";
+import { BandaMarca, CEBRA, Fondo, MARCA, MARCA_OSCURO, PieMarca, TINTE, type EmpresaPdf } from "./marca";
 
 // PDF de cualquier reporte (Reportes de compras, ventas, inventario, caja…) con la marca de la empresa.
 // Si el reporte tiene detalle (compras/ventas de cada grupo), va debajo de su fila, como en pantalla.
@@ -13,16 +13,16 @@ const s = StyleSheet.create({
   kpiValor: { fontFamily: "Helvetica-Bold", fontSize: 12, marginTop: 3 },
   seccion: { fontFamily: "Helvetica-Bold", fontSize: 10, color: MARCA_OSCURO, marginBottom: 2 },
   descripcion: { fontSize: 7.5, color: "#78716c", marginBottom: 6 },
-  cab: { flexDirection: "row", backgroundColor: MARCA, paddingVertical: 5 },
+  cab: { flexDirection: "row", paddingVertical: 5 },
   th: { fontFamily: "Helvetica-Bold", fontSize: 7, color: "#ffffff", paddingHorizontal: 4 },
   fila: { flexDirection: "row", paddingVertical: 4, borderBottomWidth: 0.5, borderBottomColor: "#e7e5e4" },
-  grupo: { flexDirection: "row", paddingVertical: 5, backgroundColor: TINTE, borderBottomWidth: 0.75, borderBottomColor: "#bfdbfe", fontFamily: "Helvetica-Bold", color: MARCA_OSCURO },
+  grupo: { flexDirection: "row", paddingVertical: 5, borderBottomWidth: 0.75, borderBottomColor: "#bfdbfe", fontFamily: "Helvetica-Bold", color: MARCA_OSCURO },
   td: { paddingHorizontal: 4 },
   detalle: { marginLeft: 14, marginBottom: 6, marginTop: 2, borderLeftWidth: 1.5, borderLeftColor: "#bfdbfe" },
   dCab: { flexDirection: "row", paddingVertical: 3, borderBottomWidth: 0.5, borderBottomColor: "#d6d3d1" },
   dTh: { fontFamily: "Helvetica-Bold", fontSize: 6, color: "#78716c", textTransform: "uppercase", letterSpacing: 0.3, paddingHorizontal: 4 },
   dFila: { flexDirection: "row", paddingVertical: 2.5, borderBottomWidth: 0.4, borderBottomColor: "#f5f5f4", fontSize: 7, color: "#44403c" },
-  total: { flexDirection: "row", paddingVertical: 6, backgroundColor: MARCA_OSCURO, color: "#ffffff", fontFamily: "Helvetica-Bold", marginTop: 2 },
+  total: { flexDirection: "row", paddingVertical: 6, color: "#ffffff", fontFamily: "Helvetica-Bold", marginTop: 2 },
   nota: { fontSize: 7, color: "#78716c", marginTop: 8 },
   vacio: { fontSize: 8, color: "#78716c", paddingVertical: 14, textAlign: "center" },
 });
@@ -86,14 +86,16 @@ export function ReportePdf(p: TablaPdfProps) {
             <Text style={s.vacio}>{limpio(p.nota ?? "Sin datos en el rango elegido.")}</Text>
           ) : (
             <>
-              <View style={s.cab} fixed><Celdas cols={p.columnas} valores={p.columnas.map((c) => c.titulo)} estilo={s.th} /></View>
+              <View style={s.cab} fixed><Fondo color={MARCA} /><Celdas cols={p.columnas} valores={p.columnas.map((c) => c.titulo)} estilo={s.th} /></View>
               {p.filas.map((f, i) => {
                 const det = conDetalle ? f.detalle ?? [] : [];
-                const estilo = det.length || f.fuerte ? s.grupo : [s.fila, i % 2 === 1 ? { backgroundColor: CEBRA } : {}];
+                const esGrupo = det.length > 0 || f.fuerte;
+                const fondo = esGrupo ? TINTE : i % 2 === 1 ? CEBRA : null;
                 return (
                   <View key={i}>
                     {/* La fila del grupo no se separa de sus primeras operaciones */}
-                    <View style={estilo} wrap={false} minPresenceAhead={det.length ? 40 : 0}>
+                    <View style={esGrupo ? s.grupo : s.fila} wrap={false} minPresenceAhead={det.length ? 40 : 0}>
+                      {fondo && <Fondo color={fondo} />}
                       <Celdas cols={p.columnas} valores={f.celdas} estilo={s.td} />
                     </View>
                     {det.length > 0 && (
@@ -107,7 +109,7 @@ export function ReportePdf(p: TablaPdfProps) {
                   </View>
                 );
               })}
-              {p.total && <View style={s.total} wrap={false}><Celdas cols={p.columnas} valores={p.total} estilo={s.td} /></View>}
+              {p.total && <View style={s.total} wrap={false}><Fondo color={MARCA_OSCURO} /><Celdas cols={p.columnas} valores={p.total} estilo={s.td} /></View>}
               {p.nota && <Text style={s.nota}>{limpio(p.nota)}</Text>}
             </>
           )}

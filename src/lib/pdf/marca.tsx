@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Canvas, Image, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 // Marca común de los PDF con la identidad de la empresa (valorizado, comprobantes de compra y venta).
 // Solo Helvetica: sin "−" ni flechas unicode.
@@ -10,7 +10,7 @@ export const CEBRA = "#fafaf9";
 export interface EmpresaPdf { razon_social: string; ruc: string | null; direccion: string | null; telefono: string | null }
 
 const s = StyleSheet.create({
-  banda: { backgroundColor: MARCA, paddingVertical: 14, paddingHorizontal: 28, flexDirection: "row", alignItems: "center" },
+  banda: { paddingVertical: 14, paddingHorizontal: 28, flexDirection: "row", alignItems: "center" },
   logoCaja: { width: 44, height: 44, borderRadius: 8, backgroundColor: "#ffffff", alignItems: "center", justifyContent: "center", marginRight: 12 },
   logo: { width: 38, height: 38, objectFit: "contain" },
   iniciales: { fontFamily: "Helvetica-Bold", fontSize: 16, color: MARCA },
@@ -19,12 +19,22 @@ const s = StyleSheet.create({
   bandaDer: { marginLeft: "auto", alignItems: "flex-end" },
   titulo: { fontFamily: "Helvetica-Bold", fontSize: 16, color: "#ffffff" },
   subtitulo: { fontSize: 8, color: "#dbeefc", marginTop: 2 },
-  franja: { height: 4, backgroundColor: MARCA_OSCURO },
+  franja: { height: 4 },
+  fondo: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   pie: {
     position: "absolute", bottom: 16, left: 28, right: 28, fontSize: 6.5, color: "#a8a29e",
     flexDirection: "row", justifyContent: "space-between", borderTopWidth: 0.5, borderTopColor: "#e7e5e4", paddingTop: 5,
   },
 });
+
+/**
+ * Fondo de color pintado como rectángulo simple. Con backgroundColor, react-pdf recorta cada fondo
+ * (clip + opacidad) y Edge/Chrome con zoom dejan rayas verticales en los bordes de sus mosaicos.
+ * Va como PRIMER hijo de la vista (queda debajo del texto); la vista no lleva backgroundColor.
+ */
+export function Fondo({ color }: { color: string }) {
+  return <Canvas style={s.fondo} paint={(p, w, h) => { p.rect(0, 0, w, h).fill(color); return null; }} />;
+}
 
 export function iniciales(nombre: string) {
   const palabras = nombre.replace(/\b(S\.?A\.?C?\.?|E\.?I\.?R\.?L\.?|SRL|SAC)\b/gi, "").split(/\s+/).filter(Boolean);
@@ -56,6 +66,7 @@ export function BandaMarca({ empresa, logo, titulo, lineas }: {
   return (
     <>
       <View style={s.banda}>
+        <Fondo color={MARCA} />
         <Logo empresa={empresa} logo={logo} />
         <View style={{ maxWidth: "55%" }}>
           <Text style={s.empresa}>{empresa.razon_social}</Text>
@@ -66,7 +77,7 @@ export function BandaMarca({ empresa, logo, titulo, lineas }: {
           {lineas.map((l) => <Text key={l} style={s.subtitulo}>{l}</Text>)}
         </View>
       </View>
-      <View style={s.franja} />
+      <View style={s.franja}><Fondo color={MARCA_OSCURO} /></View>
     </>
   );
 }

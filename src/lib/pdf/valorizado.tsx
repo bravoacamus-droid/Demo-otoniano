@@ -1,6 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { cantidad, fecha, kg, soles, unidadCorta } from "@/lib/formato";
-import { BandaMarca, MARCA, MARCA_OSCURO, fechaHoraLima, PieMarca, TINTE, type EmpresaPdf } from "./marca";
+import { BandaMarca, CEBRA, Fondo, MARCA, MARCA_OSCURO, fechaHoraLima, PieMarca, TINTE, type EmpresaPdf } from "./marca";
 
 // Inventario valorizado con la marca de la empresa (banda y pie en marca.tsx).
 
@@ -14,11 +14,11 @@ const s = StyleSheet.create({
   kpiDetalle: { fontSize: 6.5, color: "#78716c", marginTop: 2 },
   seccion: { fontFamily: "Helvetica-Bold", fontSize: 10, color: MARCA_OSCURO, marginBottom: 5, marginTop: 4 },
   nota: { fontSize: 7, color: "#78716c", marginTop: 5 },
-  cab: { flexDirection: "row", backgroundColor: MARCA, paddingVertical: 5 },
+  cab: { flexDirection: "row", paddingVertical: 5 },
   th: { fontFamily: "Helvetica-Bold", fontSize: 7, color: "#ffffff", paddingHorizontal: 4 },
   fila: { flexDirection: "row", paddingVertical: 4, borderBottomWidth: 0.5, borderBottomColor: "#e7e5e4" },
   td: { paddingHorizontal: 4 },
-  total: { flexDirection: "row", paddingVertical: 5, backgroundColor: TINTE, borderTopWidth: 1, borderTopColor: MARCA, fontFamily: "Helvetica-Bold" },
+  total: { flexDirection: "row", paddingVertical: 5, borderTopWidth: 1, borderTopColor: MARCA, fontFamily: "Helvetica-Bold" },
   punto: { width: 6, height: 6, borderRadius: 3, marginRight: 4, marginTop: 1 },
   etiqueta: { fontSize: 6.5, fontFamily: "Helvetica-Bold", paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 },
 });
@@ -53,6 +53,7 @@ function Cabecera({ cols }: { cols: Columna[] }) {
   const suma = cols.reduce((a, c) => a + c.ancho, 0);
   return (
     <View style={s.cab}>
+      <Fondo color={MARCA} />
       {cols.map((c) => <Text key={c.titulo} style={[s.th, { width: `${(c.ancho / suma) * 100}%`, textAlign: c.der ? "right" : "left" }]}>{c.titulo}</Text>)}
     </View>
   );
@@ -99,7 +100,8 @@ export function ValorizadoPdf({ d }: { d: DatosValorizado }) {
           <Text style={s.seccion}>Stock por producto</Text>
           <Cabecera cols={COL_METAL} />
           {d.metales.map((m, i) => (
-            <View key={m.nombre} style={[s.fila, i % 2 === 1 ? { backgroundColor: "#fafaf9" } : {}]} wrap={false}>
+            <View key={m.nombre} style={s.fila} wrap={false}>
+              {i % 2 === 1 && <Fondo color={CEBRA} />}
               <Celda cols={COL_METAL} i={0}>
                 <View style={[s.punto, { backgroundColor: m.color ?? "#a8a29e" }]} />
                 <Text style={{ fontFamily: "Helvetica-Bold" }}>{m.nombre}</Text>
@@ -114,6 +116,7 @@ export function ValorizadoPdf({ d }: { d: DatosValorizado }) {
             </View>
           ))}
           <View style={s.total} wrap={false}>
+            <Fondo color={TINTE} />
             <Celda cols={COL_METAL} i={0} bold>Total</Celda>
             <Celda cols={COL_METAL} i={1} bold>{kg(t.kg)}</Celda>
             <Celda cols={COL_METAL} i={2}>{""}</Celda>
@@ -132,7 +135,8 @@ export function ValorizadoPdf({ d }: { d: DatosValorizado }) {
               <Text style={[s.seccion, { marginTop: 14 }]}>Antigüedad del stock (lotes en almacén)</Text>
               <Cabecera cols={COL_LOTE} />
               {d.lotes.map((l, i) => (
-                <View key={`${l.numero}-${l.metal}-${i}`} style={[s.fila, i % 2 === 1 ? { backgroundColor: "#fafaf9" } : {}]} wrap={false}>
+                <View key={`${l.numero}-${l.metal}-${i}`} style={s.fila} wrap={false}>
+                  {i % 2 === 1 && <Fondo color={CEBRA} />}
                   <Celda cols={COL_LOTE} i={0}>{fecha(l.fecha)}</Celda>
                   <Celda cols={COL_LOTE} i={1}>{`N° ${l.numero}`}</Celda>
                   <Celda cols={COL_LOTE} i={2}>{l.proveedor ?? "Sin documento"}</Celda>

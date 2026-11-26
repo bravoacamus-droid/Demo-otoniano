@@ -1,5 +1,5 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { BandaMarca, CEBRA, MARCA, MARCA_OSCURO, PieMarca, TINTE, type EmpresaPdf } from "./marca";
+import { BandaMarca, CEBRA, Fondo, MARCA, MARCA_OSCURO, PieMarca, TINTE, type EmpresaPdf } from "./marca";
 
 // Resumen de asistencia del personal (solo Gerencia): totales por trabajador y cuadro día por día.
 
@@ -41,11 +41,11 @@ const s = StyleSheet.create({
   pagina: { paddingBottom: 40, fontSize: 8, fontFamily: "Helvetica", color: "#1c1917" },
   cuerpo: { paddingHorizontal: 28, paddingTop: 14 },
   seccion: { fontFamily: "Helvetica-Bold", fontSize: 10, color: MARCA_OSCURO, marginBottom: 6 },
-  cab: { flexDirection: "row", backgroundColor: MARCA, color: "#ffffff", paddingVertical: 4 },
+  cab: { flexDirection: "row", color: "#ffffff", paddingVertical: 4 },
   th: { fontFamily: "Helvetica-Bold", fontSize: 7, paddingHorizontal: 3 },
   fila: { flexDirection: "row", paddingVertical: 3, borderBottomWidth: 0.5, borderBottomColor: "#e7e5e4" },
   td: { paddingHorizontal: 3 },
-  total: { flexDirection: "row", paddingVertical: 4, borderTopWidth: 1, borderTopColor: MARCA_OSCURO, fontFamily: "Helvetica-Bold", backgroundColor: TINTE },
+  total: { flexDirection: "row", paddingVertical: 4, borderTopWidth: 1, borderTopColor: MARCA_OSCURO, fontFamily: "Helvetica-Bold" },
   sub: { fontSize: 6.5, color: "#78716c" },
   nota: { fontSize: 7, color: "#78716c", marginTop: 8 },
   celdaDia: { width: 15, height: 13, marginHorizontal: 0.5, borderRadius: 2, alignItems: "center", justifyContent: "center" },
@@ -68,10 +68,12 @@ export function AsistenciaPdf({ d }: { d: DatosAsistenciaPdf }) {
         <View style={s.cuerpo}>
           <Text style={s.seccion}>Totales por trabajador</Text>
           <View style={s.cab} fixed>
+            <Fondo color={MARCA} />
             {d.columnas.map((c, i) => <Text key={c.titulo} style={[s.th, { width: ancho(i), textAlign: derecha(i) }]}>{c.titulo}</Text>)}
           </View>
           {d.filas.map((f, n) => (
-            <View key={n} style={[s.fila, n % 2 === 1 ? { backgroundColor: CEBRA } : {}]} wrap={false}>
+            <View key={n} style={s.fila} wrap={false}>
+              {n % 2 === 1 && <Fondo color={CEBRA} />}
               {f.celdas.map((v, i) => (
                 <View key={i} style={[s.td, { width: ancho(i) }]}>
                   <Text style={{ textAlign: derecha(i), color: i === 2 && f.faltas > 0 ? "#b91c1c" : undefined,
@@ -82,6 +84,7 @@ export function AsistenciaPdf({ d }: { d: DatosAsistenciaPdf }) {
             </View>
           ))}
           <View style={s.total} wrap={false}>
+            <Fondo color={TINTE} />
             {d.totales.map((v, i) => <Text key={i} style={[s.td, { width: ancho(i), textAlign: derecha(i) }]}>{v}</Text>)}
           </View>
           <Text style={s.nota}>{d.nota}</Text>
@@ -95,6 +98,7 @@ export function AsistenciaPdf({ d }: { d: DatosAsistenciaPdf }) {
           <View style={s.cuerpo}>
             <Text style={s.seccion}>Día por día · {b.titulo}</Text>
             <View style={[s.cab, { alignItems: "flex-end" }]} fixed>
+              <Fondo color={MARCA} />
               <Text style={[s.th, { width: 130 }]}>Trabajador</Text>
               {b.dias.map((x) => (
                 <View key={x.dia} style={{ width: 16, alignItems: "center" }}>
@@ -104,7 +108,8 @@ export function AsistenciaPdf({ d }: { d: DatosAsistenciaPdf }) {
               ))}
             </View>
             {b.filas.map((f, n) => (
-              <View key={n} style={[s.fila, { alignItems: "center" }, n % 2 === 1 ? { backgroundColor: CEBRA } : {}]} wrap={false}>
+              <View key={n} style={[s.fila, { alignItems: "center" }]} wrap={false}>
+                {n % 2 === 1 && <Fondo color={CEBRA} />}
                 <Text style={[s.td, { width: 130, fontFamily: "Helvetica-Bold" }]}>{f.nombre}</Text>
                 {f.dias.map((x, i) => {
                   const c = COLOR[x.letra];

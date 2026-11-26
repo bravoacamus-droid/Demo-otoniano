@@ -1,7 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { ETIQUETA_MEDIO, cantidad, kg, soles, unidadCorta } from "@/lib/formato";
 import { textoComprobante, type TipoComprobante } from "@/lib/comprobantes";
-import { BandaMarca, CEBRA, MARCA, MARCA_OSCURO, fechaHoraLima, PieMarca, TINTE, type EmpresaPdf } from "./marca";
+import { BandaMarca, CEBRA, Fondo, MARCA, MARCA_OSCURO, fechaHoraLima, PieMarca, TINTE, type EmpresaPdf } from "./marca";
 
 // Comprobante interno A4 de una compra o una venta, con la marca de la empresa (como el valorizado).
 // Las cifras vienen tal cual de la BD (v_compras / v_ventas y sus ítems); aquí solo se dan formato.
@@ -19,7 +19,7 @@ const s = StyleSheet.create({
   cajaValor: { fontFamily: "Helvetica-Bold", fontSize: 10.5 },
   cajaDato: { fontSize: 7.5, color: "#57534e", marginTop: 2 },
   seccion: { fontFamily: "Helvetica-Bold", fontSize: 10, color: MARCA_OSCURO, marginBottom: 5 },
-  cab: { flexDirection: "row", backgroundColor: MARCA, paddingVertical: 5 },
+  cab: { flexDirection: "row", paddingVertical: 5 },
   th: { fontFamily: "Helvetica-Bold", fontSize: 7, color: "#ffffff", paddingHorizontal: 5 },
   fila: { flexDirection: "row", paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: "#e7e5e4" },
   td: { paddingHorizontal: 5 },
@@ -31,7 +31,7 @@ const s = StyleSheet.create({
   totalFila: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, paddingHorizontal: 8 },
   totalFinal: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4, paddingVertical: 7, paddingHorizontal: 8,
-    backgroundColor: TINTE, borderTopWidth: 1.5, borderTopColor: MARCA, borderRadius: 2,
+    borderTopWidth: 1.5, borderTopColor: MARCA,
   },
   totalTexto: { fontFamily: "Helvetica-Bold", fontSize: 10, color: MARCA_OSCURO },
   totalValor: { fontFamily: "Helvetica-Bold", fontSize: 15, color: MARCA_OSCURO },
@@ -90,12 +90,14 @@ export function ComprobantePdf({ d }: { d: DatosComprobante }) {
 
           <Text style={s.seccion}>Detalle</Text>
           <View style={s.cab}>
+            <Fondo color={MARCA} />
             {d.columnas.map((c, i) => (
               <Text key={c.titulo} style={[s.th, { width: ancho(i), textAlign: c.der ? "right" : "left" }]}>{c.titulo}</Text>
             ))}
           </View>
           {d.filas.map((f, n) => (
-            <View key={n} style={[s.fila, n % 2 === 1 ? { backgroundColor: CEBRA } : {}]} wrap={false}>
+            <View key={n} style={s.fila} wrap={false}>
+              {n % 2 === 1 && <Fondo color={CEBRA} />}
               {f.celdas.map((v, i) => i === 0 ? (
                 <View key={i} style={[s.td, { width: ancho(0), flexDirection: "row" }]}>
                   <View style={[s.punto, { backgroundColor: f.color ?? PUNTO_SIN_COLOR }]} />
@@ -121,6 +123,7 @@ export function ComprobantePdf({ d }: { d: DatosComprobante }) {
                 </View>
               ))}
               <View style={s.totalFinal}>
+                <Fondo color={TINTE} />
                 <Text style={s.totalTexto}>{d.total.texto}</Text>
                 <Text style={s.totalValor}>{d.total.valor}</Text>
               </View>
