@@ -179,7 +179,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
       />
       {/* Acciones a todo el ancho: «Registrar gasto» queda sola a la derecha */}
       {puede(rol, "caja") && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-4">
           <AccionesCaja
             empresaId={empresa.id}
             cajas={(saldos ?? []).filter((c) => c.activo).map((c) => ({ id: c.caja_id, nombre: c.nombre, saldo: c.saldo, tipo: c.tipo }))}

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, HandCoins, ListOrdered, Undo2 } from "lucide-react";
+import { Ban, ChevronDown, HandCoins, ListOrdered, Undo2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { Boton } from "@/components/ui/boton";
 import { Aviso, Insignia } from "@/components/ui/basicos";
 import { Campo, Input, InputNumero, Select } from "@/components/ui/campos";
 import { FormularioAccion } from "@/components/ui/formulario";
 import { MenuPuntos, opcionMenu } from "@/components/ui/menu-puntos";
-import { cx } from "@/components/ui/clases";
+import { claseBoton, cx } from "@/components/ui/clases";
 import { fechaDia, fechaHora, hoyLima, soles } from "@/lib/formato";
 import { aCentimos } from "@/lib/montos";
 import { anularDevolucionPrestamo, anularPrestamo, registrarDevolucionPrestamo, registrarPrestamo } from "./acciones";
@@ -292,7 +291,7 @@ export function MenuPrestamo({ p, cuotas, devoluciones, cajas, puedeAnular, pued
   );
 }
 
-/** Botones de la barra de Caja: nuevo préstamo y devolución */
+/** Botón «Préstamos» de la barra de Caja: un solo botón con menú (nuevo préstamo o devolución) para que la barra entre en una línea */
 export function BotonesPrestamo({ cajas, personas, pendientes, puedeFecha }: {
   cajas: Caja[]; personas: string[]; pendientes: PrestamoFila[]; puedeFecha: boolean;
 }) {
@@ -300,8 +299,20 @@ export function BotonesPrestamo({ cajas, personas, pendientes, puedeFecha }: {
   const cerrar = () => setModal(null);
   return (
     <>
-      <Boton variante="secundario" onClick={() => setModal("nuevo")}><HandCoins className="size-4" /> Préstamo</Boton>
-      <Boton variante="secundario" onClick={() => setModal("devolver")}><Undo2 className="size-4" /> Devolución de préstamo</Boton>
+      <MenuPuntos etiqueta="Préstamos" alto={100} claseDisparador={claseBoton("secundario")}
+        disparador={<><HandCoins className="size-4" /> Préstamos <ChevronDown className="size-4 text-stone-500" /></>}>
+        {(c) => (
+          <>
+            <button type="button" role="menuitem" className={opcionMenu} onClick={() => { c(); setModal("nuevo"); }}>
+              <HandCoins className="size-4 text-stone-500" /> Registrar préstamo
+            </button>
+            <button type="button" role="menuitem" className={opcionMenu} onClick={() => { c(); setModal("devolver"); }}>
+              <Undo2 className="size-4 text-stone-500" /> Devolución de préstamo
+              {pendientes.length > 0 && <span className="ml-auto rounded-full bg-marca-50 px-1.5 text-xs font-medium text-marca-700">{pendientes.length}</span>}
+            </button>
+          </>
+        )}
+      </MenuPuntos>
       <ModalPrestamo abierto={modal === "nuevo"} onCerrar={cerrar} cajas={cajas} personas={personas} puedeFecha={puedeFecha} />
       <ModalDevolucion key={pendientes.map((p) => p.id).join()} abierto={modal === "devolver"} onCerrar={cerrar} cajas={cajas}
         prestamos={pendientes} puedeFecha={puedeFecha} />

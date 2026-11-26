@@ -37,7 +37,8 @@ export function AccionesCaja({
   const difCierre = Number(resultadoCierre?.diferencia_cierre ?? 0);
 
   return (
-    <>
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
       {sinTurno.length > 0 && (
         <Boton variante={turnos.length ? "secundario" : "primario"} onClick={() => setAbierto("abrir")}><LockOpen className="size-4" /> Abrir caja</Boton>
       )}
@@ -126,14 +127,15 @@ export function AccionesCaja({
       {prestamos}
       <Boton variante="secundario" onClick={() => setAbierto("traspaso")}><ArrowLeftRight className="size-4" /> Traspaso</Boton>
       <Boton variante="secundario" onClick={() => { setResultadoArqueo(null); setAbierto("arqueo"); }}><Calculator className="size-4" /> Arqueo</Boton>
+      </div>
 
       {/* Gastos aparte, a la derecha: aquí entran los que salen de una caja y los pagados por fuera */}
       <button type="button" onClick={() => setAbierto("gasto")}
-        className="flex w-full items-center gap-3 rounded-xl bg-marca-600 px-4 py-2 text-left text-white shadow-sm transition hover:bg-marca-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-300 sm:ml-auto sm:w-auto">
+        className="flex w-full items-center gap-3 rounded-xl bg-marca-600 px-4 py-2 text-left text-white shadow-sm transition hover:bg-marca-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-300 sm:w-auto sm:self-start lg:shrink-0 lg:self-center">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15"><Receipt className="size-5" /></span>
         <span className="min-w-0">
           <span className="block text-sm font-semibold leading-tight">Registrar gasto</span>
-          <span className="block text-xs leading-tight text-white/80">De una caja o pagado por fuera</span>
+          <span className="block text-xs leading-tight text-white/80 lg:hidden 2xl:block">De una caja o pagado por fuera</span>
         </span>
       </button>
 
@@ -204,6 +206,6 @@ export function AccionesCaja({
           </FormularioAccion>
         )}
       </Modal>
-    </>
+    </div>
   );
 }

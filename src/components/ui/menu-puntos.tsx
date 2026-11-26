@@ -7,13 +7,18 @@ import { MoreVertical } from "lucide-react";
 /** Clase de cada opción del menú (enlace o botón) */
 export const opcionMenu = "flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-stone-700 hover:bg-marca-50";
 
-/** Tres puntitos con un menú de opciones. `children` recibe `cerrar` para cerrarlo al elegir una opción. */
-export function MenuPuntos({ etiqueta, alto = 170, children }: {
+/**
+ * Tres puntitos con un menú de opciones. `children` recibe `cerrar` para cerrarlo al elegir una opción.
+ * Con `disparador` el botón muestra ese contenido (p. ej. ícono + «Préstamos») y el menú se alinea a su izquierda.
+ */
+export function MenuPuntos({ etiqueta, alto = 170, children, disparador, claseDisparador }: {
   /** Para lectores de pantalla: «Opciones de …» */
   etiqueta: string;
   /** Alto aproximado del menú: si no entra debajo del botón, se abre hacia arriba */
   alto?: number;
   children: (cerrar: () => void) => React.ReactNode;
+  disparador?: React.ReactNode;
+  claseDisparador?: string;
 }) {
   // Posición fija junto al botón: la tabla recorta (overflow) lo que sale de ella, p. ej. en las últimas filas
   const [pos, setPos] = useState<React.CSSProperties | null>(null);
@@ -29,7 +34,7 @@ export function MenuPuntos({ etiqueta, alto = 170, children }: {
     if (abierto || !boton.current) return setPos(null);
     const b = boton.current.getBoundingClientRect();
     const arriba = window.innerHeight - b.bottom < alto;
-    setPos({ position: "fixed", right: window.innerWidth - b.right, ...(arriba ? { bottom: window.innerHeight - b.top + 4 } : { top: b.bottom + 4 }) });
+    setPos({ position: "fixed", ...(disparador ? { left: b.left } : { right: window.innerWidth - b.right }), ...(arriba ? { bottom: window.innerHeight - b.top + 4 } : { top: b.bottom + 4 }) });
   };
 
   useEffect(() => {
@@ -52,9 +57,9 @@ export function MenuPuntos({ etiqueta, alto = 170, children }: {
   return (
     <div ref={ref} className="relative inline-block">
       <button ref={boton} type="button" onClick={alternar} aria-expanded={abierto} aria-haspopup="menu"
-        aria-label={etiqueta} title="Opciones"
-        className="rounded-md p-1.5 text-stone-500 hover:bg-marca-50 hover:text-marca-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-500">
-        <MoreVertical className="size-4" />
+        aria-label={disparador ? undefined : etiqueta} title={disparador ? undefined : "Opciones"}
+        className={claseDisparador ?? "rounded-md p-1.5 text-stone-500 hover:bg-marca-50 hover:text-marca-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-500"}>
+        {disparador ?? <MoreVertical className="size-4" />}
       </button>
       {abierto && createPortal(
         <div ref={menu} role="menu" style={pos} onClick={(e) => e.stopPropagation()} className="z-30 w-56 overflow-hidden rounded-lg border border-stone-200 bg-superficie py-1 text-left shadow-lg">
