@@ -1974,6 +1974,8 @@ export type Database = {
           fecha: string
           historial: Json
           id: string
+          maquina_categoria: string | null
+          maquina_id: string | null
           monto: number
           motivo_anulacion: string | null
         }
@@ -1991,6 +1993,8 @@ export type Database = {
           fecha?: string
           historial?: Json
           id?: string
+          maquina_categoria?: string | null
+          maquina_id?: string | null
           monto: number
           motivo_anulacion?: string | null
         }
@@ -2008,6 +2012,8 @@ export type Database = {
           fecha?: string
           historial?: Json
           id?: string
+          maquina_categoria?: string | null
+          maquina_id?: string | null
           monto?: number
           motivo_anulacion?: string | null
         }
@@ -2061,6 +2067,20 @@ export type Database = {
             referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
           },
+          {
+            foreignKeyName: "gastos_maquina_id_fkey"
+            columns: ["maquina_id"]
+            isOneToOne: false
+            referencedRelation: "maquinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_maquina_id_fkey"
+            columns: ["maquina_id"]
+            isOneToOne: false
+            referencedRelation: "v_maquinas"
+            referencedColumns: ["id"]
+          },
         ]
       }
       gastos_sin_caja: {
@@ -2077,6 +2097,8 @@ export type Database = {
           fecha: string
           historial: Json
           id: string
+          maquina_categoria: string | null
+          maquina_id: string | null
           monto: number
           motivo_anulacion: string | null
         }
@@ -2093,6 +2115,8 @@ export type Database = {
           fecha?: string
           historial?: Json
           id?: string
+          maquina_categoria?: string | null
+          maquina_id?: string | null
           monto: number
           motivo_anulacion?: string | null
         }
@@ -2109,6 +2133,8 @@ export type Database = {
           fecha?: string
           historial?: Json
           id?: string
+          maquina_categoria?: string | null
+          maquina_id?: string | null
           monto?: number
           motivo_anulacion?: string | null
         }
@@ -2147,6 +2173,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_maquina_id_fkey"
+            columns: ["maquina_id"]
+            isOneToOne: false
+            referencedRelation: "maquinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_maquina_id_fkey"
+            columns: ["maquina_id"]
+            isOneToOne: false
+            referencedRelation: "v_maquinas"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2405,6 +2445,95 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_selecciones"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      maquinas: {
+        Row: {
+          cantidad: number
+          creado_en: string
+          creado_por: string | null
+          empresa_id: string
+          estado: string
+          fecha_adquisicion: string | null
+          historial: Json
+          id: string
+          marca: string | null
+          modelo: string | null
+          nombre: string
+          notas: string | null
+          responsable: string | null
+          serie: string | null
+          tipo: string
+          ubicacion: string | null
+          valor_compra: number | null
+        }
+        Insert: {
+          cantidad?: number
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id: string
+          estado?: string
+          fecha_adquisicion?: string | null
+          historial?: Json
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          nombre: string
+          notas?: string | null
+          responsable?: string | null
+          serie?: string | null
+          tipo?: string
+          ubicacion?: string | null
+          valor_compra?: number | null
+        }
+        Update: {
+          cantidad?: number
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id?: string
+          estado?: string
+          fecha_adquisicion?: string | null
+          historial?: Json
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          nombre?: string
+          notas?: string | null
+          responsable?: string | null
+          serie?: string | null
+          tipo?: string
+          ubicacion?: string | null
+          valor_compra?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maquinas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maquinas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "maquinas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "maquinas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
           },
         ]
       }
@@ -2772,6 +2901,8 @@ export type Database = {
           fecha: string
           historial: Json
           id: string
+          maquina_categoria: string | null
+          maquina_id: string | null
           monto: number
           motivo: string
           motivo_anulacion: string | null
@@ -2791,6 +2922,8 @@ export type Database = {
           fecha?: string
           historial?: Json
           id?: string
+          maquina_categoria?: string | null
+          maquina_id?: string | null
           monto: number
           motivo: string
           motivo_anulacion?: string | null
@@ -2810,6 +2943,8 @@ export type Database = {
           fecha?: string
           historial?: Json
           id?: string
+          maquina_categoria?: string | null
+          maquina_id?: string | null
           monto?: number
           motivo?: string
           motivo_anulacion?: string | null
@@ -2859,6 +2994,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_series_comprobante"
             referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_maquina_id_fkey"
+            columns: ["maquina_id"]
+            isOneToOne: false
+            referencedRelation: "maquinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_maquina_id_fkey"
+            columns: ["maquina_id"]
+            isOneToOne: false
+            referencedRelation: "v_maquinas"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "movimientos_manuales_mov_id_fkey"
@@ -5914,6 +6063,85 @@ export type Database = {
         }
         Relationships: []
       }
+      v_maquina_movimientos: {
+        Row: {
+          caja_id: string | null
+          caja_nombre: string | null
+          categoria: string | null
+          creado_en: string | null
+          creado_por_nombre: string | null
+          detalle: string | null
+          empresa_id: string | null
+          estado: Database["public"]["Enums"]["estado_doc"] | null
+          fecha: string | null
+          id: string | null
+          maquina_id: string | null
+          monto: number | null
+          motivo_anulacion: string | null
+          origen: string | null
+          tipo: string | null
+        }
+        Relationships: []
+      }
+      v_maquinas: {
+        Row: {
+          cantidad: number | null
+          compra_pagada: number | null
+          creado_en: string | null
+          creado_por: string | null
+          creado_por_nombre: string | null
+          empresa_id: string | null
+          estado: string | null
+          fecha_adquisicion: string | null
+          gastos: number | null
+          gastos_caja: number | null
+          gastos_fuera: number | null
+          historial: Json | null
+          id: string | null
+          ingresos: number | null
+          marca: string | null
+          modelo: string | null
+          n_movimientos: number | null
+          nombre: string | null
+          notas: string | null
+          responsable: string | null
+          serie: string | null
+          tipo: string | null
+          ubicacion: string | null
+          ultimo_movimiento: string | null
+          valor_compra: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maquinas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maquinas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "maquinas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "maquinas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+        ]
+      }
       v_movimientos_caja: {
         Row: {
           anulado: boolean | null
@@ -7486,6 +7714,7 @@ export type Database = {
         Returns: undefined
       }
       _cargos_iniciales: { Args: { p_empresa: string }; Returns: undefined }
+      _categoria_maquinaria: { Args: { p_empresa: string }; Returns: string }
       _categoria_personal: { Args: { p_empresa: string }; Returns: string }
       _concepto_manual: {
         Args: {
@@ -8023,6 +8252,28 @@ export type Database = {
         }
         Returns: string
       }
+      guardar_maquina: {
+        Args: {
+          p_caja?: string
+          p_cantidad: number
+          p_empresa: string
+          p_estado: string
+          p_fecha_adquisicion: string
+          p_id: string
+          p_marca: string
+          p_modelo: string
+          p_nombre: string
+          p_notas: string
+          p_pago?: string
+          p_razon?: string
+          p_responsable: string
+          p_serie: string
+          p_tipo: string
+          p_ubicacion: string
+          p_valor_compra: number
+        }
+        Returns: string
+      }
       guardar_tareo: {
         Args: { p_celdas: Json; p_empresa: string }
         Returns: number
@@ -8268,6 +8519,18 @@ export type Database = {
           p_motivo: string
           p_persona?: string
           p_tipo: Database["public"]["Enums"]["tipo_mov_caja"]
+        }
+        Returns: Json
+      }
+      registrar_movimiento_maquina: {
+        Args: {
+          p_caja?: string
+          p_categoria: string
+          p_detalle?: string
+          p_fecha?: string
+          p_maquina: string
+          p_monto: number
+          p_tipo: string
         }
         Returns: Json
       }

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { ArrowLeftRight, ClipboardCheck, MinusCircle } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Boton } from "@/components/ui/boton";
 import { Campo, InputNumero, Select, Textarea } from "@/components/ui/campos";
 import { FormularioAccion } from "@/components/ui/formulario";
+import { Portal } from "@/components/ui/portal";
 import { useNotificar } from "@/components/ui/notificaciones";
 import { cantidad, unidadCorta } from "@/lib/formato";
 import { aGramos, gramosAKg } from "@/lib/montos";
@@ -59,10 +59,9 @@ function CamposConteo({ metales, nuevo = false }: { metales: M[]; nuevo?: boolea
 /** «Editar stock» del menú ⋮: deja el stock del producto en la cantidad indicada (mismo registro que el conteo físico) */
 export function EditarStock({ metal, abierto, onCerrar }: { metal: M; abierto: boolean; onCerrar: () => void }) {
   const notificar = useNotificar();
-  if (typeof document === "undefined") return null;
-  // Portal + stopPropagation: en celular la fila del stock es un enlace y el clic no debe abrir el historial
-  return createPortal(
-    <div onClick={(e) => e.stopPropagation()}>
+  // En celular la fila del stock es un enlace: el cuadro va en un portal para que el clic no abra el historial
+  return (
+    <Portal>
       <Modal abierto={abierto} onCerrar={onCerrar} titulo={`Editar stock · ${metal.nombre}`}>
         <FormularioAccion accion={registrarConteo} textoBoton="Guardar stock" mensajeExito={false}
           onExito={(m) => { notificar({ titulo: "Stock actualizado", mensaje: String(m) }); onCerrar(); }}>
@@ -73,8 +72,7 @@ export function EditarStock({ metal, abierto, onCerrar }: { metal: M; abierto: b
           {abierto && <CamposConteo metales={[metal]} nuevo />}
         </FormularioAccion>
       </Modal>
-    </div>,
-    document.body,
+    </Portal>
   );
 }
 

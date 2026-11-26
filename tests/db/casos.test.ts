@@ -1301,3 +1301,50 @@ describe("Préstamos con cuotas (26/11)", () => {
     expect(otro.rows).toHaveLength(0);
   });
 });
+
+describe("Maquinaria (26/11)", () => {
+  const saldo = () => como(db, DUENO_A, (tx) => uno<{ s: string }>(tx,
+    `select saldo s from v_saldo_caja where caja_id = $1`, [caja])).then((r) => num(r.s));
+  const guardar = (id: string | null, estado = "operativo", razon: string | null = null, pago: string | null = null, user = DUENO_A) =>
+    como(db, user, (tx) => uno<{ id: string }>(tx,
+      `select guardar_maquina($1, $2, 'Moto carguera', 'Vehículo', 'Honda', 'Cargo 150', 'ABC-123', 2, '2026-01-15', 8000,
+                              $3, 'Patio', 'Elmer', null, $4, $5, $6) id`, [empA, id, estado, razon, pago, caja])).then((r) => r.id);
+  const mover = (maq: string, tipo: string, cat: string, monto: number, conCaja: boolean, user = DUENO_A) =>
+    como(db, user, (tx) => tx.query(`select registrar_movimiento_maquina($1, $2, $3, $4, $5, 'detalle')`,
+      [maq, tipo, cat, monto, conCaja ? caja : null]));
+
+  it("se crea con su compra, se le cargan gastos (caja o por fuera) e ingresos, y la caja cuadra", async () => {
+    const c0 = await saldo();
+    await expect(guardar(null, "operativo", null, null, CAJERO_A)).rejects.toThrow();
+    const id = await guardar(null, "operativo", null, "caja");
+    expect(await saldo()).toBeCloseTo(c0 - 8000, 2);
+    await mover(id, "gasto", "Reparación", 350, true, CAJERO_A);
+    await mover(id, "gasto", "Combustible", 50, false, CAJERO_A);
+    await expect(mover(id, "ingreso", "Alquiler", 200, false)).rejects.toThrow(/caja/);
+    await mover(id, "ingreso", "Alquiler", 200, true);
+    expect(await saldo()).toBeCloseTo(c0 - 8000 - 350 + 200, 2);
+    const m = await como(db, DUENO_A, (tx) => uno<{ gastos: string; gastos_caja: string; gastos_fuera: string; ingresos: string; n_movimientos: number }>(tx,
+      `select gastos, gastos_caja, gastos_fuera, ingresos, n_movimientos::int from v_maquinas where id = $1`, [id]));
+    expect([num(m.gastos), num(m.gastos_caja), num(m.gastos_fuera), num(m.ingresos), m.n_movimientos]).toEqual([400, 350, 50, 200, 4]);
+    const cat = await como(db, DUENO_A, (tx) => uno<{ nombre: string }>(tx,
+      `select cg.nombre from gastos g join categorias_gasto cg on cg.id = g.categoria_id where g.maquina_id = $1 limit 1`, [id]));
+    expect(cat.nombre).toBe("Maquinaria");
+    // Anular el gasto desde Caja también lo saca del historial de la máquina
+    const g = (await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx, `select id from gastos where maquina_id = $1 and maquina_categoria = 'Reparación'`, [id]))).id;
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_gasto($1, 'Mal registrado')`, [g]));
+    const m2 = await como(db, DUENO_A, (tx) => uno<{ gastos: string }>(tx, `select gastos from v_maquinas where id = $1`, [id]));
+    expect(num(m2.gastos)).toBe(50);
+    expect(await saldo()).toBeCloseTo(c0 - 8000 + 200, 2);
+  });
+
+  it("al editar guarda lo anterior; para darla de baja pide el motivo", async () => {
+    const id = await guardar(null);
+    await expect(guardar(id, "de_baja")).rejects.toThrow(/baja/);
+    await guardar(id, "de_baja", "Vendida");
+    const r = await como(db, DUENO_A, (tx) => uno<{ estado: string; n: number; razon: string; antes: string }>(tx,
+      `select estado, jsonb_array_length(historial) n, historial->0->>'razon' razon, historial->0->'antes'->>'estado' antes from maquinas where id = $1`, [id]));
+    expect(r).toEqual({ estado: "de_baja", n: 1, razon: "Vendida", antes: "operativo" });
+    const otro = await como(db, DUENO_B, (tx) => tx.query(`select 1 from v_maquinas where id = $1`, [id]));
+    expect(otro.rows).toHaveLength(0);
+  });
+});

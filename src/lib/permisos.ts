@@ -32,6 +32,12 @@ const PERMISOS = {
   personal: ["dueno"],
   /** Aprobar horas extras */
   aprobarExtras: ["dueno"],
+  /** Maquinaria: ver las máquinas y su historial de gastos e ingresos */
+  maquinaria: ["dueno", "administrador", "cajero", "socio"],
+  /** Registrar gastos e ingresos de una máquina (pasan por caja como cualquier gasto/ingreso) */
+  moverMaquinaria: ["dueno", "administrador", "cajero"],
+  /** Crear, editar y dar de baja máquinas */
+  editarMaquinaria: ["dueno", "administrador"],
 } as const satisfies Record<string, readonly Rol[]>;
 
 export type Accion = keyof typeof PERMISOS;

@@ -13,7 +13,8 @@ import { PanelModulo, TituloSeccion } from "@/components/panel-modulo";
 import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
 import { AccionesCaja } from "./acciones-caja";
 import { CuadreCaja } from "./cuadre-caja";
-import { BotonesPrestamo, MenuPrestamo, SITUACION, type CuotaFila, type DevolucionFila, type PrestamoFila } from "./prestamos";
+import { SITUACION } from "./prestamos-datos";
+import { BotonesPrestamo, MenuPrestamo, type CuotaFila, type DevolucionFila, type PrestamoFila } from "./prestamos";
 import { anularTraspaso } from "./acciones";
 import { EditarTurno, MenuGasto, MenuManual, type GastoFila, type Manual, type TurnoFila } from "./menus-caja";
 

@@ -1,6 +1,6 @@
 import {
   ArrowDownToLine, ArrowUpFromLine, BarChart3, Boxes, Building2, ClipboardList, Contact, Handshake, Home, Landmark,
-  Banknote, CalendarCheck, HandCoins, IdCard, PackageCheck, PiggyBank, PlusCircle, Search, Settings, Tag, Users, Wallet,
+  Banknote, CalendarCheck, Forklift, HandCoins, IdCard, PackageCheck, PiggyBank, PlusCircle, Search, Settings, Tag, Users, Wallet,
 } from "lucide-react";
 import { puede, type Accion } from "@/lib/permisos";
 import type { Rol } from "@/lib/tipos";
@@ -90,6 +90,7 @@ export const MODULOS: Modulo[] = [
       { href: "/caja", texto: "Caja", icono: Wallet, permiso: ["caja", "verTodo"] },
       { href: "/creditos", texto: "Créditos", icono: HandCoins, permiso: ["creditos"] },
       { href: "/capital", texto: "Capital y cierres", icono: PiggyBank, permiso: ["verTodo"] },
+      { href: "/maquinaria", texto: "Maquinaria", icono: Forklift, permiso: ["maquinaria"] },
       { href: "/caja/reportes", texto: "Reportes", icono: BarChart3, permiso: ["verReportes"] },
     ],
   },

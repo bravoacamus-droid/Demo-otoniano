@@ -31,10 +31,6 @@ export type DevolucionFila = {
 };
 
 const FRECUENCIA: Record<string, string> = { unica: "Una sola cuota", semanal: "Semanal", quincenal: "Quincenal", mensual: "Mensual" };
-export const SITUACION: Record<string, { texto: string; tono: "verde" | "rojo" | "ambar" | "gris" }> = {
-  al_dia: { texto: "Al día", tono: "ambar" }, vencido: { texto: "Cuota vencida", tono: "rojo" },
-  pagado: { texto: "Devuelto", tono: "verde" }, anulado: { texto: "Anulado", tono: "gris" },
-};
 export const quien = (p: { tipo: TipoPrestamo; persona: string }) =>
   p.tipo === "recibido" ? `Nos prestó ${p.persona}` : `Le prestamos a ${p.persona}`;
 
