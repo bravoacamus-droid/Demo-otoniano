@@ -125,10 +125,16 @@ export function ModalPrestamo({ abierto, onCerrar, cajas, personas, puedeFecha }
             </ol>
           )}
         </fieldset>
+        {/* Los dos textos ocupan la misma celda (el otro invisible): el aviso no cambia de alto y el cuadro no salta */}
         <Aviso tono="azul">
-          {recibido
-            ? "No es ganancia: la caja sube y queda como deuda hasta devolverlo. Cada devolución sale de la caja."
-            : "No es gasto: la caja baja y queda como dinero por cobrar hasta que lo devuelva."}
+          <span className="grid">
+            <span className={cx("col-start-1 row-start-1", !recibido && "invisible")} aria-hidden={!recibido}>
+              No es ganancia: la caja sube y queda como deuda hasta devolverlo. Cada devolución sale de la caja.
+            </span>
+            <span className={cx("col-start-1 row-start-1", recibido && "invisible")} aria-hidden={recibido}>
+              No es gasto: la caja baja y queda como dinero por cobrar hasta que lo devuelva. Cada devolución entra a la caja.
+            </span>
+          </span>
         </Aviso>
       </FormularioAccion>
     </Modal>
