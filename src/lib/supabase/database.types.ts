@@ -4680,6 +4680,21 @@ export type Database = {
           },
         ]
       }
+      v_cuadre_caja: {
+        Row: {
+          aportes: number | null
+          compras: number | null
+          compras_por_pagar: number | null
+          empresa_id: string | null
+          gastos: number | null
+          otros: number | null
+          retiros: number | null
+          saldo: number | null
+          ventas: number | null
+          ventas_por_cobrar: number | null
+        }
+        Relationships: []
+      }
       v_credito_cuotas: {
         Row: {
           credito_estado: Database["public"]["Enums"]["estado_doc"] | null

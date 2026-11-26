@@ -12,6 +12,7 @@ import { cx } from "@/components/ui/clases";
 import { PanelModulo, TituloSeccion } from "@/components/panel-modulo";
 import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
 import { AccionesCaja } from "./acciones-caja";
+import { CuadreCaja } from "./cuadre-caja";
 import { anularTraspaso } from "./acciones";
 import { EditarTurno, MenuGasto, MenuManual, type GastoFila, type Manual, type TurnoFila } from "./menus-caja";
 
@@ -71,8 +72,9 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
   else if (sp.categoria) { qGas = qGas.eq("categoria_id", sp.categoria); qGasSin = qGasSin.eq("categoria_id", sp.categoria); }
   const de = sp.de === "caja" || sp.de === "ninguna" ? sp.de : null;
 
-  const [{ data: saldos }, { data: categorias }, { data: abiertos }, { data: socios }, { data: trabajadores }, { data: prestamos }, rMov, rGas, rGasSin, rTra, rArq, rTur] = await Promise.all([
+  const [{ data: saldos }, { data: cuadre }, { data: categorias }, { data: abiertos }, { data: socios }, { data: trabajadores }, { data: prestamos }, rMov, rGas, rGasSin, rTra, rArq, rTur] = await Promise.all([
     supabase.from("v_saldo_caja").select("*").eq("empresa_id", empresa.id).order("orden"),
+    supabase.from("v_cuadre_caja").select("*").eq("empresa_id", empresa.id).maybeSingle(),
     supabase.from("categorias_gasto").select("id, nombre").eq("empresa_id", empresa.id).eq("activo", true).order("nombre"),
     supabase.from("v_turnos_caja").select("*").eq("empresa_id", empresa.id).is("cerrado_en", null).is("anulado_en", null).order("abierto_en"),
     supabase.from("socios").select("nombre").eq("empresa_id", empresa.id).eq("activo", true).order("nombre"),
@@ -185,6 +187,9 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
           href: `/caja?vista=movimientos&caja=${c.caja_id}`,
         }))}
       />
+
+      {/* De dónde sale el saldo total: capital de socios + ventas − compras − gastos */}
+      {cuadre && !sp.caja && <CuadreCaja c={cuadre} />}
 
       {/* Turno en curso: quién abrió y desde cuándo; el corte parcial se imprime sin cerrar */}
       <div className="mb-4 space-y-2">

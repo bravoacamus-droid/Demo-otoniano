@@ -1221,3 +1221,19 @@ describe("Pagos al personal (23/11)", () => {
     expect(r2).toEqual({ voucher_url: "emp/vouchers/x.jpg", operacion: "OP-124" });
   });
 });
+
+describe("Cuadre de caja (26/11)", () => {
+  it("el saldo de todas las cajas = aportes + ventas − compras − gastos ± lo demás; lo de crédito va aparte", async () => {
+    const r = await como(db, DUENO_A, (tx) => uno<Record<string, string>>(tx, `
+      select q.*, (select coalesce(sum(saldo), 0) from v_saldo_caja where empresa_id = $1) cajas,
+             (select coalesce(sum(saldo), 0) from v_creditos where empresa_id = $1 and tipo = 'por_pagar' and estado = 'registrada') pp
+        from v_cuadre_caja q where empresa_id = $1`, [empA]));
+    const partes = ["aportes", "ventas", "compras", "gastos", "retiros", "otros"].reduce((s, k) => s + num(r[k]), 0);
+    expect(partes).toBeCloseTo(num(r.saldo), 2);
+    expect(num(r.saldo)).toBeCloseTo(num(r.cajas), 2);
+    expect(num(r.compras_por_pagar)).toBeCloseTo(num(r.pp), 2);
+    // Otra empresa no ve el cuadre de A
+    const otro = await como(db, DUENO_B, (tx) => tx.query(`select 1 from v_cuadre_caja where empresa_id = $1`, [empA]));
+    expect(otro.rows).toHaveLength(0);
+  });
+});
