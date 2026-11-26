@@ -14,10 +14,13 @@ export function CuadreCaja({ c }: { c: Cuadre }) {
     { texto: "Compras pagadas", valor: Number(c.compras), siempre: true },
     { texto: "Gastos", valor: Number(c.gastos), siempre: true },
     { texto: "Retiros de socios", valor: Number(c.retiros) },
-    { texto: "Otros ingresos y salidas (ajustes, préstamos, adelantos)", valor: Number(c.otros) },
+    { texto: "Préstamos (recibidos y cobrados − prestados y devueltos)", valor: Number(c.prestamos) },
+    { texto: "Otros ingresos y salidas (ajustes, adelantos, devoluciones)", valor: Number(c.otros) },
   ].filter((f) => f.siempre || f.valor !== 0);
   const porPagar = Number(c.compras_por_pagar);
   const porCobrar = Number(c.ventas_por_cobrar);
+  const debemos = Number(c.prestamos_por_pagar);
+  const nosDeben = Number(c.prestamos_por_cobrar);
 
   return (
     <Tarjeta className="mb-4">
@@ -36,11 +39,14 @@ export function CuadreCaja({ c }: { c: Cuadre }) {
           <dd className={cx("cifra shrink-0 text-base font-semibold", Number(c.saldo) < 0 ? "text-red-700" : "text-stone-900")}>{soles(c.saldo)}</dd>
         </div>
       </dl>
-      {(porPagar > 0 || porCobrar > 0) && (
+      {(porPagar > 0 || porCobrar > 0 || debemos > 0 || nosDeben > 0) && (
         <p className="border-t border-stone-100 px-4 py-2.5 text-xs text-stone-600">
           {porPagar > 0 && <>Compras a crédito por pagar: <b className="cifra">{soles(porPagar)}</b> (aún no salieron de caja). </>}
           {porCobrar > 0 && <>Ventas a crédito por cobrar: <b className="cifra">{soles(porCobrar)}</b>. </>}
-          <Link href="/creditos" className="font-medium text-marca-700 hover:underline">Ver créditos</Link>
+          {debemos > 0 && <>Préstamos por devolver: <b className="cifra">{soles(debemos)}</b>. </>}
+          {nosDeben > 0 && <>Préstamos por cobrar: <b className="cifra">{soles(nosDeben)}</b>. </>}
+          {(porPagar > 0 || porCobrar > 0) && <Link href="/creditos" className="font-medium text-marca-700 hover:underline">Ver créditos</Link>}
+          {(debemos > 0 || nosDeben > 0) && <> <Link href="/caja?vista=prestamos" className="font-medium text-marca-700 hover:underline">Ver préstamos</Link></>}
         </p>
       )}
     </Tarjeta>

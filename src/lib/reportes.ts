@@ -298,6 +298,7 @@ export const REPORTES: DefReporte[] = [
         ...(Number(v.por_cobrar) !== 0 ? [{ concepto: "Saldo a favor por cobrar a proveedores (descuentos)", kg: null, monto: v.por_cobrar }] : []),
         { concepto: "LO QUE TENEMOS (caja + mercadería + por cobrar)", kg: null, monto: v.activos, _fuerte: true },
         { concepto: "Deudas con proveedores (compras a crédito)", kg: null, monto: -Number(v.cuentas_por_pagar), _fuerte: true },
+        ...(Number(v.prestamos_por_pagar) !== 0 ? [{ concepto: "Préstamos recibidos por devolver", kg: null, monto: -Number(v.prestamos_por_pagar), _fuerte: true }] : []),
         { concepto: "Aportes de socios", kg: null, monto: v.aportes },
         { concepto: "Retiros de socios", kg: null, monto: -Number(v.retiros) },
         { concepto: "Capital neto", kg: null, monto: v.capital, _fuerte: true },

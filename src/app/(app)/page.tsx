@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Inicio" };
 
 interface Dashboard {
   caja: number; stock_costo: number; stock_precio_venta: number; en_transito: number; por_cobrar: number; capital: number;
-  activos: number; ganancia_acumulada: number; cuentas_por_cobrar: number; cuentas_por_pagar: number; ventas_pendientes: number; por_seleccionar: number; selecciones_retrasadas: number;
+  activos: number; ganancia_acumulada: number; cuentas_por_cobrar: number; cuentas_por_pagar: number; prestamos_por_pagar?: number; ventas_pendientes: number; por_seleccionar: number; selecciones_retrasadas: number;
 }
 
 interface DashboardRango {
@@ -76,7 +76,8 @@ async function Patrimonio({ ctx }: { ctx: Contexto }) {
   const ganancia = Number(db.ganancia_acumulada);
   // Por cobrar: descuentos a proveedores + ventas a crédito (ambos ya están en «lo que tenemos»)
   const porCobrar = Number(db.por_cobrar ?? 0) + Number(db.cuentas_por_cobrar ?? 0);
-  const debemos = Number(db.cuentas_por_pagar ?? 0);
+  // Compras a crédito por pagar + préstamos recibidos por devolver
+  const debemos = Number(db.cuentas_por_pagar ?? 0) + Number(db.prestamos_por_pagar ?? 0);
   return (
     <>
       {(db.ventas_pendientes > 0 || db.selecciones_retrasadas > 0) && (

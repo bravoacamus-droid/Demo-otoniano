@@ -3,6 +3,7 @@
 import { obtenerContexto } from "@/lib/contexto";
 import { fallo, ok, texto } from "@/lib/acciones";
 import { normalizar } from "@/lib/montos";
+import { hoyLima } from "@/lib/formato";
 import type { Resultado, ResumenTurno } from "@/lib/tipos";
 
 function monto(fd: FormData, campo = "monto") {
@@ -217,6 +218,57 @@ export async function corregirApertura(_: unknown, fd: FormData): Promise<Result
 export async function anularTurno(_: unknown, fd: FormData): Promise<Resultado> {
   const { supabase } = await obtenerContexto();
   const { error } = await supabase.rpc("anular_turno", { p_turno: texto(fd, "id")!, p_motivo: texto(fd, "motivo")! });
+  if (error) return fallo(error);
+  return ok(null);
+}
+
+/** Fecha elegida en el formulario (hoy = ahora mismo; otro día = mediodía de Lima de ese día) */
+const fechaLima = (fd: FormData) => {
+  const f = texto(fd, "fecha");
+  return f && f !== hoyLima() ? `${f}T12:00:00-05:00` : undefined;
+};
+
+/** Préstamo: «recibido» (nos prestan, entra dinero) u «otorgado» (prestamos, sale dinero), en una o varias cuotas */
+export async function registrarPrestamo(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase, empresa } = await obtenerContexto();
+  const m = monto(fd);
+  if (!m) return fallo("Ingrese el monto del préstamo.");
+  const cuotas = Number(texto(fd, "cuotas") ?? "1") || 1;
+  const { data, error } = await supabase.rpc("registrar_prestamo", {
+    p_empresa: empresa.id, p_tipo: texto(fd, "tipo") ?? "", p_persona: texto(fd, "persona") ?? "", p_monto: Number(m),
+    p_caja: texto(fd, "caja_id")!, p_motivo: texto(fd, "motivo") ?? "", p_cuotas: cuotas,
+    p_frecuencia: texto(fd, "frecuencia") ?? "mensual", p_primer_vencimiento: texto(fd, "primer_vencimiento") ?? undefined,
+    p_fecha: fechaLima(fd), p_documento: texto(fd, "documento") ?? undefined,
+  });
+  if (error) return fallo(error);
+  return ok(data);
+}
+
+/** Devolución de un préstamo: sale de caja si nos prestaron; entra si nosotros prestamos */
+export async function registrarDevolucionPrestamo(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase } = await obtenerContexto();
+  const m = monto(fd);
+  if (!m) return fallo("Ingrese el monto de la devolución.");
+  const prestamo = texto(fd, "prestamo_id");
+  if (!prestamo) return fallo("Elija el préstamo.");
+  const { data, error } = await supabase.rpc("registrar_pago_prestamo", {
+    p_prestamo: prestamo, p_monto: Number(m), p_caja: texto(fd, "caja_id")!, p_fecha: fechaLima(fd),
+    p_nota: texto(fd, "nota") ?? undefined,
+  });
+  if (error) return fallo(error);
+  return ok(data);
+}
+
+export async function anularPrestamo(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase } = await obtenerContexto();
+  const { error } = await supabase.rpc("anular_prestamo", { p_prestamo: texto(fd, "id")!, p_motivo: texto(fd, "motivo")! });
+  if (error) return fallo(error);
+  return ok(null);
+}
+
+export async function anularDevolucionPrestamo(_: unknown, fd: FormData): Promise<Resultado> {
+  const { supabase } = await obtenerContexto();
+  const { error } = await supabase.rpc("anular_pago_prestamo", { p_pago: texto(fd, "id")!, p_motivo: texto(fd, "motivo")! });
   if (error) return fallo(error);
   return ok(null);
 }

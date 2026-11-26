@@ -17,7 +17,7 @@ interface Reporte {
   generado_en: string;
   resultado: Record<"compras" | "kg_comprados" | "ventas" | "kg_vendidos" | "costo_ventas" | "merma_venta" | "merma_ajustes"
     | "merma_ajustes_kg" | "gastos" | "ajustes_caja" | "margen_bruto" | "utilidad", N> | null;
-  patrimonio: Record<"caja" | "stock_costo" | "en_transito" | "por_cobrar" | "cuentas_por_cobrar" | "cuentas_por_pagar"
+  patrimonio: Record<"caja" | "stock_costo" | "en_transito" | "por_cobrar" | "cuentas_por_cobrar" | "cuentas_por_pagar" | "prestamos_por_pagar"
     | "capital" | "activos" | "ganancia_acumulada", N> | null;
   patrimonio_inicio?: Reporte["patrimonio"];
   stock: { metal: string; kg: N; costo: N }[] | null;
@@ -57,7 +57,7 @@ export default async function ReporteMes({ params }: { params: Promise<{ periodo
   const totalStock = stock.reduce((t, s) => t + n(s.costo), 0);
   const ventas = r.ventas ?? [];
   const compras = r.compras ?? [];
-  const debemos = n(pat?.cuentas_por_pagar);
+  const debemos = n(pat?.cuentas_por_pagar) + n(pat?.prestamos_por_pagar);
   const porCobrar = n(pat?.por_cobrar) + n(pat?.cuentas_por_cobrar) + n(pat?.en_transito);
   const mermas = n(res?.merma_venta) + n(res?.merma_ajustes);
   const cerrado = r.estado === "cerrado";
@@ -122,7 +122,7 @@ export default async function ReporteMes({ params }: { params: Promise<{ periodo
             <Linea texto="En caja (efectivo y bancos)" monto={pat?.caja} />
             <Linea signo="+" texto="En material del almacén" monto={pat?.stock_costo} detalle="Detalle por producto abajo" />
             {porCobrar !== 0 && <Linea signo="+" texto="Por cobrar" monto={porCobrar} detalle="Ventas a crédito, saldos de proveedores y material en camino" />}
-            {debemos !== 0 && <Linea signo="−" texto="Lo que debemos" monto={debemos} detalle="Compras a crédito por pagar" />}
+            {debemos !== 0 && <Linea signo="−" texto="Lo que debemos" monto={debemos} detalle="Compras a crédito y préstamos por devolver" />}
             <Linea signo="=" texto="Total que tenemos" monto={n(pat?.activos) - debemos} fuerte />
             <Linea signo="−" texto="Capital de los socios" monto={pat?.capital} />
             <Linea signo="=" texto="Ganancia acumulada" monto={pat?.ganancia_acumulada} fuerte detalle="Lo ganado desde el inicio, menos la utilidad ya entregada" />

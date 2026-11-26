@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LockOpen } from "lucide-react";
 import { exigir } from "@/lib/contexto";
 import { puede } from "@/lib/permisos";
-import { ETIQUETA_ORIGEN, fechaHora, soles } from "@/lib/formato";
+import { ETIQUETA_ORIGEN, fechaDia, fechaHora, soles } from "@/lib/formato";
 import { Aviso, Encabezado, Insignia, Tarjeta } from "@/components/ui/basicos";
 import { TablaDatos } from "@/components/ui/tabla";
 import { Filtros, rangoLima } from "@/components/filtros";
@@ -13,6 +13,7 @@ import { PanelModulo, TituloSeccion } from "@/components/panel-modulo";
 import { BotonImprimir80 } from "@/components/ticket/boton-imprimir-80";
 import { AccionesCaja } from "./acciones-caja";
 import { CuadreCaja } from "./cuadre-caja";
+import { BotonesPrestamo, MenuPrestamo, SITUACION, type CuotaFila, type DevolucionFila, type PrestamoFila } from "./prestamos";
 import { anularTraspaso } from "./acciones";
 import { EditarTurno, MenuGasto, MenuManual, type GastoFila, type Manual, type TurnoFila } from "./menus-caja";
 
@@ -21,13 +22,14 @@ export const metadata: Metadata = { title: "Caja" };
 type Params = { vista?: string; caja?: string; desde?: string; hasta?: string; ver?: string; categoria?: string; de?: string };
 
 const ENLACE_ORIGEN: Record<string, string> = { compra: "/compras/", venta: "/ventas/" };
-const TITULO_VISTA: Record<string, string> = { movimientos: "Movimientos de caja", gastos: "Gastos", traspasos: "Traspasos entre cajas", arqueos: "Arqueos", cierres: "Aperturas y cierres de caja" };
+const TITULO_VISTA: Record<string, string> = { movimientos: "Movimientos de caja", gastos: "Gastos", prestamos: "Préstamos", traspasos: "Traspasos entre cajas", arqueos: "Arqueos", cierres: "Aperturas y cierres de caja" };
 
 /** Filtro «Ver» de movimientos: lo del sistema (compras y ventas) aparte de los demás gastos y movimientos */
 const GRUPOS = {
   sistema: { texto: "Compras y ventas", origenes: ["compra", "venta", "devolucion", "adelanto"] },
   gastos: { texto: "Otros gastos", origenes: ["gasto"] },
-  dinero: { texto: "Ingresos y salidas de dinero", origenes: ["ajuste", "prestamo"] },
+  dinero: { texto: "Ingresos y salidas de dinero", origenes: ["ajuste"] },
+  prestamos: { texto: "Préstamos y devoluciones", origenes: ["prestamo"] },
   socios: { texto: "Aportes y retiros de socios", origenes: ["aporte", "retiro"] },
   traspasos: { texto: "Traspasos", origenes: ["traspaso"] },
   aperturas: { texto: "Aperturas y cierres", origenes: [] },
@@ -56,7 +58,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
   };
 
   // Solo la lista de la pestaña activa; todo en paralelo con los saldos
-  const esArqueos = !["movimientos", "gastos", "traspasos", "cierres"].includes(vista);
+  const esArqueos = !["movimientos", "gastos", "traspasos", "cierres", "prestamos"].includes(vista);
   const conMovs = vista === "movimientos" && grupo !== "aperturas";
   // Aperturas y cierres van en el historial de movimientos (no mueven dinero: se muestran aparte del saldo)
   const conTurnos = vista === "cierres" || (vista === "movimientos" && (!grupo || grupo === "aperturas"));
@@ -72,14 +74,14 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
   else if (sp.categoria) { qGas = qGas.eq("categoria_id", sp.categoria); qGasSin = qGasSin.eq("categoria_id", sp.categoria); }
   const de = sp.de === "caja" || sp.de === "ninguna" ? sp.de : null;
 
-  const [{ data: saldos }, { data: cuadre }, { data: categorias }, { data: abiertos }, { data: socios }, { data: trabajadores }, { data: prestamos }, rMov, rGas, rGasSin, rTra, rArq, rTur] = await Promise.all([
+  const [{ data: saldos }, { data: cuadre }, { data: categorias }, { data: abiertos }, { data: socios }, { data: trabajadores }, { data: prestamosTodos }, rMov, rGas, rGasSin, rTra, rArq, rTur] = await Promise.all([
     supabase.from("v_saldo_caja").select("*").eq("empresa_id", empresa.id).order("orden"),
     supabase.from("v_cuadre_caja").select("*").eq("empresa_id", empresa.id).maybeSingle(),
     supabase.from("categorias_gasto").select("id, nombre").eq("empresa_id", empresa.id).eq("activo", true).order("nombre"),
     supabase.from("v_turnos_caja").select("*").eq("empresa_id", empresa.id).is("cerrado_en", null).is("anulado_en", null).order("abierto_en"),
     supabase.from("socios").select("nombre").eq("empresa_id", empresa.id).eq("activo", true).order("nombre"),
     supabase.from("trabajadores").select("nombre").eq("empresa_id", empresa.id).is("fecha_cese", null).order("nombre"),
-    supabase.from("v_prestamos_pendientes").select("persona, pendiente").eq("empresa_id", empresa.id).order("persona"),
+    supabase.from("v_prestamos").select("*").eq("empresa_id", empresa.id).order("fecha", { ascending: false }).limit(300),
     conMovs ? rango(qMov) : null,
     vista === "gastos" && de !== "ninguna" ? rango(qGas) : null,
     vista === "gastos" && de !== "caja" ? rango(qGasSin) : null,
@@ -95,6 +97,24 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
   const arqueos = rArq ? rArq.data ?? [] : null;
   const turnos = rTur ? rTur.data ?? [] : null;
   const turnosAbiertos = abiertos ?? [];
+  const prestamos = (prestamosTodos ?? []) as unknown as PrestamoFila[];
+  const pendientes = prestamos.filter((p) => p.estado === "registrada" && Number(p.saldo) > 0);
+  // Cronograma y devoluciones solo en la pestaña de préstamos
+  const idsPrestamo = vista === "prestamos" ? prestamos.map((p) => p.id) : [];
+  const [{ data: cuotasP }, { data: pagosP }] = await Promise.all([
+    idsPrestamo.length ? supabase.from("v_prestamo_cuotas").select("prestamo_id, numero, vence, monto, pagado, saldo, situacion").in("prestamo_id", idsPrestamo).order("numero") : { data: [] },
+    idsPrestamo.length ? supabase.from("v_prestamo_pagos").select("id, prestamo_id, fecha, monto, caja_nombre, nota, estado, creado_por_nombre, motivo_anulacion").in("prestamo_id", idsPrestamo).order("fecha", { ascending: false }) : { data: [] },
+  ]);
+  const agrupar = <T extends { prestamo_id: string | null }>(xs: T[]) => {
+    const m = new Map<string, T[]>();
+    for (const x of xs) m.set(x.prestamo_id!, [...(m.get(x.prestamo_id!) ?? []), x]);
+    return m;
+  };
+  const cuotasDe = agrupar(cuotasP ?? []);
+  const pagosDe = agrupar(pagosP ?? []);
+  const sumaSaldo = (t: string) => pendientes.filter((p) => p.tipo === t).reduce((a, p) => a + Math.round(Number(p.saldo) * 100), 0) / 100;
+  const puedeFecha = rol === "dueno" || rol === "administrador";
+  const cajasPrestamo = (saldos ?? []).filter((c) => c.activo).map((c) => ({ id: c.caja_id!, nombre: c.nombre!, saldo: String(c.saldo) }));
 
   // Gastos con caja y de solo registro, juntos y por fecha
   const gastos = vista === "gastos" ? [
@@ -166,8 +186,10 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             categorias={categorias ?? []}
             puedeAjustar={rol === "dueno"}
             turnos={turnosAbiertos.map((t) => ({ id: t.id!, numero: t.numero!, caja_id: t.caja_id!, caja_nombre: t.caja_nombre!, abierto_en: t.abierto_en! }))}
-            personas={[...new Set([...(socios ?? []), ...(trabajadores ?? [])].map((p) => p.nombre))]}
-            prestamos={(prestamos ?? []).filter((p) => Number(p.pendiente) > 0).map((p) => ({ persona: p.persona!, pendiente: String(p.pendiente) }))}
+            prestamos={
+              <BotonesPrestamo cajas={cajasPrestamo} pendientes={pendientes} puedeFecha={puedeFecha}
+                personas={[...new Set([...(socios ?? []).map((p) => p.nombre), ...(trabajadores ?? []).map((p) => p.nombre), ...prestamos.map((p) => p.persona)])]} />
+            }
           />
         </div>
       )}
@@ -215,6 +237,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
       <div className="mb-3 flex gap-1 overflow-x-auto rounded-xl bg-stone-200/70 p-1 sm:inline-flex">
         {pestana("movimientos", "Movimientos")}
         {pestana("gastos", "Gastos")}
+        {pestana("prestamos", "Préstamos")}
         {pestana("traspasos", "Traspasos")}
         {pestana("arqueos", "Arqueos")}
         {pestana("cierres", "Cierres")}
@@ -234,7 +257,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
           {gastos && <span className="text-sm text-stone-500">{gastos.length} registro(s)</span>}
         </div>
       )}
-      <Filtros
+      {vista !== "prestamos" && <Filtros
         valores={sp}
         ocultos={vista === "gastos" && de ? { vista, de } : { vista }}
         selects={vista === "movimientos" ? [
@@ -243,7 +266,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
         ] : vista === "gastos" ? [
           { nombre: "categoria", etiqueta: "Categoría", opciones: [...(categorias ?? []).map((c) => ({ valor: c.id, texto: c.nombre })), { valor: "sin", texto: "Otros gastos (escritos a mano)" }] },
         ] : []}
-      />
+      />}
 
       <Tarjeta>
         {filas && (
@@ -265,6 +288,9 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
                 celda: (f) => {
                   if (f.tipo === "mov") {
                     const m = f.m;
+                    if (m.origen === "prestamo" && !manualPorMov.has(m.id!)) {
+                      return <Link className={cx("text-marca-700 hover:underline", m.anulado && "line-through")} href="/caja?vista=prestamos">{m.concepto}</Link>;
+                    }
                     return ENLACE_ORIGEN[m.origen!] && m.origen_id
                       ? <Link className="text-marca-700 hover:underline" href={`${ENLACE_ORIGEN[m.origen!]}${m.origen_id}`}>{m.concepto}</Link>
                       : <span className={m.anulado ? "text-stone-500 line-through" : ""}>{m.concepto}</span>;
@@ -320,6 +346,60 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
               },
             ]}
           />
+        )}
+        {vista === "prestamos" && (
+          <>
+            {(sumaSaldo("recibido") > 0 || sumaSaldo("otorgado") > 0) && (
+              <div className="grid gap-px border-b border-stone-100 bg-stone-100 sm:grid-cols-2">
+                <div className="bg-superficie px-4 py-3">
+                  <p className="text-xs text-stone-500">Nos prestaron · falta devolver</p>
+                  <p className="cifra text-lg font-semibold text-stone-900">{soles(sumaSaldo("recibido"))}</p>
+                </div>
+                <div className="bg-superficie px-4 py-3">
+                  <p className="text-xs text-stone-500">Prestamos · falta que nos devuelvan</p>
+                  <p className="cifra text-lg font-semibold text-stone-900">{soles(sumaSaldo("otorgado"))}</p>
+                </div>
+              </div>
+            )}
+            <TablaDatos
+              filas={prestamos}
+              clave={(p) => p.id}
+              vacio="Sin préstamos. Use «Préstamo» para registrar uno."
+              columnas={[
+                { titulo: "Fecha", celda: (p) => fechaHora(p.fecha) },
+                {
+                  titulo: "Préstamo", principal: true,
+                  celda: (p) => (
+                    <span className={cx("min-w-0", p.estado === "anulada" && "text-stone-500 line-through")}>
+                      <Insignia tono={p.tipo === "recibido" ? "azul" : "gris"}>{p.tipo === "recibido" ? "Nos prestó" : "Le prestamos"}</Insignia>{" "}
+                      <b className="font-medium">{p.persona}</b>
+                      <span className="block text-xs text-stone-500">{p.motivo}</span>
+                    </span>
+                  ),
+                },
+                { titulo: "Monto", alinear: "der", celda: (p) => <span className="cifra">{soles(p.monto)}</span> },
+                { titulo: "Devuelto", alinear: "der", celda: (p) => <span className="cifra">{soles(p.pagado)}</span> },
+                { titulo: "Falta", alinear: "der", principal: true, celda: (p) => <span className="cifra font-semibold">{soles(p.estado === "anulada" ? 0 : p.saldo)}</span> },
+                {
+                  titulo: "Cuotas",
+                  celda: (p) => p.estado === "anulada" || Number(p.saldo) === 0 ? <span className="text-stone-500">{p.n_cuotas} cuota(s)</span> : (
+                    <span className="text-sm">
+                      {p.n_cuotas > 1 ? `Cuota ${p.proxima_numero} de ${p.n_cuotas}` : "Una cuota"}
+                      <span className="block text-xs text-stone-500">vence {fechaDia(p.proxima_vence)} · {soles(p.proxima_saldo)}</span>
+                    </span>
+                  ),
+                },
+                { titulo: "Estado", celda: (p) => <Insignia tono={SITUACION[p.situacion]?.tono ?? "gris"}>{SITUACION[p.situacion]?.texto ?? p.situacion}</Insignia> },
+                {
+                  titulo: "",
+                  celda: (p) => (
+                    <MenuPrestamo p={p} cajas={cajasPrestamo} puedeAnular={puedeCorregir} puedeFecha={puedeFecha} puedeDevolver={puede(rol, "caja") || puedeCorregir}
+                      cuotas={(cuotasDe.get(p.id) ?? []) as unknown as CuotaFila[]} devoluciones={(pagosDe.get(p.id) ?? []) as unknown as DevolucionFila[]} />
+                  ),
+                },
+              ]}
+            />
+          </>
         )}
         {gastos && (
           <TablaDatos

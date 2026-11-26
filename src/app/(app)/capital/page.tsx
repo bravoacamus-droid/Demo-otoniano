@@ -52,6 +52,8 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
   const listaSocios = activos.map((s) => ({ id: s.socio_id!, nombre: s.nombre! }));
   const listaCajas = cajas ?? [];
   const capitalizado = Number(patrimonio?.capitalizado ?? 0);
+  // Compras a crédito por pagar + préstamos recibidos por devolver
+  const debemos = Number(patrimonio?.cuentas_por_pagar ?? 0) + Number(patrimonio?.prestamos_por_pagar ?? 0);
 
   return (
     <>
@@ -77,9 +79,9 @@ export default async function CapitalPage({ searchParams }: { searchParams: Prom
         celdas={[
           {
             // Igual que «Total que tenemos» del reporte del mes: ya restado lo que debemos
-            titulo: "Lo que tenemos", valor: soles(Number(patrimonio?.activos ?? 0) - Number(patrimonio?.cuentas_por_pagar ?? 0)),
-            detalle: Number(patrimonio?.cuentas_por_pagar ?? 0) > 0
-              ? `Caja + material + por cobrar − ${soles(patrimonio?.cuentas_por_pagar)} que debemos`
+            titulo: "Lo que tenemos", valor: soles(Number(patrimonio?.activos ?? 0) - debemos),
+            detalle: debemos > 0
+              ? `Caja + material + por cobrar − ${soles(debemos)} que debemos`
               : "Caja + material a costo + por cobrar",
           },
           {

@@ -95,6 +95,13 @@ export type Database = {
             foreignKeyName: "adelantos_proveedor_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "adelantos_proveedor_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -202,6 +209,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_inventario_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "ajustes_inventario_empresa_id_fkey"
@@ -331,6 +345,13 @@ export type Database = {
             foreignKeyName: "aportes_retiros_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "aportes_retiros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -431,6 +452,13 @@ export type Database = {
             foreignKeyName: "arqueos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "arqueos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -507,6 +535,13 @@ export type Database = {
             foreignKeyName: "asistencias_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "asistencias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -573,6 +608,13 @@ export type Database = {
             foreignKeyName: "cajas_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "cajas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -625,6 +667,13 @@ export type Database = {
             foreignKeyName: "cargos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "cargos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -663,6 +712,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categorias_gasto_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "categorias_gasto_empresa_id_fkey"
@@ -724,6 +780,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cierres_mes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "cierres_mes_empresa_id_fkey"
@@ -796,6 +859,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compra_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "compra_items_empresa_id_fkey"
@@ -885,6 +955,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compradores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "compradores_empresa_id_fkey"
@@ -998,6 +1075,13 @@ export type Database = {
             foreignKeyName: "compras_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -1101,6 +1185,13 @@ export type Database = {
             foreignKeyName: "correcciones_compra_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "correcciones_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -1162,6 +1253,13 @@ export type Database = {
             foreignKeyName: "correcciones_venta_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -1211,6 +1309,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correlativos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "correlativos_empresa_id_fkey"
@@ -1282,6 +1387,13 @@ export type Database = {
             foreignKeyName: "credito_ajustes_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "credito_ajustes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -1340,6 +1452,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "credito_cuotas_empresa_id_fkey"
@@ -1450,6 +1569,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "credito_pagos_empresa_id_fkey"
@@ -1592,6 +1718,13 @@ export type Database = {
             foreignKeyName: "creditos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "creditos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -1706,6 +1839,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_proveedor_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "devoluciones_proveedor_empresa_id_fkey"
@@ -1904,6 +2044,13 @@ export type Database = {
             foreignKeyName: "gastos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "gastos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -1984,6 +2131,13 @@ export type Database = {
             foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -2043,6 +2197,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kardex_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "kardex_empresa_id_fkey"
@@ -2146,6 +2307,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "limpieza_traslados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "limpieza_traslados_empresa_id_fkey"
@@ -2297,6 +2465,13 @@ export type Database = {
             foreignKeyName: "medios_pago_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "medios_pago_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -2365,6 +2540,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "metales_empresa_id_fkey"
@@ -2467,6 +2649,13 @@ export type Database = {
             foreignKeyName: "miembros_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "miembros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -2546,6 +2735,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "movimientos_caja_empresa_id_fkey"
@@ -2647,6 +2843,13 @@ export type Database = {
             foreignKeyName: "movimientos_manuales_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -2717,6 +2920,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "padron_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "padron_documentos_empresa_id_fkey"
@@ -2833,6 +3043,13 @@ export type Database = {
             foreignKeyName: "pagos_personal_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -2930,6 +3147,13 @@ export type Database = {
             foreignKeyName: "precios_metal_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "precios_metal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -2967,6 +3191,321 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_stock_metal"
             referencedColumns: ["metal_id"]
+          },
+        ]
+      }
+      prestamo_cuotas: {
+        Row: {
+          empresa_id: string
+          id: string
+          monto: number
+          numero: number
+          prestamo_id: string
+          vence: string
+        }
+        Insert: {
+          empresa_id: string
+          id?: string
+          monto: number
+          numero: number
+          prestamo_id: string
+          vence: string
+        }
+        Update: {
+          empresa_id?: string
+          id?: string
+          monto?: number
+          numero?: number
+          prestamo_id?: string
+          vence?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prestamo_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_prestamo_id_fkey"
+            columns: ["prestamo_id"]
+            isOneToOne: false
+            referencedRelation: "prestamos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_prestamo_id_fkey"
+            columns: ["prestamo_id"]
+            isOneToOne: false
+            referencedRelation: "v_prestamos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prestamo_pagos: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string
+          creado_en: string
+          creado_por: string | null
+          empresa_id: string
+          estado: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          id: string
+          monto: number
+          motivo_anulacion: string | null
+          mov_id: string | null
+          nota: string | null
+          prestamo_id: string
+        }
+        Insert: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id: string
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          id?: string
+          monto: number
+          motivo_anulacion?: string | null
+          mov_id?: string | null
+          nota?: string | null
+          prestamo_id: string
+        }
+        Update: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id?: string
+          creado_en?: string
+          creado_por?: string | null
+          empresa_id?: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          id?: string
+          monto?: number
+          motivo_anulacion?: string | null
+          mov_id?: string | null
+          nota?: string | null
+          prestamo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prestamo_pagos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "v_movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_prestamo_id_fkey"
+            columns: ["prestamo_id"]
+            isOneToOne: false
+            referencedRelation: "prestamos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_prestamo_id_fkey"
+            columns: ["prestamo_id"]
+            isOneToOne: false
+            referencedRelation: "v_prestamos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prestamos: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string
+          creado_en: string
+          creado_por: string | null
+          documento: string | null
+          empresa_id: string
+          estado: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          frecuencia: string
+          id: string
+          monto: number
+          motivo: string
+          motivo_anulacion: string | null
+          mov_id: string | null
+          n_cuotas: number
+          persona: string
+          primer_vencimiento: string
+          tipo: string
+        }
+        Insert: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id: string
+          creado_en?: string
+          creado_por?: string | null
+          documento?: string | null
+          empresa_id: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha: string
+          frecuencia: string
+          id?: string
+          monto: number
+          motivo: string
+          motivo_anulacion?: string | null
+          mov_id?: string | null
+          n_cuotas: number
+          persona: string
+          primer_vencimiento: string
+          tipo: string
+        }
+        Update: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          caja_id?: string
+          creado_en?: string
+          creado_por?: string | null
+          documento?: string | null
+          empresa_id?: string
+          estado?: Database["public"]["Enums"]["estado_doc"]
+          fecha?: string
+          frecuencia?: string
+          id?: string
+          monto?: number
+          motivo?: string
+          motivo_anulacion?: string | null
+          mov_id?: string | null
+          n_cuotas?: number
+          persona?: string
+          primer_vencimiento?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prestamos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "prestamos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "v_movimientos_caja"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3023,6 +3562,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "proveedores_empresa_id_fkey"
@@ -3092,6 +3638,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seleccion_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "seleccion_items_empresa_id_fkey"
@@ -3245,6 +3798,13 @@ export type Database = {
             foreignKeyName: "selecciones_compra_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "selecciones_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -3309,6 +3869,13 @@ export type Database = {
             foreignKeyName: "series_comprobante_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "series_comprobante_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -3364,6 +3931,13 @@ export type Database = {
             foreignKeyName: "socios_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "socios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -3405,6 +3979,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_metal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "stock_metal_empresa_id_fkey"
@@ -3526,6 +4107,13 @@ export type Database = {
             foreignKeyName: "trabajadores_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "trabajadores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -3619,6 +4207,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspasos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "traspasos_empresa_id_fkey"
@@ -3732,6 +4327,13 @@ export type Database = {
             foreignKeyName: "turnos_caja_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "turnos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -3782,6 +4384,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unidades_medida_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "unidades_medida_empresa_id_fkey"
@@ -3852,6 +4461,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "venta_items_empresa_id_fkey"
@@ -4042,6 +4658,13 @@ export type Database = {
             foreignKeyName: "ventas_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "ventas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -4089,6 +4712,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_inventario_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "ajustes_inventario_empresa_id_fkey"
@@ -4184,6 +4814,13 @@ export type Database = {
             foreignKeyName: "aportes_retiros_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "aportes_retiros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -4263,6 +4900,13 @@ export type Database = {
             foreignKeyName: "arqueos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "arqueos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -4296,6 +4940,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "socios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "socios_empresa_id_fkey"
@@ -4357,6 +5008,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compra_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "compra_items_empresa_id_fkey"
@@ -4452,6 +5110,13 @@ export type Database = {
             foreignKeyName: "compradores_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "compradores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -4531,6 +5196,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "compras_empresa_id_fkey"
@@ -4616,6 +5288,13 @@ export type Database = {
             foreignKeyName: "correcciones_compra_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "correcciones_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -4654,6 +5333,13 @@ export type Database = {
             foreignKeyName: "correcciones_venta_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "correcciones_venta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -4679,21 +5365,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      v_cuadre_caja: {
-        Row: {
-          aportes: number | null
-          compras: number | null
-          compras_por_pagar: number | null
-          empresa_id: string | null
-          gastos: number | null
-          otros: number | null
-          retiros: number | null
-          saldo: number | null
-          ventas: number | null
-          ventas_por_cobrar: number | null
-        }
-        Relationships: []
       }
       v_credito_cuotas: {
         Row: {
@@ -4730,6 +5401,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "credito_cuotas_empresa_id_fkey"
@@ -4804,6 +5482,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "credito_pagos_empresa_id_fkey"
@@ -4919,6 +5604,13 @@ export type Database = {
             foreignKeyName: "creditos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "creditos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -4965,6 +5657,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_cuadre_caja: {
+        Row: {
+          aportes: number | null
+          compras: number | null
+          compras_por_pagar: number | null
+          empresa_id: string | null
+          gastos: number | null
+          otros: number | null
+          prestamos: number | null
+          prestamos_por_cobrar: number | null
+          prestamos_por_pagar: number | null
+          retiros: number | null
+          saldo: number | null
+          ventas: number | null
+          ventas_por_cobrar: number | null
+        }
+        Relationships: []
       }
       v_gastos: {
         Row: {
@@ -5014,6 +5724,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "gastos_empresa_id_fkey"
@@ -5069,6 +5786,13 @@ export type Database = {
             foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "gastos_sin_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -5107,6 +5831,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kardex_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "kardex_empresa_id_fkey"
@@ -5228,6 +5959,13 @@ export type Database = {
             foreignKeyName: "movimientos_caja_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "movimientos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -5284,6 +6022,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "movimientos_manuales_empresa_id_fkey"
@@ -5371,6 +6116,13 @@ export type Database = {
             foreignKeyName: "pagos_personal_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "pagos_personal_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -5438,12 +6190,259 @@ export type Database = {
           en_transito: number | null
           ganancia_acumulada: number | null
           por_cobrar: number | null
+          prestamos_por_pagar: number | null
           retiros: number | null
           stock_costo: number | null
           stock_precio_venta: number | null
           utilidad_entregada: number | null
         }
         Relationships: []
+      }
+      v_prestamo_cuotas: {
+        Row: {
+          empresa_id: string | null
+          id: string | null
+          monto: number | null
+          numero: number | null
+          pagado: number | null
+          prestamo_estado: Database["public"]["Enums"]["estado_doc"] | null
+          prestamo_id: string | null
+          saldo: number | null
+          situacion: string | null
+          tipo: string | null
+          vence: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prestamo_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_prestamo_id_fkey"
+            columns: ["prestamo_id"]
+            isOneToOne: false
+            referencedRelation: "prestamos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_cuotas_prestamo_id_fkey"
+            columns: ["prestamo_id"]
+            isOneToOne: false
+            referencedRelation: "v_prestamos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_prestamo_pagos: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string | null
+          caja_nombre: string | null
+          creado_en: string | null
+          creado_por: string | null
+          creado_por_nombre: string | null
+          empresa_id: string | null
+          estado: Database["public"]["Enums"]["estado_doc"] | null
+          fecha: string | null
+          id: string | null
+          monto: number | null
+          motivo_anulacion: string | null
+          mov_id: string | null
+          nota: string | null
+          persona: string | null
+          prestamo_id: string | null
+          tipo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prestamo_pagos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "v_movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_prestamo_id_fkey"
+            columns: ["prestamo_id"]
+            isOneToOne: false
+            referencedRelation: "prestamos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamo_pagos_prestamo_id_fkey"
+            columns: ["prestamo_id"]
+            isOneToOne: false
+            referencedRelation: "v_prestamos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_prestamos: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          caja_id: string | null
+          caja_nombre: string | null
+          creado_en: string | null
+          creado_por: string | null
+          creado_por_nombre: string | null
+          cuotas_pagadas: number | null
+          cuotas_vencidas: number | null
+          documento: string | null
+          empresa_id: string | null
+          estado: Database["public"]["Enums"]["estado_doc"] | null
+          fecha: string | null
+          frecuencia: string | null
+          id: string | null
+          monto: number | null
+          monto_vencido: number | null
+          motivo: string | null
+          motivo_anulacion: string | null
+          mov_id: string | null
+          n_cuotas: number | null
+          n_pagos: number | null
+          pagado: number | null
+          persona: string | null
+          primer_vencimiento: string | null
+          proxima_numero: number | null
+          proxima_saldo: number | null
+          proxima_vence: string | null
+          saldo: number | null
+          situacion: string | null
+          tipo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prestamos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_caja"
+            referencedColumns: ["caja_id"]
+          },
+          {
+            foreignKeyName: "prestamos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_patrimonio"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_series_comprobante"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "prestamos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_caja"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prestamos_mov_id_fkey"
+            columns: ["mov_id"]
+            isOneToOne: false
+            referencedRelation: "v_movimientos_caja"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_prestamos_pendientes: {
         Row: {
@@ -5459,6 +6458,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_manuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "movimientos_manuales_empresa_id_fkey"
@@ -5504,6 +6510,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "metales_empresa_id_fkey"
@@ -5588,6 +6601,13 @@ export type Database = {
             foreignKeyName: "proveedores_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "proveedores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -5645,6 +6665,13 @@ export type Database = {
             foreignKeyName: "cajas_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "cajas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -5678,6 +6705,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "proveedores_empresa_id_fkey"
@@ -5746,6 +6780,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "selecciones_compra_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "selecciones_compra_empresa_id_fkey"
@@ -5835,6 +6876,13 @@ export type Database = {
             foreignKeyName: "metales_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "metales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -5913,6 +6961,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "metales_empresa_id_fkey"
@@ -6047,6 +7102,13 @@ export type Database = {
             foreignKeyName: "trabajadores_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "trabajadores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -6113,6 +7175,13 @@ export type Database = {
             foreignKeyName: "turnos_caja_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "turnos_caja_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -6158,6 +7227,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "socios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "socios_empresa_id_fkey"
@@ -6209,6 +7285,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
           },
           {
             foreignKeyName: "venta_items_empresa_id_fkey"
@@ -6367,6 +7450,13 @@ export type Database = {
             foreignKeyName: "ventas_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_cuadre_caja"
+            referencedColumns: ["empresa_id"]
+          },
+          {
+            foreignKeyName: "ventas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
             referencedRelation: "v_patrimonio"
             referencedColumns: ["empresa_id"]
           },
@@ -6432,6 +7522,13 @@ export type Database = {
         }
         Returns: string
       }
+      _fecha_prestamo: {
+        Args: {
+          p_fecha: string
+          p_rol: Database["public"]["Enums"]["rol_miembro"]
+        }
+        Returns: string
+      }
       _foto_mes: {
         Args: { p_empresa: string; p_periodo: string }
         Returns: Json
@@ -6481,6 +7578,10 @@ export type Database = {
         Returns: string
       }
       _plan_cuotas: { Args: { p_credito: string }; Returns: undefined }
+      _plan_cuotas_prestamo: {
+        Args: { p_prestamo: string }
+        Returns: undefined
+      }
       _precio_sugerido: {
         Args: {
           p_clase: string
@@ -6727,6 +7828,14 @@ export type Database = {
       }
       anular_pago_personal: {
         Args: { p_id: string; p_motivo: string }
+        Returns: undefined
+      }
+      anular_pago_prestamo: {
+        Args: { p_motivo: string; p_pago: string }
+        Returns: undefined
+      }
+      anular_prestamo: {
+        Args: { p_motivo: string; p_prestamo: string }
         Returns: undefined
       }
       anular_seleccion: {
@@ -7204,6 +8313,32 @@ export type Database = {
           p_voucher_url?: string
         }
         Returns: string
+      }
+      registrar_pago_prestamo: {
+        Args: {
+          p_caja: string
+          p_fecha?: string
+          p_monto: number
+          p_nota?: string
+          p_prestamo: string
+        }
+        Returns: Json
+      }
+      registrar_prestamo: {
+        Args: {
+          p_caja: string
+          p_cuotas?: number
+          p_documento?: string
+          p_empresa: string
+          p_fecha?: string
+          p_frecuencia?: string
+          p_monto: number
+          p_motivo: string
+          p_persona: string
+          p_primer_vencimiento?: string
+          p_tipo: string
+        }
+        Returns: Json
       }
       registrar_seleccion: {
         Args: {

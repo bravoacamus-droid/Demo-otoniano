@@ -1228,12 +1228,76 @@ describe("Cuadre de caja (26/11)", () => {
       select q.*, (select coalesce(sum(saldo), 0) from v_saldo_caja where empresa_id = $1) cajas,
              (select coalesce(sum(saldo), 0) from v_creditos where empresa_id = $1 and tipo = 'por_pagar' and estado = 'registrada') pp
         from v_cuadre_caja q where empresa_id = $1`, [empA]));
-    const partes = ["aportes", "ventas", "compras", "gastos", "retiros", "otros"].reduce((s, k) => s + num(r[k]), 0);
+    const partes = ["aportes", "ventas", "compras", "gastos", "retiros", "otros", "prestamos"].reduce((s, k) => s + num(r[k]), 0);
     expect(partes).toBeCloseTo(num(r.saldo), 2);
     expect(num(r.saldo)).toBeCloseTo(num(r.cajas), 2);
     expect(num(r.compras_por_pagar)).toBeCloseTo(num(r.pp), 2);
     // Otra empresa no ve el cuadre de A
     const otro = await como(db, DUENO_B, (tx) => tx.query(`select 1 from v_cuadre_caja where empresa_id = $1`, [empA]));
+    expect(otro.rows).toHaveLength(0);
+  });
+});
+
+describe("Préstamos con cuotas (26/11)", () => {
+  const saldo = () => como(db, DUENO_A, (tx) => uno<{ s: string }>(tx,
+    `select saldo s from v_saldo_caja where caja_id = $1`, [caja])).then((r) => num(r.s));
+  const ganancia = () => como(db, DUENO_A, (tx) => uno<{ g: string }>(tx,
+    `select ganancia_acumulada g from v_patrimonio where empresa_id = $1`, [empA])).then((r) => num(r.g));
+  const prestamo = (tipo: string, monto: number, cuotas = 1, frec = "mensual", user = DUENO_A, persona = "Juan Pérez") =>
+    como(db, user, (tx) => uno<{ r: { id: string } }>(tx,
+      `select registrar_prestamo($1, $2, $3, $4, $5, 'Capital de trabajo', $6, $7, '2030-01-10') r`,
+      [empA, tipo, persona, monto, caja, cuotas, frec])).then((x) => x.r.id);
+  const devolver = (id: string, monto: number, user = DUENO_A) =>
+    como(db, user, (tx) => uno<{ r: { id: string; saldo: string; cuota: number } }>(tx,
+      `select registrar_pago_prestamo($1, $2, $3) r`, [id, monto, caja])).then((x) => x.r);
+
+  it("nos prestan en 3 cuotas: entra a caja, queda como deuda y cada devolución es una salida", async () => {
+    const c0 = await saldo();
+    const g0 = await ganancia();
+    await expect(prestamo("recibido", 1000, 3, "diaria")).rejects.toThrow(/semanales, quincenales o mensuales/);
+    const id = await prestamo("recibido", 1000, 3, "mensual", CAJERO_A);
+    expect(await saldo()).toBeCloseTo(c0 + 1000, 2);
+    expect(await ganancia()).toBeCloseTo(g0, 2);
+    const cuotas = await como(db, DUENO_A, (tx) => tx.query<{ monto: string; vence: string }>(
+      `select monto, vence::text from prestamo_cuotas where prestamo_id = $1 order by numero`, [id]));
+    expect(cuotas.rows.map((q) => [num(q.monto), q.vence])).toEqual([[333.33, "2030-01-10"], [333.33, "2030-02-10"], [333.34, "2030-03-10"]]);
+
+    const d = await devolver(id, 500, CAJERO_A);
+    expect([num(d.saldo), d.cuota]).toEqual([500, 1]);
+    expect(await saldo()).toBeCloseTo(c0 + 500, 2);
+    expect(await ganancia()).toBeCloseTo(g0, 2);
+    const p = await como(db, DUENO_A, (tx) => uno<{ saldo: string; cuotas_pagadas: number; proxima_numero: number; prestamos_por_pagar: string }>(tx,
+      `select v.saldo, v.cuotas_pagadas::int, v.proxima_numero, pa.prestamos_por_pagar
+         from v_prestamos v, v_patrimonio pa where v.id = $1 and pa.empresa_id = $2`, [id, empA]));
+    expect([num(p.saldo), p.cuotas_pagadas, p.proxima_numero, num(p.prestamos_por_pagar)]).toEqual([500, 1, 2, 500]);
+    await expect(devolver(id, 600)).rejects.toThrow(/mayor a lo que falta/);
+
+    // Almacén no anula; con devoluciones no se anula el préstamo
+    await expect(como(db, CAJERO_A, (tx) => tx.query(`select anular_prestamo($1, 'x')`, [id]))).rejects.toThrow();
+    await expect(como(db, DUENO_A, (tx) => tx.query(`select anular_prestamo($1, 'Error')`, [id]))).rejects.toThrow(/devoluciones/);
+    const pago = (await como(db, DUENO_A, (tx) => uno<{ id: string }>(tx, `select id from prestamo_pagos where prestamo_id = $1`, [id]))).id;
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_pago_prestamo($1, 'Monto mal')`, [pago]));
+    await como(db, DUENO_A, (tx) => tx.query(`select anular_prestamo($1, 'Registrado por error')`, [id]));
+    expect(await saldo()).toBeCloseTo(c0, 2);
+    expect(await ganancia()).toBeCloseTo(g0, 2);
+  });
+
+  it("prestamos a una persona: sale de caja, queda por cobrar y su devolución entra; el cuadre lo muestra aparte", async () => {
+    const c0 = await saldo();
+    const g0 = await ganancia();
+    const id = await prestamo("otorgado", 300, 1, "mensual", DUENO_A, "Socio 1");
+    expect(await saldo()).toBeCloseTo(c0 - 300, 2);
+    expect(await ganancia()).toBeCloseTo(g0, 2);
+    await devolver(id, 300);
+    expect(await saldo()).toBeCloseTo(c0, 2);
+    const v = await como(db, DUENO_A, (tx) => uno<{ situacion: string }>(tx, `select situacion from v_prestamos where id = $1`, [id]));
+    expect(v.situacion).toBe("pagado");
+    await expect(devolver(id, 1)).rejects.toThrow(/devuelto por completo/);
+    const q = await como(db, DUENO_A, (tx) => uno<Record<string, string>>(tx, `select * from v_cuadre_caja where empresa_id = $1`, [empA]));
+    const partes = ["aportes", "ventas", "compras", "gastos", "retiros", "otros", "prestamos"].reduce((s, k) => s + num(q[k]), 0);
+    expect(partes).toBeCloseTo(num(q.saldo), 2);
+    // Otra empresa no ve los préstamos de A
+    const otro = await como(db, DUENO_B, (tx) => tx.query(`select 1 from v_prestamos where id = $1`, [id]));
     expect(otro.rows).toHaveLength(0);
   });
 });

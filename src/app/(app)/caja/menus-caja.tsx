@@ -20,7 +20,7 @@ type Cambio = { fecha: string; razon: string; que?: string; monto?: string | num
 
 const claseRojo = `${opcionMenu} text-red-700 hover:bg-red-50`;
 
-function ModalAnular({ id, accion, titulo, explicacion, abierto, onCerrar }: {
+export function ModalAnular({ id, accion, titulo, explicacion, abierto, onCerrar }: {
   id: string; accion: (p: Resultado | null, fd: FormData) => Promise<Resultado>; titulo: string; explicacion?: string;
   abierto: boolean; onCerrar: () => void;
 }) {
